@@ -30,6 +30,7 @@ import type { Expense } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
+import { cn } from '@/lib/utils';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -75,6 +76,7 @@ export function ExpensesCard({
               <TableHead>Description</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Paid By</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="w-[50px] no-print"></TableHead>
             </TableRow>
@@ -94,6 +96,14 @@ export function ExpensesCard({
                   </TableCell>
                   <TableCell>
                     <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{expense.paidBy}</Badge>
+                  </TableCell>
+                  <TableCell>
+                     <Badge
+                        variant={expense.status === 'Paid' ? 'default' : 'destructive'}
+                        className={cn(expense.status === 'Paid' && 'bg-green-600 hover:bg-green-700')}
+                    >
+                        {expense.status}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     ${expense.amount.toFixed(2)}
@@ -119,7 +129,7 @@ export function ExpensesCard({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No expenses logged for this month.
                 </TableCell>
               </TableRow>

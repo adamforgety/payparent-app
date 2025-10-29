@@ -13,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialData } from '@/lib/data';
 import type { AppData, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
-import { ExportButton } from './export-button';
 
 const defaultMonthData: MonthData = {
   childSupport: { amount: 0, paidBy: 'None' },
@@ -69,6 +68,15 @@ export function Dashboard() {
       expenses: currentMonthData.expenses.filter((exp) => exp.id !== expenseId),
     });
   };
+  
+  const updateExpense = (updatedExpense: Expense) => {
+    updateMonthData({
+      expenses: currentMonthData.expenses.map((exp) =>
+        exp.id === updatedExpense.id ? updatedExpense : exp
+      ),
+    });
+  };
+
 
   const totalExpenses = currentMonthData.expenses.reduce(
     (sum, exp) => sum + exp.amount,
@@ -112,6 +120,7 @@ export function Dashboard() {
                   expenses={currentMonthData.expenses}
                   expenseSplit={currentMonthData.expenseSplit}
                   childSupport={currentMonthData.childSupport}
+                  onUpdateExpense={updateExpense}
                 />
                 <SummaryCard
                   parent="Parent 2"
@@ -119,6 +128,7 @@ export function Dashboard() {
                   expenses={currentMonthData.expenses}
                   expenseSplit={currentMonthData.expenseSplit}
                   childSupport={currentMonthData.childSupport}
+                  onUpdateExpense={updateExpense}
                 />
               </div>
             </div>

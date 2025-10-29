@@ -14,6 +14,7 @@ export interface Expense {
   amount: number;
   paidBy: Parent;
   category: ExpenseCategory;
+  status: 'Unpaid' | 'Paid';
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';

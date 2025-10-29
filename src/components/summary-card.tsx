@@ -1,15 +1,19 @@
-import { Scale } from 'lucide-react';
+import { HandCoins, Scale } from 'lucide-react';
 
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { ChildSupport, ExpenseSplit, Parent, Expense } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import { SettleBalanceDialog } from './settle-balance-dialog';
+import { useMemo } from 'react';
 
 interface SummaryCardProps {
   parent: Parent;
@@ -17,6 +21,7 @@ interface SummaryCardProps {
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
+  onUpdateExpense: (expense: Expense) => void;
 }
 
 export function SummaryCard({
@@ -25,50 +30,57 @@ export function SummaryCard({
   expenses,
   expenseSplit,
   childSupport,
+  onUpdateExpense,
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
-  const expenseShare = totalExpenses * (parentSplitPercentage / 100);
+  
+  // Calculate total amount this parent has paid directly
   const totalPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
-  // Determine what this parent is responsible for paying in total
-  let totalOwedByParent = expenseShare;
+  // This parent's share of the total expenses
+  const expenseShare = totalExpenses * (parentSplitPercentage / 100);
 
-  // childSupport.paidBy is the one who PAYS support
-  // If this parent is the one who pays support, their total obligation increases.
+  // Determine child support obligation
+  let childSupportAdjustment = 0;
   if (childSupport.paidBy === parent) {
-    totalOwedByParent += childSupport.amount;
+    // This parent PAYS child support, so it's an added cost for them
+    childSupportAdjustment = childSupport.amount;
+  } else if (childSupport.paidBy !== 'None') {
+    // This parent RECEIVES child support, so it's a credit
+    childSupportAdjustment = -childSupport.amount;
   }
 
-  // Calculate the net balance
-  // A positive balance means they paid more than they owe (other parent owes them)
-  // A negative balance means they paid less than they owe (they owe the other parent)
-  const netBalance = totalPaidByParent - totalOwedByParent;
-  
+  // Final balance:
+  // A positive balance means they are owed money.
+  // A negative balance means they owe money.
+  const netBalance = totalPaidByParent - (expenseShare + childSupportAdjustment);
+
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
   let transferDescription: string;
   let balanceDescription: string;
-  let amountDescription: string;
 
   if (netBalance > 0) {
-    transferDescription = `Receives from ${otherParent}`;
+    transferDescription = `${otherParent} owes you`;
     balanceDescription = "You've paid more than your total share.";
-    amountDescription = `Amount to Receive`;
   } else if (netBalance < 0) {
-    transferDescription = `Owes ${otherParent}`;
+    transferDescription = `You owe ${otherParent}`;
     balanceDescription = "Your payments are less than your total share.";
-    amountDescription = `Amount Owed`;
   } else {
-    transferDescription = "All settled up";
+    transferDescription = 'All settled up';
     balanceDescription = "You've paid your exact share.";
-    amountDescription = 'Balance';
   }
 
+  const expensesOwedByOtherParent = useMemo(() => {
+    // These are expenses paid by `parent` that `otherParent` needs to contribute to.
+    // We only care about `Unpaid` expenses.
+    return expenses.filter(exp => exp.paidBy === parent && exp.status === 'Unpaid');
+  }, [expenses, parent]);
 
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader>
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
@@ -80,7 +92,7 @@ export function SummaryCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-grow">
         <div className="flex justify-between items-center">
           <p className="text-muted-foreground">Your Share of Expenses ({parentSplitPercentage}%)</p>
           <p className="font-semibold">${expenseShare.toFixed(2)}</p>
@@ -90,9 +102,14 @@ export function SummaryCard({
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
         <div className="flex justify-between items-center">
-            <p className="text-muted-foreground">Child Support</p>
-            <p className={`font-semibold ${childSupport.paidBy === 'None' ? '' : childSupport.paidBy === parent ? 'text-red-600' : 'text-green-600'}`}>
-                {childSupport.paidBy === 'None' ? '$0.00' : `${childSupport.paidBy === parent ? '-' : '+'}$${childSupport.amount.toFixed(2)}`}
+            <p className="text-muted-foreground">Child Support Adjustment</p>
+            <p className={cn(
+                "font-semibold",
+                childSupportAdjustment === 0 && "",
+                childSupportAdjustment > 0 && "text-red-600",
+                childSupportAdjustment < 0 && "text-green-600"
+            )}>
+                {childSupportAdjustment >= 0 ? `$${childSupportAdjustment.toFixed(2)}` : `-$${Math.abs(childSupportAdjustment).toFixed(2)}`}
             </p>
         </div>
         <Separator />
@@ -108,9 +125,25 @@ export function SummaryCard({
             <p className="text-xs text-muted-foreground">{balanceDescription}</p>
         </div>
         <p className="text-xs text-muted-foreground pt-2">
-            This is the net balance for the month. A positive amount means you are owed money, and a negative amount means you owe the other parent. This is calculated as (Total Paid) - (Expense Share + Child Support).
+            This is the net balance for the month, calculated as: (Total You Paid) - (Your Expense Share + Your Child Support Adjustment). A positive amount means you are owed money.
         </p>
       </CardContent>
+       <CardFooter>
+        {netBalance > 0 && (
+          <SettleBalanceDialog
+            parent={parent}
+            otherParent={otherParent}
+            expenses={expensesOwedByOtherParent}
+            expenseSplit={expenseSplit}
+            onUpdateExpense={onUpdateExpense}
+          >
+            <Button className="w-full">
+              <HandCoins className="mr-2" />
+              Settle Balance
+            </Button>
+          </SettleBalanceDialog>
+        )}
+      </CardFooter>
     </Card>
   );
 }

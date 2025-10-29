@@ -80,6 +80,7 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
       date: values.date.toISOString(),
       paidBy: values.paidBy as Parent,
       category: values.category as ExpenseCategory,
+      status: 'Unpaid',
     });
     toast({
       title: 'Expense Added',
