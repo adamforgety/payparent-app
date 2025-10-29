@@ -34,6 +34,7 @@ interface SettleBalanceDialogProps {
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: React.ReactNode;
+  netBalance: number;
 }
 
 type ItemToSettle = {
@@ -54,6 +55,7 @@ export function SettleBalanceDialog({
   onUpdateExpense,
   onUpdateChildSupport,
   children,
+  netBalance,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -82,7 +84,7 @@ export function SettleBalanceDialog({
       });
     }
 
-    return [...owedExpenses, ...owedChildSupport];
+    return [...owedExpenses, ...owedChildSupport].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParent, expenseSplit]);
 
   // Items where the current parent owes the other parent
@@ -110,7 +112,7 @@ export function SettleBalanceDialog({
        });
      }
 
-    return [...owedExpenses, ...owedChildSupport];
+    return [...owedExpenses, ...owedChildSupport].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParent, expenseSplit]);
 
 
@@ -132,7 +134,7 @@ export function SettleBalanceDialog({
     }
   }
 
-  const totalOwedToMe = itemsOwedToMe.filter(i => i.status !== 'Paid').reduce((acc, item) => acc + item.owedAmount, 0);
+  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + item.owedAmount, 0);
   const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
   return (
@@ -143,12 +145,26 @@ export function SettleBalanceDialog({
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
             Manage payments between you and {otherParent}. Mark items as paid or confirm receipt of payments.
+            <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                {netBalance > 0 ? `${otherParent} owes you` : `You owe ${otherParent}`}
+              </p>
+              <p
+                className={cn(
+                  'text-2xl font-bold',
+                   netBalance < 0 && 'text-destructive',
+                   netBalance > 0 && 'text-green-600'
+                )}
+              >
+                ${Math.abs(netBalance).toFixed(2)}
+              </p>
+            </div>
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="owed-to-me">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="owed-to-me">
-              Owed to You ({itemsOwedToMe.filter(i => i.status !== 'Paid').length})
+              Owed to You ({itemsOwedToMe.length})
               <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
               </TabsTrigger>
             <TabsTrigger value="owed-by-me">

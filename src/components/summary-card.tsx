@@ -40,26 +40,13 @@ export function SummaryCard({
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
-  const childSupportPaidByParent =
-    childSupport.paidBy === parent && childSupport.status !== 'Unpaid'
-      ? childSupport.amount
-      : 0;
-  
-  const totalPaidByParent = totalExpensesPaidByParent + childSupportPaidByParent;
-
-  const pendingExpensesConfirmation = expenses
+  const pendingConfirmation = expenses
     .filter(
       (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
     )
     .reduce((sum, exp) => {
-       const expenseShareOwed = exp.amount * (parentSplitPercentage / 100);
-       return sum + expenseShareOwed;
-    }, 0);
-  
-  const pendingChildSupportConfirmation = (childSupport.status === 'Pending' && childSupport.paidBy === otherParent) ? childSupport.amount : 0;
-
-  const pendingConfirmation = pendingExpensesConfirmation + pendingChildSupportConfirmation;
-
+       return sum + exp.amount * (parentSplitPercentage / 100);
+    }, 0) + ((childSupport.status === 'Pending' && childSupport.paidBy === otherParent) ? childSupport.amount : 0);
 
   const totalSettled = expenses
     .filter((exp) => exp.status === 'Paid')
@@ -77,10 +64,8 @@ export function SummaryCard({
   let childSupportAdjustment = 0;
   if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // This parent pays support, which counts as a credit for them.
       childSupportAdjustment = childSupport.amount;
     } else {
-      // This parent receives support, which counts as a debit for them.
       childSupportAdjustment = -childSupport.amount;
     }
   }
@@ -88,12 +73,10 @@ export function SummaryCard({
   const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
 
   let transferDescription: string;
-  let buttonText = 'Settle Balance';
   let isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
 
   if (isSettled) {
     transferDescription = 'All settled up';
-    buttonText = 'All Settled';
   } else if (netBalance > 0) {
     transferDescription = `${otherParent} owes you`;
   } else {
@@ -122,7 +105,7 @@ export function SummaryCard({
         </div>
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground">Total You Paid Directly</p>
-          <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
+          <p className="font-semibold">${totalExpensesPaidByParent.toFixed(2)}</p>
         </div>
         <div className="flex items-center justify-between text-sm">
           <p className="text-muted-foreground">Pending Confirmation</p>
@@ -161,10 +144,11 @@ export function SummaryCard({
           childSupport={childSupport}
           onUpdateExpense={onUpdateExpense}
           onUpdateChildSupport={onUpdateChildSupport}
+          netBalance={netBalance}
         >
-          <Button className="w-full" disabled={isSettled}>
+          <Button className="w-full">
             <HandCoins className="mr-2 h-4 w-4" />
-            {buttonText}
+            Settle Balance
           </Button>
         </SettleBalanceDialog>
       </CardFooter>
