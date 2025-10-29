@@ -128,6 +128,14 @@ export function SettleBalanceDialog({
     }
   };
   
+  const handleMarkAllAsPaid = () => {
+    itemsOwedByMe.forEach(item => {
+      if (item.status === 'Unpaid') {
+        handleMarkAsPaid(item);
+      }
+    });
+  };
+
   const handleMarkAsReceived = (item: ItemToSettle) => {
      if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
@@ -148,10 +156,12 @@ export function SettleBalanceDialog({
       <DialogContent className="max-w-full w-full sm:max-w-3xl" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
-          <DialogDescription>
-            Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
+          <DialogDescription asChild>
+            <div>
+              Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
+            </div>
           </DialogDescription>
-          <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
+           <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
             <div className="text-sm text-muted-foreground">
               {netBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
             </div>
@@ -195,6 +205,7 @@ export function SettleBalanceDialog({
                 actionVariant='destructive'
                 actionDisabled={item => item.status === 'Pending' || item.status === 'Paid'}
                 parent={parent}
+                onMarkAllPaid={handleMarkAllAsPaid}
               />
           </TabsContent>
         </Tabs>
@@ -216,9 +227,10 @@ interface SettlementTableProps {
   actionVariant: 'default' | 'destructive';
   actionDisabled: (item: ItemToSettle) => boolean;
   parent: Parent;
+  onMarkAllPaid?: () => void;
 }
 
-function SettlementTable({ items, actionLabel, onItemAction, actionVariant, actionDisabled, parent }: SettlementTableProps) {
+function SettlementTable({ items, actionLabel, onItemAction, actionVariant, actionDisabled, onMarkAllPaid }: SettlementTableProps) {
   
   const getStatus = (item: ItemToSettle) => {
     if(item.status === 'Pending' && actionLabel === 'Paid') return { text: 'Pending Confirmation', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
@@ -226,9 +238,19 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
     if(item.status === 'Unpaid') return { text: 'Unpaid', variant: 'destructive' as const, style: '' };
     return { text: 'Paid', variant: 'default' as const, style: 'bg-green-600 hover:bg-green-700' };
   }
+
+  const canMarkAllPaid = items.some(item => item.status === 'Unpaid');
   
   return (
-      <ScrollArea className="h-[300px] sm:h-[400px] border rounded-md mt-4">
+    <>
+       {onMarkAllPaid && (
+          <div className="flex justify-end mt-4">
+            <Button onClick={onMarkAllPaid} disabled={!canMarkAllPaid} variant="destructive">
+              Mark All as Paid
+            </Button>
+          </div>
+        )}
+      <ScrollArea className="h-[300px] sm:h-[400px] border rounded-md mt-2">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
@@ -279,5 +301,6 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
           </TableBody>
         </Table>
       </ScrollArea>
+      </>
   )
 }
