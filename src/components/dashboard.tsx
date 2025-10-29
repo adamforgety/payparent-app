@@ -67,9 +67,9 @@ export function Dashboard() {
         title: 'Incomplete Information',
         description: 'Please select who paid for child support before switching tabs.',
       });
-      return;
+    } else {
+      setActiveTab(value);
     }
-    setActiveTab(value);
   };
 
 
