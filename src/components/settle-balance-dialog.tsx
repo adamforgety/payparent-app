@@ -153,13 +153,11 @@ export function SettleBalanceDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-full w-full sm:max-w-3xl" hideCloseButton>
+      <DialogContent className="max-w-3xl w-full grid-rows-[auto,1fr,auto] max-h-screen">
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
-          <DialogDescription asChild>
-            <div>
-              Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
-            </div>
+          <DialogDescription>
+             Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
           </DialogDescription>
            <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
             <div className="text-sm text-muted-foreground">
@@ -176,6 +174,7 @@ export function SettleBalanceDialog({
             </div>
           </div>
         </DialogHeader>
+        <div className='overflow-y-auto'>
         <Tabs defaultValue="owed-to-me">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="owed-to-me">
@@ -209,6 +208,7 @@ export function SettleBalanceDialog({
               />
           </TabsContent>
         </Tabs>
+        </div>
         <DialogFooter className="mt-4">
           <DialogClose asChild>
             <Button variant="outline" className="w-full sm:w-auto">Close</Button>
@@ -304,3 +304,5 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
       </>
   )
 }
+
+    
