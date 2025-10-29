@@ -35,41 +35,33 @@ export function SummaryCard({
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-  const otherParentSplitPercentage = expenseSplit[otherParent];
 
 
   const totalPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
-    .reduce((sum, exp) => sum + exp.amount, 0)
-    + (childSupport.paidBy === parent ? childSupport.amount : 0);
+    .reduce((sum, exp) => sum + exp.amount, 0);
     
-  const totalPaidByOtherParent = expenses
-    .filter((exp) => exp.paidBy === otherParent)
-    .reduce((sum, exp) => sum + exp.amount, 0)
-     + (childSupport.paidBy === otherParent ? childSupport.amount : 0);
-
   const unsettledExpenses = expenses.filter(e => e.status !== 'Paid');
 
-  const totalUnsettledAmount = unsettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status !== 'Paid' ? childSupport.amount : 0);
-
-  const unsettledPaidByParent = expenses
-    .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
+  const unsettledPaidByParent = unsettledExpenses
+    .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const expenseShare = unsettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) * (parentSplitPercentage / 100);
+  
+  const totalUnsettledExpenses = unsettledExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const expenseShare = totalUnsettledExpenses * (parentSplitPercentage / 100);
 
   let childSupportAdjustment = 0;
-    if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
+  if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // I am the payer, so I get "credit" for this amount
-      childSupportAdjustment = childSupport.amount;
-    } else {
-      // The other parent is the payer, so I "owe" this amount
+      // I am the payer, so I owe this amount. It's a negative adjustment to my balance.
       childSupportAdjustment = -childSupport.amount;
+    } else {
+      // The other parent is the payer, so I am owed this amount. It's a positive adjustment.
+      childSupportAdjustment = childSupport.amount;
     }
   }
 
-  const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
+  const netBalance = (unsettledPaidByParent - expenseShare) + childSupportAdjustment;
 
   const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
@@ -86,7 +78,7 @@ export function SummaryCard({
   const isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
   let transferDescription = 'All settled up';
   if (!isSettled) {
-    transferDescription = netBalance > 0 ? `${otherParent} owes you` : `You owe ${otherParent}`;
+    transferDescription = netBalance > 0 ? `You are owed by ${otherParent}` : `You owe ${otherParent}`;
   }
   
   return (
