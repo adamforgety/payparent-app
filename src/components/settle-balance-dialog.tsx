@@ -88,7 +88,7 @@ export function SettleBalanceDialog({
     }
 
     return [...unsettledExpensesPaidByMe, ...childSupportOwedToMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParent, otherParentSplit]);
+  }, [expenses, childSupport, parent, otherParentSplit]);
 
   // Items where the current parent owes the other parent
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
@@ -143,7 +143,7 @@ export function SettleBalanceDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-full sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
@@ -226,7 +226,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
   }
   
   return (
-      <ScrollArea className="h-[400px] border rounded-md mt-4">
+      <ScrollArea className="h-[300px] sm:h-[400px] border rounded-md mt-4">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
