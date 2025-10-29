@@ -76,25 +76,27 @@ export function SummaryCard({
 
   const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
 
+  // Handle EXPENSES confirmation amounts
   pendingExpenses.forEach(exp => {
-    // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
-    if (exp.paidBy === parent) {
-      awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
-    }
     // If the other parent paid, it's awaiting YOUR confirmation.
-    else if (exp.paidBy === otherParent) {
+    if (exp.paidBy === otherParent) {
       awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
+    }
+    // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
+    else if (exp.paidBy === parent) {
+      awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
     }
   });
 
+  // Handle CHILD SUPPORT confirmation amounts (this logic was correct)
   if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
-    // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
-    if (childSupport.paidBy === parent) {
-      awaitingOtherParentConfirmationAmount += childSupport.amount;
-    }
     // If other parent paid child support, it's awaiting YOUR confirmation.
-    else if (childSupport.paidBy === otherParent) {
+    if (childSupport.paidBy === otherParent) {
       awaitingYourConfirmationAmount += childSupport.amount;
+    }
+    // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
+    else if (childSupport.paidBy === parent) {
+      awaitingOtherParentConfirmationAmount += childSupport.amount;
     }
   }
 
