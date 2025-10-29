@@ -71,9 +71,9 @@ export function SummaryCard({
   const pendingYourConfirmationAmount =
     expenses
       .filter(
-        (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
+        (exp) => exp.status === 'Pending' && exp.paidBy === parent
       )
-      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[parent] / 100), 0) +
+      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[otherParent] / 100), 0) +
     (childSupport.status === 'Pending' && childSupport.paidBy === otherParent
       ? childSupport.amount
       : 0);
