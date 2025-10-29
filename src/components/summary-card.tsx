@@ -36,9 +36,10 @@ export function SummaryCard({
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
-  const totalExpensesPaidByParent = expenses
+  const totalPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
-    .reduce((sum, exp) => sum + exp.amount, 0);
+    .reduce((sum, exp) => sum + exp.amount, 0)
+    + (childSupport.paidBy === parent ? childSupport.amount : 0);
 
   const pendingConfirmation = expenses
     .filter(
@@ -54,13 +55,12 @@ export function SummaryCard({
     + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
   const unsettledExpenses = totalExpenses - expenses.filter(e => e.status === 'Paid').reduce((s, e) => s + e.amount, 0);
-
-  const expenseShare = unsettledExpenses * (parentSplitPercentage / 100);
-  
   const unsettledPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
     .reduce((sum, exp) => sum + exp.amount, 0);
 
+  const expenseShare = unsettledExpenses * (parentSplitPercentage / 100);
+  
   let childSupportAdjustment = 0;
   if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
@@ -69,18 +69,13 @@ export function SummaryCard({
       childSupportAdjustment = -childSupport.amount;
     }
   }
-  
+
   const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
 
-  let transferDescription: string;
-  let isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
-
-  if (isSettled) {
-    transferDescription = 'All settled up';
-  } else if (netBalance > 0) {
-    transferDescription = `${otherParent} owes you`;
-  } else {
-    transferDescription = `You owe ${otherParent}`;
+  const isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
+  let transferDescription = 'All settled up';
+  if (!isSettled) {
+    transferDescription = netBalance > 0 ? `${otherParent} owes you` : `You owe ${otherParent}`;
   }
   
   return (
@@ -105,7 +100,7 @@ export function SummaryCard({
         </div>
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground">Total You Paid Directly</p>
-          <p className="font-semibold">${totalExpensesPaidByParent.toFixed(2)}</p>
+          <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
         <div className="flex items-center justify-between text-sm">
           <p className="text-muted-foreground">Pending Confirmation</p>

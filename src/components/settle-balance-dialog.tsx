@@ -58,23 +58,25 @@ export function SettleBalanceDialog({
   netBalance,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const parentSplit = expenseSplit[parent] / 100;
+  const otherParentSplit = expenseSplit[otherParent] / 100;
 
   // Items where the other parent owes the current parent
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
-    const owedExpenses = expenses
+    const unsettledExpensesPaidByMe = expenses
       .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
         description: exp.description,
         totalAmount: exp.amount,
-        owedAmount: exp.amount * (expenseSplit[otherParent] / 100),
+        owedAmount: exp.amount * otherParentSplit,
         status: exp.status,
         type: 'expense',
       }));
 
-    const owedChildSupport: ItemToSettle[] = [];
+    const childSupportOwedToMe: ItemToSettle[] = [];
     if (childSupport.paidBy === otherParent && childSupport.status !== 'Paid') {
-      owedChildSupport.push({
+      childSupportOwedToMe.push({
         id: 'child-support',
         description: 'Child Support',
         totalAmount: childSupport.amount,
@@ -84,25 +86,25 @@ export function SettleBalanceDialog({
       });
     }
 
-    return [...owedExpenses, ...owedChildSupport].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParent, expenseSplit]);
+    return [...unsettledExpensesPaidByMe, ...childSupportOwedToMe].filter(item => item.owedAmount > 0);
+  }, [expenses, childSupport, parent, otherParentSplit]);
 
   // Items where the current parent owes the other parent
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
-    const owedExpenses = expenses
-      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
+    const unsettledExpensesPaidByOther = expenses
+      .filter((exp) => exp.paidBy === otherParent && exp.status !== 'Paid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
         description: exp.description,
         totalAmount: exp.amount,
-        owedAmount: exp.amount * (expenseSplit[parent] / 100),
+        owedAmount: exp.amount * parentSplit,
         status: exp.status,
         type: 'expense',
       }));
     
-    const owedChildSupport: ItemToSettle[] = [];
-     if (childSupport.paidBy === parent && childSupport.status === 'Unpaid') {
-       owedChildSupport.push({
+    const childSupportOwedByMe: ItemToSettle[] = [];
+     if (childSupport.paidBy === parent && childSupport.status !== 'Paid') {
+       childSupportOwedByMe.push({
          id: 'child-support',
          description: 'Child Support',
          totalAmount: childSupport.amount,
@@ -112,8 +114,8 @@ export function SettleBalanceDialog({
        });
      }
 
-    return [...owedExpenses, ...owedChildSupport].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParent, expenseSplit]);
+    return [...unsettledExpensesPaidByOther, ...childSupportOwedByMe].filter(item => item.owedAmount > 0);
+  }, [expenses, childSupport, parent, parentSplit]);
 
 
   const handleMarkAsPaid = (item: ItemToSettle) => {
@@ -147,7 +149,7 @@ export function SettleBalanceDialog({
             Manage payments between you and {otherParent}. Mark items as paid or confirm receipt of payments.
             <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
               <p className="text-sm text-muted-foreground">
-                {netBalance > 0 ? `${otherParent} owes you` : `You owe ${otherParent}`}
+                {netBalance >= 0 ? `${otherParent} owes you` : `You owe ${otherParent}`}
               </p>
               <p
                 className={cn(
