@@ -36,23 +36,30 @@ export function SummaryCard({
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
-  const totalPaidByParent = expenses
+  const totalExpensesPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
+  const childSupportPaidByParent = 
+    childSupport.paidBy === parent && childSupport.status !== 'Unpaid' 
+    ? childSupport.amount 
+    : 0;
+
+  const totalPaidByParent = totalExpensesPaidByParent + childSupportPaidByParent;
+
   const pendingConfirmation = expenses
     .filter(
-      (exp) =>
-        (exp.paidBy === parent && exp.status === 'Pending') ||
-        (exp.paidBy === otherParent && exp.status === 'Pending')
+      (exp) => exp.status === 'Pending'
     )
-    .reduce((sum, exp) => sum + exp.amount, 0);
+    .reduce((sum, exp) => sum + exp.amount, 0)
+    + (childSupport.status === 'Pending' ? childSupport.amount : 0);
 
   const totalSettled = expenses
     .filter((exp) => exp.status === 'Paid')
-    .reduce((sum, exp) => sum + exp.amount, 0);
+    .reduce((sum, exp) => sum + exp.amount, 0)
+    + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
-  const unsettledExpenses = totalExpenses - totalSettled;
+  const unsettledExpenses = totalExpenses - expenses.filter(e => e.status === 'Paid').reduce((s, e) => s + e.amount, 0);
 
   const expenseShare = unsettledExpenses * (parentSplitPercentage / 100);
   
