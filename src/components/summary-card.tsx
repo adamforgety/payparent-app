@@ -85,6 +85,7 @@ export function SummaryCard({
       .filter(exp => exp.status === 'Pending' && exp.paidBy === parent)
       .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[otherParent] / 100)), 0) +
     (childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0);
+  
 
   const isSettled = netBalance === 0 && awaitingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
   let transferDescription = 'All settled up';
