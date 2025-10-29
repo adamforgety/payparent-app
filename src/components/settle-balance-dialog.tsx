@@ -88,7 +88,7 @@ export function SettleBalanceDialog({
     }
 
     return [...unsettledExpensesPaidByMe, ...childSupportOwedToMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParentSplit]);
+  }, [expenses, childSupport, parent, otherParentSplit, otherParent]);
 
   // Items where the current parent owes the other parent
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
@@ -143,7 +143,7 @@ export function SettleBalanceDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-full sm:max-w-3xl">
+      <DialogContent className="max-w-full w-full sm:max-w-3xl" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
