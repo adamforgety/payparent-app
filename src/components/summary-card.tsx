@@ -106,15 +106,18 @@ export function SummaryCard({
   
   const itemsOwedByMe = expenses.filter(e => e.paidBy === otherParent && e.status === 'Unpaid');
   const childSupportOwedByMe = (childSupport.paidBy === parent && childSupport.status === 'Unpaid') ? 1 : 0;
-  const itemsOwedByMeCount = itemsOwedByMe.length + childSupportOwedByMe;
 
   const itemsToConfirm = expenses.filter(e => e.paidBy === otherParent && e.status === 'Pending');
   const childSupportToConfirm = (childSupport.paidBy === otherParent && childSupport.status === 'Pending') ? 1 : 0;
   const itemsToConfirmCount = itemsToConfirm.length + childSupportToConfirm;
 
+  // I owe the other parent for expenses they paid, OR I owe child support
+  const hasItemsToPay = expenses.some(e => e.paidBy === otherParent && e.status === 'Unpaid') || (childSupport.paidBy === parent && childSupport.status === 'Unpaid');
+  // The other parent has paid for something and is waiting for my confirmation
+  const hasItemsToConfirm = expenses.some(e => e.paidBy === otherParent && e.status === 'Pending') || (childSupport.paidBy === otherParent && childSupport.status === 'Pending');
 
-  const isButtonDisabled = itemsOwedByMeCount === 0 && itemsToConfirmCount === 0;
-  
+  const isButtonDisabled = !hasItemsToPay && !hasItemsToConfirm;
+
   return (
     <Card className="flex flex-col">
       <CardHeader>

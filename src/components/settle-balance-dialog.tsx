@@ -131,7 +131,14 @@ export function SettleBalanceDialog({
   const handleMarkAllAsPaid = () => {
     itemsOwedByMe.forEach(item => {
       if (item.status === 'Unpaid') {
-        handleMarkAsPaid(item);
+        if (item.type === 'expense') {
+          const originalExpense = expenses.find(exp => exp.id === item.id);
+          if (originalExpense) {
+            onUpdateExpense({ ...originalExpense, status: 'Pending' });
+          }
+        } else {
+          onUpdateChildSupport({ ...childSupport, status: 'Pending' });
+        }
       }
     });
   };
@@ -235,8 +242,9 @@ interface SettlementTableProps {
 function SettlementTable({ items, actionLabel, onItemAction, actionVariant, actionDisabled, onMarkAllPaid }: SettlementTableProps) {
   
   const getStatus = (item: ItemToSettle) => {
-    if(item.status === 'Pending' && actionLabel === 'Paid') return { text: 'Pending Confirmation', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
-    if(item.status === 'Pending' && actionLabel === 'Received') return { text: 'Confirmation Required', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
+    if (item.status === 'Pending') {
+      return { text: 'Pending Confirmation', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
+    }
     if(item.status === 'Unpaid') return { text: 'Unpaid', variant: 'destructive' as const, style: '' };
     return { text: 'Paid', variant: 'default' as const, style: 'bg-green-600 hover:bg-green-700' };
   }
