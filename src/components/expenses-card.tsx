@@ -90,10 +90,10 @@ export function ExpensesCard({
   };
 
   const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
-
   const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
+  const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
   const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
+
 
   return (
     <Card>
@@ -111,7 +111,7 @@ export function ExpensesCard({
             </div>
           </div>
           <div className="no-print flex flex-wrap items-center justify-start sm:justify-end gap-2">
-            <ExportButton
+             <ExportButton
               expenses={expenses}
               childSupport={childSupport}
               currentDate={currentDate}

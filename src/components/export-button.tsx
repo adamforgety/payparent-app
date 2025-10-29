@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 
 import type { ChildSupport, Expense, ParentNames } from '@/lib/types';
 import { Button } from './ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface ExportButtonProps {
   expenses: Expense[];
@@ -53,13 +54,23 @@ export function ExportButton({
   };
 
   return (
-    <Button
-      variant="outline"
-      onClick={handleExport}
-      disabled={expenses.length === 0 && childSupport.amount === 0}
-    >
-      <Sheet className="mr-2 h-4 w-4" />
-      Export to Excel
-    </Button>
+     <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleExport}
+            disabled={expenses.length === 0 && childSupport.amount === 0}
+            aria-label="Export to Excel"
+          >
+            <Sheet className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Export to Excel</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
