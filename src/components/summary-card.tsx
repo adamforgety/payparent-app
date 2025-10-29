@@ -70,22 +70,23 @@ export function SummaryCard({
   
   const otherParentName = parentNames[otherParent];
 
+
   // What YOU need to confirm.
-  // Pending items where the OTHER parent is owed money by you.
+  // This is money the OTHER parent has sent you that is awaiting your confirmation.
   const awaitingYourConfirmationAmount =
     expenses
       .filter(exp => exp.status === 'Pending' && exp.paidBy === otherParent)
       .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[parent] / 100)), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0);
+    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0);
 
 
   // What the OTHER PARENT needs to confirm.
-  // Pending items where YOU are owed money by them.
+  // This is money YOU have sent that is awaiting their confirmation.
   const awaitingOtherParentConfirmationAmount =
     expenses
       .filter(exp => exp.status === 'Pending' && exp.paidBy === parent)
       .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[otherParent] / 100)), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0);
+    (childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0);
   
 
   const isSettled = netBalance === 0 && awaitingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
@@ -103,7 +104,13 @@ export function SummaryCard({
   const hasItemsToPay = expenses.some(e => e.paidBy === otherParent && e.status === 'Unpaid') || (childSupport.paidBy === parent && childSupport.status === 'Unpaid');
   const hasItemsToConfirm = expenses.some(e => e.paidBy === otherParent && e.status === 'Pending') || (childSupport.paidBy === parent && childSupport.status === 'Pending');
 
-  const isButtonDisabled = !hasItemsToPay && !hasItemsToConfirm;
+  const isButtonDisabled = !(
+      expenses.some(e => e.status === 'Unpaid') ||
+      (childSupport.amount > 0 && childSupport.status === 'Unpaid') ||
+      expenses.some(e => e.status === 'Pending') ||
+      (childSupport.amount > 0 && childSupport.status === 'Pending')
+  );
+
 
   return (
     <Card className="flex flex-col">
