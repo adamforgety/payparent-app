@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -87,7 +88,7 @@ export function SettleBalanceDialog({
     }
 
     return [...unsettledExpensesPaidByMe, ...childSupportOwedToMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParentSplit]);
+  }, [expenses, childSupport, parent, otherParent, otherParentSplit]);
 
   // Items where the current parent owes the other parent
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
@@ -195,6 +196,11 @@ export function SettleBalanceDialog({
               />
           </TabsContent>
         </Tabs>
+        <DialogFooter className="mt-4">
+          <DialogClose asChild>
+            <Button variant="outline" className="w-full sm:w-auto">Close</Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
