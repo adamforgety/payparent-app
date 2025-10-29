@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
-import { HeartHandshake } from "lucide-react";
+import { Users } from "lucide-react";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div className="bg-primary/20 text-primary rounded-lg p-2 flex items-center justify-center">
-        <HeartHandshake className="h-6 w-6" />
+        <Users className="h-6 w-6" />
       </div>
       <h1 className="text-xl font-bold text-foreground font-logo">PayParent</h1>
     </div>
