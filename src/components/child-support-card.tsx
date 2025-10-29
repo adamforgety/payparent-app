@@ -20,16 +20,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { ChildSupport, Parent } from '@/lib/types';
+import type { ChildSupport, Parent, ParentNames } from '@/lib/types';
 
 interface ChildSupportCardProps {
   childSupport: ChildSupport;
   onUpdate: (data: ChildSupport) => void;
+  parentNames: ParentNames;
 }
 
 export function ChildSupportCard({
   childSupport,
   onUpdate,
+  parentNames
 }: ChildSupportCardProps) {
   const [inputValue, setInputValue] = useState<string>(
     childSupport.amount > 0 ? String(childSupport.amount) : ''
@@ -44,11 +46,9 @@ export function ChildSupportCard({
     const value = e.target.value;
     setInputValue(value);
     
-    // Convert to number for state update
     const amount = Number(value);
     const finalAmount = isNaN(amount) || value === '' ? 0 : amount;
     
-    // Update parent immediately
     if (childSupport.amount !== finalAmount) {
       onUpdate({ ...childSupport, amount: finalAmount });
     }
@@ -103,8 +103,8 @@ export function ChildSupportCard({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="None">None</SelectItem>
-              <SelectItem value="Parent 1">Parent 1</SelectItem>
-              <SelectItem value="Parent 2">Parent 2</SelectItem>
+              <SelectItem value="Parent 1">{parentNames['Parent 1']}</SelectItem>
+              <SelectItem value="Parent 2">{parentNames['Parent 2']}</SelectItem>
             </SelectContent>
           </Select>
         </div>

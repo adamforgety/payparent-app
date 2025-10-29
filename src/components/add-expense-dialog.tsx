@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Expense, Parent, ExpenseCategory } from '@/lib/types';
+import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const expenseSchema = z.object({
@@ -58,9 +58,10 @@ const expenseSchema = z.object({
 
 interface AddExpenseDialogProps {
   onAddExpense: (expense: Omit<Expense, 'id'>) => void;
+  parentNames: ParentNames;
 }
 
-export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
@@ -179,8 +180,8 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Parent 1">Parent 1</SelectItem>
-                        <SelectItem value="Parent 2">Parent 2</SelectItem>
+                        <SelectItem value="Parent 1">{parentNames['Parent 1']}</SelectItem>
+                        <SelectItem value="Parent 2">{parentNames['Parent 2']}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

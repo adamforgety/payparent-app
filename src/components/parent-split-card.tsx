@@ -12,16 +12,18 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { ExpenseSplit, Parent } from '@/lib/types';
+import type { ExpenseSplit, Parent, ParentNames } from '@/lib/types';
 
 interface ParentSplitCardProps {
   expenseSplit: ExpenseSplit;
   onUpdate: (data: ExpenseSplit) => void;
+  parentNames: ParentNames;
 }
 
 export function ParentSplitCard({
   expenseSplit,
   onUpdate,
+  parentNames,
 }: ParentSplitCardProps) {
   const handleSplitChange = (
     parent: Parent,
@@ -53,7 +55,7 @@ export function ParentSplitCard({
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="parent1-split">Parent 1 (%)</Label>
+          <Label htmlFor="parent1-split">{parentNames['Parent 1']} (%)</Label>
           <Input
             id="parent1-split"
             type="number"
@@ -62,7 +64,7 @@ export function ParentSplitCard({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="parent2-split">Parent 2 (%)</Label>
+          <Label htmlFor="parent2-split">{parentNames['Parent 2']} (%)</Label>
           <Input
             id="parent2-split"
             type="number"

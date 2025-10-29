@@ -14,11 +14,13 @@ import { initialData } from '@/lib/data';
 import type { AppData, ChildSupport, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
+import { ParentNamesCard } from './parent-names-card';
 
 const defaultMonthData: MonthData = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
   expenseSplit: { 'Parent 1': 50, 'Parent 2': 50 },
   expenses: [],
+  parentNames: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
 };
 
 export function Dashboard() {
@@ -61,15 +63,15 @@ export function Dashboard() {
   };
   
   const handleTabChange = (value: string) => {
-    if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
+     if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
       toast({
         variant: 'destructive',
         title: 'Incomplete Information',
         description: 'Please select who paid for child support before switching tabs.',
       });
-    } else {
-      setActiveTab(value);
+      return;
     }
+    setActiveTab(value);
   };
 
 
@@ -143,6 +145,7 @@ export function Dashboard() {
                   childSupport={currentMonthData.childSupport}
                   onUpdateExpense={updateExpense}
                   onUpdateChildSupport={updateChildSupport}
+                  parentNames={currentMonthData.parentNames}
                 />
                 <SummaryCard
                   parent="Parent 2"
@@ -152,6 +155,7 @@ export function Dashboard() {
                   childSupport={currentMonthData.childSupport}
                   onUpdateExpense={updateExpense}
                   onUpdateChildSupport={updateChildSupport}
+                  parentNames={currentMonthData.parentNames}
                 />
               </div>
             </div>
@@ -162,20 +166,27 @@ export function Dashboard() {
                   expenses={currentMonthData.expenses}
                   onDelete={deleteExpense}
                   currentDate={currentDate}
+                  parentNames={currentMonthData.parentNames}
                 >
-                  <AddExpenseDialog onAddExpense={addExpense} />
+                  <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
                 </ExpensesCard>
               </div>
           </TabsContent>
           <TabsContent value="settings">
             <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+               <ParentNamesCard
+                  parentNames={currentMonthData.parentNames}
+                  onUpdate={(parentNames) => updateMonthData({ parentNames })}
+               />
                <ChildSupportCard
                 childSupport={currentMonthData.childSupport}
                 onUpdate={updateChildSupport}
+                parentNames={currentMonthData.parentNames}
               />
               <ParentSplitCard
                 expenseSplit={currentMonthData.expenseSplit}
                 onUpdate={(expenseSplit) => updateMonthData({ expenseSplit })}
+                parentNames={currentMonthData.parentNames}
               />
             </div>
           </TabsContent>

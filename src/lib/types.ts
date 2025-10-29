@@ -21,6 +21,11 @@ export interface Expense {
 
 export type Parent = 'Parent 1' | 'Parent 2';
 
+export interface ParentNames {
+  'Parent 1': string;
+  'Parent 2': string;
+}
+
 export interface ChildSupport {
   amount: number;
   paidBy: Parent | 'None';
@@ -36,6 +41,7 @@ export interface MonthData {
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
   expenses: Expense[];
+  parentNames: ParentNames;
 }
 
 export interface AppData {

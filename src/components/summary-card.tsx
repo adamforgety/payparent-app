@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { ChildSupport, Expense, ExpenseSplit, Parent } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
@@ -22,6 +22,7 @@ interface SummaryCardProps {
   childSupport: ChildSupport;
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
+  parentNames: ParentNames;
 }
 
 export function SummaryCard({
@@ -32,6 +33,7 @@ export function SummaryCard({
   childSupport,
   onUpdateExpense,
   onUpdateChildSupport,
+  parentNames,
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
@@ -69,9 +71,9 @@ export function SummaryCard({
   const pendingYourConfirmationAmount =
     expenses
       .filter(
-        (exp) => exp.status === 'Pending' && exp.paidBy === parent
+        (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
       )
-      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[otherParent] / 100), 0) +
+      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[parent] / 100), 0) +
     (childSupport.status === 'Pending' && childSupport.paidBy === otherParent
       ? childSupport.amount
       : 0);
@@ -79,8 +81,9 @@ export function SummaryCard({
 
   const isSettled = Math.abs(netBalance) < 0.01 && pendingYourConfirmationAmount === 0;
   let transferDescription = 'All settled up';
+  const otherParentName = parentNames[otherParent];
   if (!isSettled) {
-    transferDescription = netBalance > 0 ? `You are owed by ${otherParent}` : `You owe ${otherParent}`;
+    transferDescription = netBalance > 0 ? `You are owed by ${otherParentName}` : `You owe ${otherParentName}`;
   }
   
   return (
@@ -91,7 +94,7 @@ export function SummaryCard({
             <Scale className="h-5 w-5 text-secondary-foreground" />
           </span>
           <div>
-            <CardTitle>{parent}</CardTitle>
+            <CardTitle>{parentNames[parent]}</CardTitle>
             <CardDescription>Monthly contribution summary.</CardDescription>
           </div>
         </div>
@@ -147,6 +150,7 @@ export function SummaryCard({
           onUpdateExpense={onUpdateExpense}
           onUpdateChildSupport={onUpdateChildSupport}
           netBalance={netBalance}
+          parentNames={parentNames}
         >
           <Button className="w-full" disabled={isSettled}>
             <HandCoins className="mr-2 h-4 w-4" />

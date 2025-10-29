@@ -26,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
@@ -37,6 +37,7 @@ interface ExpensesCardProps {
   onDelete: (expenseId: string) => void;
   children: ReactNode;
   currentDate: Date;
+  parentNames: ParentNames;
 }
 
 const statusVariant: Record<PaymentStatus, 'default' | 'secondary' | 'destructive'> = {
@@ -57,6 +58,7 @@ export function ExpensesCard({
   onDelete,
   children,
   currentDate,
+  parentNames,
 }: ExpensesCardProps) {
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
@@ -108,7 +110,7 @@ export function ExpensesCard({
                     <Badge variant="outline">{expense.category}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{expense.paidBy}</Badge>
+                    <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[expense.paidBy]}</Badge>
                   </TableCell>
                   <TableCell>
                      <Badge

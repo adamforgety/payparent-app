@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Expense, Parent, ExpenseSplit, ChildSupport, PaymentStatus } from '@/lib/types';
+import type { Expense, Parent, ExpenseSplit, ChildSupport, PaymentStatus, ParentNames } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -36,6 +36,7 @@ interface SettleBalanceDialogProps {
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: React.ReactNode;
   netBalance: number;
+  parentNames: ParentNames;
 }
 
 type ItemToSettle = {
@@ -57,6 +58,7 @@ export function SettleBalanceDialog({
   onUpdateChildSupport,
   children,
   netBalance,
+  parentNames,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const parentSplit = expenseSplit[parent] / 100;
@@ -138,6 +140,8 @@ export function SettleBalanceDialog({
   const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + item.owedAmount, 0);
   const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
+  const otherParentName = parentNames[otherParent];
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -145,10 +149,10 @@ export function SettleBalanceDialog({
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
-            Manage payments between you and {otherParent}. Mark items as paid or confirm receipt of payments.
+            Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
             <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
               <div className="text-sm text-muted-foreground">
-                {netBalance >= 0 ? `${otherParent} owes you` : `You owe ${otherParent}`}
+                {netBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
               </div>
               <div
                 className={cn(

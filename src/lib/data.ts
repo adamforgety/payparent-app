@@ -15,5 +15,9 @@ export const initialData: AppData = {
       'Parent 2': 50,
     },
     expenses: [],
+    parentNames: {
+      'Parent 1': 'Parent 1',
+      'Parent 2': 'Parent 2',
+    },
   },
 };
