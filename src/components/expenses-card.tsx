@@ -32,8 +32,6 @@ import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
 import { cn } from '@/lib/utils';
 import { EditExpenseDialog } from './edit-expense-dialog';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
 import { Separator } from './ui/separator';
 
 interface ExpensesCardProps {
@@ -88,7 +86,6 @@ export function ExpensesCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
   const totalSettled = paidItems.reduce((sum, item) => sum + item.amount, 0);
 
-  // --- Calculation Logic (Mirrored from SummaryCard) ---
   const calculateParentBalance = (parent: 'Parent 1' | 'Parent 2') => {
     const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
     const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -104,10 +101,8 @@ export function ExpensesCard({
   
     if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
-        // Payer owes this amount
         netBalance -= childSupport.amount;
       } else {
-        // Recipient is owed this amount
         netBalance += childSupport.amount;
       }
     }
@@ -119,8 +114,6 @@ export function ExpensesCard({
 
   let parent1Owes = parent1NetBalance < 0 ? Math.abs(parent1NetBalance) : 0;
   let parent2Owes = parent2NetBalance < 0 ? Math.abs(parent2NetBalance) : 0;
-
-  // --- End Calculation Logic ---
 
   const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
     if (item.id === 'child-support') {
@@ -182,7 +175,7 @@ export function ExpensesCard({
               <TableHead>Description</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Paid By</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[100px]">Status</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="w-[120px] no-print text-right">Actions</TableHead>
             </TableRow>
@@ -204,19 +197,9 @@ export function ExpensesCard({
                     {item.paidBy && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                   </TableCell>
                   <TableCell>
-                     <div className="flex items-center space-x-2">
-                        <Switch
-                            id={`status-switch-${item.id}`}
-                            checked={item.status === 'Paid'}
-                            onCheckedChange={(checked) =>
-                                handleStatusChange(item, checked ? 'Paid' : 'Unpaid')
-                            }
-                            aria-label={`Mark as ${item.status === 'Paid' ? 'Unpaid' : 'Paid'}`}
-                        />
-                        <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Paid' ? 'text-green-600' : 'text-destructive')}>
-                          {item.status}
-                        </Label>
-                    </div>
+                     <Badge variant={item.status === 'Paid' ? 'secondary' : 'destructive'}>
+                        {item.status}
+                      </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     ${item.amount.toFixed(2)}
