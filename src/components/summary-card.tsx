@@ -1,3 +1,5 @@
+'use client';
+
 import { HandCoins, Scale } from 'lucide-react';
 
 import {
@@ -42,26 +44,29 @@ export function SummaryCard({
   const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
   const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   
-  const expenseShare = totalUnpaidExpenses * (parentSplitPercentage / 100);
-
   const unpaidPaidByParent = unpaidExpenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-
-  let childSupportAdjustment = 0;
-   if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
-      if (childSupport.paidBy === parent) {
-        // Parent is the payer, so this amount is credited to them (reduces what they owe overall)
-        childSupportAdjustment = unpaidPaidByParent - expenseShare + childSupport.amount;
-      } else {
-        // Parent is the receiver, so this amount is debited from them (increases what they owe)
-        childSupportAdjustment = unpaidPaidByParent - expenseShare - childSupport.amount;
-      }
-    } else {
-      childSupportAdjustment = unpaidPaidByParent - expenseShare;
-    }
     
-  const netBalance = childSupportAdjustment;
+  const parentExpenseShare = totalUnpaidExpenses * (parentSplitPercentage / 100);
+  
+  // This is the balance from shared expenses only.
+  // Positive means you are owed money, negative means you owe money for expenses.
+  const expenseBalance = unpaidPaidByParent - parentExpenseShare;
+
+  let netBalance = expenseBalance;
+
+  // Apply child support to the balance
+  if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
+      if (childSupport.paidBy === parent) {
+        // You are the payer. This payment is a "credit" for you, reducing what you owe for other expenses.
+        netBalance += childSupport.amount;
+      } else {
+        // You are the receiver. This amount is owed to you.
+        netBalance -= childSupport.amount;
+      }
+  }
+
 
   const paidItems = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidItems.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
