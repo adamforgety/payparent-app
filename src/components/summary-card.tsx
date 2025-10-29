@@ -68,27 +68,21 @@ export function SummaryCard({
   const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
-  // Amount waiting for ME to confirm. This means the OTHER parent has paid and is waiting for my confirmation.
+  // This is the correct logic.
+  // I need to confirm items that the OTHER parent paid for.
   const pendingYourConfirmationAmount =
     expenses
-      .filter(
-        (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
-      )
-      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[parent] / 100), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent
-      ? childSupport.amount
-      : 0);
+      .filter(exp => exp.status === 'Pending' && exp.paidBy === otherParent)
+      .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[parent] / 100)), 0) +
+    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0);
 
-  // Amount I paid, waiting for the OTHER parent to confirm.
+
+  // The other parent needs to confirm items that I paid for.
   const awaitingOtherParentConfirmationAmount =
     expenses
-      .filter(
-        (exp) => exp.status === 'Pending' && exp.paidBy === parent
-      )
-      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[otherParent] / 100), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === parent
-      ? childSupport.amount
-      : 0);
+      .filter(exp => exp.status === 'Pending' && exp.paidBy === parent)
+      .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[otherParent] / 100)), 0) +
+    (childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0);
 
 
   const isSettled = netBalance === 0 && pendingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
@@ -96,7 +90,7 @@ export function SummaryCard({
   const otherParentName = parentNames[otherParent];
   if (!isSettled) {
     if (netBalance > 0) {
-        transferDescription = `You are owed by ${otherParentName}`;
+        transferDescription = `${otherParentName} owes you`;
     } else if (netBalance < 0) {
         transferDescription = `You owe ${otherParentName}`;
     } else if (pendingYourConfirmationAmount > 0 || awaitingOtherParentConfirmationAmount > 0) {
@@ -106,7 +100,9 @@ export function SummaryCard({
   
   // I owe the other parent for expenses they paid, OR I owe child support
   const hasItemsToPay = expenses.some(e => e.paidBy === otherParent && e.status === 'Unpaid') || (childSupport.paidBy === parent && childSupport.status === 'Unpaid');
-  // The other parent has paid for something and is waiting for my confirmation
+  
+  // The other parent has paid for something and is waiting for my confirmation.
+  // This means there are pending items that the OTHER parent paid for.
   const hasItemsToConfirm = expenses.some(e => e.paidBy === otherParent && e.status === 'Pending') || (childSupport.paidBy === otherParent && childSupport.status === 'Pending');
 
   const isButtonDisabled = !hasItemsToPay && !hasItemsToConfirm;
