@@ -1,5 +1,4 @@
 import { HandCoins, Scale } from 'lucide-react';
-import { useMemo } from 'react';
 
 import {
   Card,
@@ -55,6 +54,7 @@ export function SummaryCard({
   }
 
   // Final balance:
+  // (Total You Paid) - (Your Expense Share + Your Child Support Obligation)
   // A positive balance means they are owed money.
   // A negative balance means they owe money.
   const netBalance = totalPaidByParent - (expenseShare + childSupportAdjustment);
@@ -74,14 +74,10 @@ export function SummaryCard({
     transferDescription = 'All settled up';
     balanceDescription = "You've paid your exact share.";
   }
-
-  const expensesOwedByOtherParent = useMemo(() => {
-    // These are expenses paid by `parent` that `otherParent` needs to contribute to.
-    // We only care about `Unpaid` expenses.
-    return expenses.filter(
+  
+  const expensesOwedByOtherParent = expenses.filter(
       (exp) => exp.paidBy === parent && exp.status === 'Unpaid'
-    );
-  }, [expenses, parent]);
+  );
 
   return (
     <Card className="flex flex-col">
