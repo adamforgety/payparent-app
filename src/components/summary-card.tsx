@@ -50,7 +50,7 @@ export function SummaryCard({
     }
   }
 
-  const netBalance = totalPaidByParent - (expenseShare + childSupportAdjustment);
+  const netBalance = totalPaidByParent - expenseShare - childSupportAdjustment;
 
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
