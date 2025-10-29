@@ -41,27 +41,25 @@ export function SummaryCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
 
   const expenseShare = totalExpenses * (parentSplitPercentage / 100);
-
+  
   let childSupportAdjustment = 0;
   if (childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // This parent paid child support, so it increases their contribution
+      // This parent paid child support, so it's part of their total contribution
       childSupportAdjustment = childSupport.amount;
     } else {
-      // This parent received child support, so it reduces their net contribution
+      // This parent receives child support, so it counts against their contribution
       childSupportAdjustment = -childSupport.amount;
     }
   }
 
-  // Net Balance: (What you paid) - (Your share of costs)
-  // Your share of costs is your expense share + what you pay in child support.
-  // If you receive child support, it reduces your share.
-  const netBalance = totalPaidByParent - (expenseShare + childSupportAdjustment);
+  // Net Balance = (Total you contributed: direct payments + child support paid) - (Your responsibility: expense share)
+  const netBalance = totalPaidByParent + childSupportAdjustment - expenseShare;
 
   let transferDescription: string;
-  if (netBalance > 0) {
+  if (netBalance > 0.005) { // Use a small epsilon for floating point comparison
     transferDescription = `${otherParent} owes you`;
-  } else if (netBalance < 0) {
+  } else if (netBalance < -0.005) {
     transferDescription = `You owe ${otherParent}`;
   } else {
     transferDescription = 'All settled up';
@@ -96,11 +94,8 @@ export function SummaryCard({
           <p
             className={cn(
               'font-semibold',
-              childSupportAdjustment === 0 && '',
-              // If you PAY support, it's a positive adjustment (cost) to you, shown as green on other side
-              childSupportAdjustment > 0 && 'text-red-600', 
-              // If you RECEIVE support, it's a negative adjustment (credit) to you, shown as red on other side
-              childSupportAdjustment < 0 && 'text-green-600'
+               childSupportAdjustment > 0 ? 'text-red-600' :
+               childSupportAdjustment < 0 ? 'text-green-600' : ''
             )}
           >
             {childSupportAdjustment >= 0
