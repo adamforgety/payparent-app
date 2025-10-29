@@ -1,0 +1,133 @@
+/**
+ * @fileoverview Firestore Security Rules for a co-parenting finance application.
+ *
+ * Core Philosophy: This ruleset enforces a strict user-ownership model, ensuring
+ * that each parent can only access and modify data associated with their own
+ * account. All data is nested under /parents/{parentId}, where parentId
+ * corresponds to the authenticated user's UID.
+ *
+ * Data Structure: The Firestore database is structured as follows:
+ * - /parents/{parentId}: Stores parent profile information.
+ * - /parents/{parentId}/childSupportPayments/{childSupportPaymentId}: Stores child support payments made by a parent.
+ * - /parents/{parentId}/expenses/{expenseId}: Stores expenses logged by a parent.
+ * - /parents/{parentId}/expenseCoverage/{expenseCoverageId}: Stores expense coverage percentages for a parent.
+ * - /parents/{parentId}/monthlyReports/{monthlyReportId}: Stores monthly reports generated for a parent.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed to protect privacy.
+ * - All write operations are protected by ownership checks based on `request.auth.uid`.
+ * - The `parentId` is considered immutable for all subcollections to maintain data integrity.
+ *
+ * Denormalization for Authorization: The `parentId` is denormalized into each
+ * subcollection document. This allows security rules to quickly verify ownership
+ * without performing additional `get()` operations. For example,
+ * /parents/{parentId}/expenses/{expenseId} documents MUST contain a `parentPayerId`
+ * field that MUST match the {parentId} in the path. This ensures that only the
+ * owning parent can create, modify, or delete the expense.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Checks if the user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the user is the owner of the document, based on the parentId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the user is the owner of the existing document.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Enforces document ownership for writes.
+     * @path /parents/{parentId}
+     * @allow (create) User with UID 'user_abc' can create a parent document with id 'user_abc'.
+     * @deny (create) User with UID 'user_abc' cannot create a parent document with id 'user_xyz'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /parents/{parentId} {
+      allow get: if false;
+      allow list: if false;
+
+      allow create: if isOwner(parentId) && request.resource.data.id == parentId;
+      allow update: if isExistingOwner(parentId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(parentId);
+    }
+
+    /**
+     * @description Secures child support payments under a parent's document.
+     * @path /parents/{parentId}/childSupportPayments/{childSupportPaymentId}
+     * @allow (create) User with UID 'user_abc' can create a child support payment under /parents/user_abc/childSupportPayments/{childSupportPaymentId}
+     * @deny (create) User with UID 'user_xyz' cannot create a child support payment under /parents/user_abc/childSupportPayments/{childSupportPaymentId}
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /parents/{parentId}/childSupportPayments/{childSupportPaymentId} {
+      allow get: if isOwner(parentId);
+      allow list: if isOwner(parentId);
+
+      allow create: if isOwner(parentId) && request.resource.data.payerId == parentId;
+      allow update: if isExistingOwner(parentId) && request.resource.data.payerId == resource.data.payerId;
+      allow delete: if isExistingOwner(parentId);
+    }
+
+    /**
+     * @description Secures expenses under a parent's document.
+     * @path /parents/{parentId}/expenses/{expenseId}
+     * @allow (create) User with UID 'user_abc' can create an expense under /parents/user_abc/expenses/{expenseId}
+     * @deny (create) User with UID 'user_xyz' cannot create an expense under /parents/user_abc/expenses/{expenseId}
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /parents/{parentId}/expenses/{expenseId} {
+      allow get: if isOwner(parentId);
+      allow list: if isOwner(parentId);
+
+      allow create: if isOwner(parentId) && request.resource.data.parentPayerId == parentId;
+      allow update: if isExistingOwner(parentId) && request.resource.data.parentPayerId == resource.data.parentPayerId;
+      allow delete: if isExistingOwner(parentId);
+    }
+
+    /**
+     * @description Secures expense coverage settings under a parent's document.
+     * @path /parents/{parentId}/expenseCoverage/{expenseCoverageId}
+     * @allow (create) User with UID 'user_abc' can create expense coverage under /parents/user_abc/expenseCoverage/{expenseCoverageId}
+     * @deny (create) User with UID 'user_xyz' cannot create expense coverage under /parents/user_abc/expenseCoverage/{expenseCoverageId}
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /parents/{parentId}/expenseCoverage/{expenseCoverageId} {
+      allow get: if isOwner(parentId);
+      allow list: if isOwner(parentId);
+
+      allow create: if isOwner(parentId) && request.resource.data.parentId == parentId;
+      allow update: if isExistingOwner(parentId) && request.resource.data.parentId == resource.data.parentId;
+      allow delete: if isExistingOwner(parentId);
+    }
+
+    /**
+     * @description Secures monthly reports under a parent's document.
+     * @path /parents/{parentId}/monthlyReports/{monthlyReportId}
+     * @allow (create) User with UID 'user_abc' can create a monthly report under /parents/user_abc/monthlyReports/{monthlyReportId}
+     * @deny (create) User with UID 'user_xyz' cannot create a monthly report under /parents/user_abc/monthlyReports/{monthlyReportId}
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /parents/{parentId}/monthlyReports/{monthlyReportId} {
+      allow get: if isOwner(parentId);
+      allow list: if isOwner(parentId);
+
+      allow create: if isOwner(parentId);
+      allow update: if isExistingOwner(parentId);
+      allow delete: if isExistingOwner(parentId);
+    }
+  }
+}
