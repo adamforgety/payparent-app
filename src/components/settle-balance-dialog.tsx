@@ -65,6 +65,8 @@ export function SettleBalanceDialog({
   const otherParentSplit = expenseSplit[otherParent] / 100;
 
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
+    // Expenses I paid for that are not settled yet.
+    // The other parent owes me their share.
     const unsettledExpensesPaidByMe = expenses
       .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
       .map((exp): ItemToSettle => ({
@@ -76,6 +78,7 @@ export function SettleBalanceDialog({
         type: 'expense',
       }));
 
+    // Child support the other parent owes me that is not settled.
     const childSupportOwedToMe: ItemToSettle[] = [];
     if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status !== 'Paid') {
       childSupportOwedToMe.push({
@@ -92,8 +95,10 @@ export function SettleBalanceDialog({
   }, [expenses, childSupport, parent, otherParentSplit, otherParent]);
 
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
+    // Expenses the other parent paid for that are not settled.
+    // I owe my share.
     const unsettledExpensesPaidByOther = expenses
-      .filter((exp) => exp.paidBy === otherParent && exp.status !== 'Paid')
+      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
         description: exp.description,
@@ -103,8 +108,9 @@ export function SettleBalanceDialog({
         type: 'expense',
       }));
 
+    // Child support I owe that is not settled.
     const childSupportOwedByMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status !== 'Paid') {
+    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
       childSupportOwedByMe.push({
         id: 'child-support',
         description: 'Child Support',
@@ -136,7 +142,7 @@ export function SettleBalanceDialog({
           if (originalExpense) {
             onUpdateExpense({ ...originalExpense, status: 'Pending' });
           }
-        } else {
+        } else if (item.type === 'child_support' && childSupport.status === 'Unpaid') {
           onUpdateChildSupport({ ...childSupport, status: 'Pending' });
         }
       }
@@ -260,7 +266,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
             </Button>
           </div>
         )}
-      <ScrollArea className="h-72 rounded-md border">
+      <ScrollArea className="h-64 rounded-md border">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
