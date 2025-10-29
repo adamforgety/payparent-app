@@ -270,7 +270,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, pare
             </Button>
           </div>
         )}
-      <ScrollArea className="h-[25vh] rounded-md border">
+      <ScrollArea className="h-[40vh] rounded-md border">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
