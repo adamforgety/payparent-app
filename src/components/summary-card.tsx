@@ -74,9 +74,9 @@ export function SummaryCard({
   let awaitingYourConfirmationAmount = 0;
   let awaitingOtherParentConfirmationAmount = 0;
 
-  const pendingItems = expenses.filter(exp => exp.status === 'Pending');
+  const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
 
-  pendingItems.forEach(exp => {
+  pendingExpenses.forEach(exp => {
     // If the other parent paid, it's awaiting YOUR confirmation.
     if (exp.paidBy === otherParent) {
       awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
@@ -141,16 +141,16 @@ export function SummaryCard({
           <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
-        {awaitingYourConfirmationAmount > 0 && (
+        {awaitingOtherParentConfirmationAmount > 0 && (
            <div className="flex items-center justify-between text-sm">
             <p className="text-yellow-600">Awaiting Your Confirmation</p>
-            <p className="font-semibold text-yellow-600">${awaitingYourConfirmationAmount.toFixed(2)}</p>
+            <p className="font-semibold text-yellow-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
-        {awaitingOtherParentConfirmationAmount > 0 && (
+        {awaitingYourConfirmationAmount > 0 && (
           <div className="flex items-center justify-between text-sm">
             <p className="text-blue-600">Awaiting {otherParentName}'s Confirmation</p>
-            <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
+            <p className="font-semibold text-blue-600">${awaitingYourConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
         <div className="flex items-center justify-between text-sm">
