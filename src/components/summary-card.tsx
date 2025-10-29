@@ -82,13 +82,13 @@ export function SummaryCard({
 
   // Handle EXPENSES confirmation amounts
   pendingExpenses.forEach(exp => {
-    // If the other parent paid, it's awaiting YOUR confirmation.
-    if (exp.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
-    }
     // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
-    else if (exp.paidBy === parent) {
+    if (exp.paidBy === parent) {
       awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+    }
+    // If the other parent paid, it's awaiting YOUR confirmation.
+    else if (exp.paidBy === otherParent) {
+      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
     }
   });
 
