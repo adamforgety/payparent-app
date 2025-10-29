@@ -9,6 +9,7 @@ import { ExpensesCard } from '@/components/expenses-card';
 import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
 import { SummaryCard } from '@/components/summary-card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialData } from '@/lib/data';
 import type { AppData, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
@@ -94,48 +95,56 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-          <div className="space-y-6 lg:col-span-1 print-grid">
-            <ChildSupportCard
-              childSupport={currentMonthData.childSupport}
-              onUpdate={ (childSupport) => updateMonthData({ childSupport }) }
-            />
-            <ParentSplitCard
-              expenseSplit={currentMonthData.expenseSplit}
-              onUpdate={ (expenseSplit) => updateMonthData({ expenseSplit }) }
-            />
-          </div>
-
-          <div className="lg:col-span-2 print-col-span-2">
-            <ExpensesCard
-              expenses={currentMonthData.expenses}
-              onDelete={deleteExpense}
-            >
-              <AddExpenseDialog onAddExpense={addExpense} />
-            </ExpensesCard>
-          </div>
-        </div>
-
-        <div className="mt-8">
-            <h2 className="text-2xl font-bold tracking-tight mb-4">Monthly Summary</h2>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8 print-grid">
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 no-print">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+          <TabsContent value="dashboard">
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold tracking-tight mb-4 sr-only">Monthly Summary</h2>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8 print-grid">
                 <SummaryCard
-                    parent="Parent 1"
-                    totalExpenses={totalExpenses}
-                    expenses={currentMonthData.expenses}
-                    expenseSplit={currentMonthData.expenseSplit}
-                    childSupport={currentMonthData.childSupport}
+                  parent="Parent 1"
+                  totalExpenses={totalExpenses}
+                  expenses={currentMonthData.expenses}
+                  expenseSplit={currentMonthData.expenseSplit}
+                  childSupport={currentMonthData.childSupport}
                 />
                 <SummaryCard
-                    parent="Parent 2"
-                    totalExpenses={totalExpenses}
-                    expenses={currentMonthData.expenses}
-                    expenseSplit={currentMonthData.expenseSplit}
-                    childSupport={currentMonthData.childSupport}
+                  parent="Parent 2"
+                  totalExpenses={totalExpenses}
+                  expenses={currentMonthData.expenses}
+                  expenseSplit={currentMonthData.expenseSplit}
+                  childSupport={currentMonthData.childSupport}
                 />
+              </div>
             </div>
-        </div>
-
+          </TabsContent>
+          <TabsContent value="expenses">
+             <div className="mt-6">
+                <ExpensesCard
+                  expenses={currentMonthData.expenses}
+                  onDelete={deleteExpense}
+                >
+                  <AddExpenseDialog onAddExpense={addExpense} />
+                </ExpensesCard>
+              </div>
+          </TabsContent>
+          <TabsContent value="settings">
+            <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+               <ChildSupportCard
+                childSupport={currentMonthData.childSupport}
+                onUpdate={(childSupport) => updateMonthData({ childSupport })}
+              />
+              <ParentSplitCard
+                expenseSplit={currentMonthData.expenseSplit}
+                onUpdate={(expenseSplit) => updateMonthData({ expenseSplit })}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
