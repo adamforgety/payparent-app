@@ -122,12 +122,14 @@ export function Dashboard() {
                 <SummaryCard
                     parent="Parent 1"
                     totalExpenses={totalExpenses}
+                    expenses={currentMonthData.expenses}
                     expenseSplit={currentMonthData.expenseSplit}
                     childSupport={currentMonthData.childSupport}
                 />
                 <SummaryCard
                     parent="Parent 2"
                     totalExpenses={totalExpenses}
+                    expenses={currentMonthData.expenses}
                     expenseSplit={currentMonthData.expenseSplit}
                     childSupport={currentMonthData.childSupport}
                 />

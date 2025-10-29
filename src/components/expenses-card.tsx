@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/tooltip';
 import type { Expense } from '@/lib/types';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -66,6 +67,7 @@ export function ExpensesCard({
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Description</TableHead>
+              <TableHead>Paid By</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="w-[50px] no-print"></TableHead>
             </TableRow>
@@ -79,6 +81,9 @@ export function ExpensesCard({
                   </TableCell>
                   <TableCell className="font-medium">
                     {expense.description}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{expense.paidBy}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     ${expense.amount.toFixed(2)}
@@ -104,7 +109,7 @@ export function ExpensesCard({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   No expenses logged for this month.
                 </TableCell>
               </TableRow>

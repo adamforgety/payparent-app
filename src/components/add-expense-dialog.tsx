@@ -32,14 +32,24 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Expense } from '@/lib/types';
+import type { Expense, Parent } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.coerce.number().positive('Amount must be a positive number'),
   date: z.date({ required_error: 'A date is required.' }),
+  paidBy: z.enum(['Parent 1', 'Parent 2'], {
+    required_error: 'Please select who paid.',
+  }),
 });
 
 interface AddExpenseDialogProps {
@@ -63,6 +73,7 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
     onAddExpense({
       ...values,
       date: values.date.toISOString(),
+      paidBy: values.paidBy as Parent,
     });
     toast({
       title: 'Expense Added',
@@ -102,19 +113,45 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount ($)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="50.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount ($)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="50.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="paidBy"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Paid By</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select parent" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Parent 1">Parent 1</SelectItem>
+                        <SelectItem value="Parent 2">Parent 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="date"

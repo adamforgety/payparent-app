@@ -8,11 +8,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { ChildSupport, ExpenseSplit, Parent } from '@/lib/types';
+import type { ChildSupport, ExpenseSplit, Parent, Expense } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface SummaryCardProps {
   parent: Parent;
   totalExpenses: number;
+  expenses: Expense[];
   expenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
 }
@@ -20,30 +22,34 @@ interface SummaryCardProps {
 export function SummaryCard({
   parent,
   totalExpenses,
+  expenses,
   expenseSplit,
   childSupport,
 }: SummaryCardProps) {
   const parentSplit = expenseSplit[parent];
   const expenseShare = totalExpenses * (parentSplit / 100);
+  const totalPaidByParent = expenses.filter(exp => exp.paidBy === parent).reduce((sum, exp) => sum + exp.amount, 0);
 
   let childSupportEffect = 0;
-  let supportDescription = 'No contribution';
   if (childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
       childSupportEffect = -childSupport.amount;
-      supportDescription = 'Payment sent';
     } else {
       childSupportEffect = childSupport.amount;
-      supportDescription = 'Payment received';
     }
   }
 
-  const netContribution = expenseShare;
+  const netBalance = totalPaidByParent - expenseShare - childSupportEffect;
   
-  // The summary shows the parent's share of expenses.
-  // The child support is a separate transfer. The prompt is about calculating contributions.
-  // "Calculate each parent's contribution for the month". This is their share of expenses.
-  // Child support is a fixed transfer on top of that. I will show them as separate items.
+  let balanceDescription = "Amount you've paid is less than your share.";
+  if(netBalance > 0) balanceDescription = "You've paid more than your share.";
+  if(netBalance === 0) balanceDescription = "All settled up.";
+
+  const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+  let transferDescription = `Owes ${otherParent}`;
+  if(netBalance < 0) transferDescription = `Receives from ${otherParent}`;
+  if(netBalance === 0) transferDescription = "No transfer needed";
+
 
   return (
     <Card>
@@ -63,23 +69,30 @@ export function SummaryCard({
           <p className="text-muted-foreground">Share of Expenses ({parentSplit}%)</p>
           <p className="font-semibold">${expenseShare.toFixed(2)}</p>
         </div>
-        <Separator />
+         <div className="flex justify-between items-center">
+          <p className="text-muted-foreground">Total Paid</p>
+          <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
+        </div>
         <div className="flex justify-between items-center">
             <p className="text-muted-foreground">Child Support</p>
-            <div className='text-right'>
-                <p className={`font-semibold ${childSupportEffect === 0 ? '' : childSupportEffect > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {childSupportEffect >= 0 ? '+' : '-'}${Math.abs(childSupportEffect).toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">{supportDescription}</p>
-            </div>
+            <p className={`font-semibold ${childSupportEffect === 0 ? '' : childSupportEffect > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {childSupportEffect >= 0 ? '+' : '-'}${Math.abs(childSupportEffect).toFixed(2)}
+            </p>
         </div>
         <Separator />
-         <div className="flex justify-between items-center text-lg font-bold">
-          <p>Total Contribution</p>
-          <p className="text-primary">${(expenseShare).toFixed(2)}</p>
+         <div className="rounded-lg bg-secondary/50 p-4 text-center">
+            <p className="text-sm text-muted-foreground">{transferDescription}</p>
+            <p className={cn(
+                "text-2xl font-bold",
+                netBalance > 0 && "text-red-600",
+                netBalance < 0 && "text-green-600",
+            )}>
+              ${Math.abs(netBalance).toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground">{balanceDescription}</p>
         </div>
         <p className="text-xs text-muted-foreground pt-2">
-            This is the total share of this month's expenses. Child support is handled as a separate transfer between parents.
+            This is the net balance for the month. A positive amount indicates you are owed money, and a negative amount means you owe money to the other parent.
         </p>
       </CardContent>
     </Card>

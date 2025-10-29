@@ -3,6 +3,7 @@ export interface Expense {
   date: string; // ISO string
   description: string;
   amount: number;
+  paidBy: Parent;
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';

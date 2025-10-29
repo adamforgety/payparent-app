@@ -16,10 +16,10 @@ export const initialData: AppData = {
       'Parent 2': 50,
     },
     expenses: [
-      { id: 'exp1', date: new Date().toISOString(), description: 'School Uniform', amount: 150.75 },
-      { id: 'exp2', date: new Date().toISOString(), description: 'Soccer Club Fees', amount: 75 },
-      { id: 'exp3', date: new Date().toISOString(), description: 'Groceries (Week 1)', amount: 220.50 },
-      { id: 'exp4', date: new Date().toISOString(), description: 'Dentist Appointment', amount: 125 },
+      { id: 'exp1', date: new Date().toISOString(), description: 'School Uniform', amount: 150.75, paidBy: 'Parent 1' },
+      { id: 'exp2', date: new Date().toISOString(), description: 'Soccer Club Fees', amount: 75, paidBy: 'Parent 2' },
+      { id: 'exp3', date: new Date().toISOString(), description: 'Groceries (Week 1)', amount: 220.50, paidBy: 'Parent 1' },
+      { id: 'exp4', date: new Date().toISOString(), description: 'Dentist Appointment', amount: 125, paidBy: 'Parent 2' },
     ],
   },
   [format(lastMonth, 'yyyy-MM')]: {
@@ -32,9 +32,9 @@ export const initialData: AppData = {
       'Parent 2': 40,
     },
     expenses: [
-      { id: 'exp5', date: new Date(new Date(lastMonth).setDate(5)).toISOString(), description: 'Birthday Gift for Friend', amount: 25 },
-      { id: 'exp6', date: new Date(new Date(lastMonth).setDate(15)).toISOString(), description: 'Field Trip to Museum', amount: 40 },
-      { id: 'exp7', date: new Date(new Date(lastMonth).setDate(22)).toISOString(), description: 'New Shoes', amount: 65 },
+      { id: 'exp5', date: new Date(new Date(lastMonth).setDate(5)).toISOString(), description: 'Birthday Gift for Friend', amount: 25, paidBy: 'Parent 1' },
+      { id: 'exp6', date: new Date(new Date(lastMonth).setDate(15)).toISOString(), description: 'Field Trip to Museum', amount: 40, paidBy: 'Parent 1' },
+      { id: 'exp7', date: new Date(new Date(lastMonth).setDate(22)).toISOString(), description: 'New Shoes', amount: 65, paidBy: 'Parent 2' },
     ],
   },
   [format(twoMonthsAgo, 'yyyy-MM')]: {
@@ -47,8 +47,8 @@ export const initialData: AppData = {
       'Parent 2': 50,
     },
     expenses: [
-       { id: 'exp8', date: new Date(new Date(twoMonthsAgo).setDate(10)).toISOString(), description: 'Art Supplies', amount: 55.40 },
-       { id: 'exp9', date: new Date(new Date(twoMonthsAgo).setDate(18)).toISOString(), description: 'Book Fair', amount: 32.00 },
+       { id: 'exp8', date: new Date(new Date(twoMonthsAgo).setDate(10)).toISOString(), description: 'Art Supplies', amount: 55.40, paidBy: 'Parent 1' },
+       { id: 'exp9', date: new Date(new Date(twoMonthsAgo).setDate(18)).toISOString(), description: 'Book Fair', amount: 32.00, paidBy: 'Parent 2' },
     ]
   }
 };
