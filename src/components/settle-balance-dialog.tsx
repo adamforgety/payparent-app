@@ -115,7 +115,7 @@ export function SettleBalanceDialog({
      }
 
     return [...unsettledExpensesPaidByOther, ...childSupportOwedByMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, parentSplit]);
+  }, [expenses, childSupport, parent, parentSplit, otherParent]);
 
 
   const handleMarkAsPaid = (item: ItemToSettle) => {

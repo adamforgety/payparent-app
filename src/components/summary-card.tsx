@@ -35,12 +35,45 @@ export function SummaryCard({
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+  const otherParentSplitPercentage = expenseSplit[otherParent];
+
 
   const totalPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0)
     + (childSupport.paidBy === parent ? childSupport.amount : 0);
+    
+  const totalPaidByOtherParent = expenses
+    .filter((exp) => exp.paidBy === otherParent)
+    .reduce((sum, exp) => sum + exp.amount, 0)
+     + (childSupport.paidBy === otherParent ? childSupport.amount : 0);
 
+  const unsettledExpenses = expenses.filter(e => e.status !== 'Paid');
+
+  const totalUnsettledAmount = unsettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status !== 'Paid' ? childSupport.amount : 0);
+
+  const unsettledPaidByParent = expenses
+    .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const expenseShare = unsettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) * (parentSplitPercentage / 100);
+
+  let childSupportAdjustment = 0;
+    if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
+    if (childSupport.paidBy === parent) {
+      // I am the payer, so I get "credit" for this amount
+      childSupportAdjustment = childSupport.amount;
+    } else {
+      // The other parent is the payer, so I "owe" this amount
+      childSupportAdjustment = -childSupport.amount;
+    }
+  }
+
+  const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
+
+  const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
+  const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
+  
   const pendingConfirmation = expenses
     .filter(
       (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
@@ -49,28 +82,6 @@ export function SummaryCard({
        return sum + exp.amount * (parentSplitPercentage / 100);
     }, 0) + ((childSupport.status === 'Pending' && childSupport.paidBy === otherParent) ? childSupport.amount : 0);
 
-  const totalSettled = expenses
-    .filter((exp) => exp.status === 'Paid')
-    .reduce((sum, exp) => sum + exp.amount, 0)
-    + (childSupport.status === 'Paid' ? childSupport.amount : 0);
-  
-  const unsettledExpenses = totalExpenses - expenses.filter(e => e.status === 'Paid').reduce((s, e) => s + e.amount, 0);
-  const unsettledPaidByParent = expenses
-    .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
-    .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const expenseShare = unsettledExpenses * (parentSplitPercentage / 100);
-  
-  let childSupportAdjustment = 0;
-  if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
-    if (childSupport.paidBy === parent) {
-      childSupportAdjustment = childSupport.amount;
-    } else {
-      childSupportAdjustment = -childSupport.amount;
-    }
-  }
-
-  const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
 
   const isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
   let transferDescription = 'All settled up';
