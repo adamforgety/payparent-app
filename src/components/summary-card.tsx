@@ -70,24 +70,33 @@ export function SummaryCard({
   
   const otherParentName = parentNames[otherParent];
 
+  // Logic for confirmation messages
+  let awaitingYourConfirmationAmount = 0;
+  let awaitingOtherParentConfirmationAmount = 0;
 
-  // What YOU need to confirm.
-  // This is money the OTHER parent has sent that is awaiting your confirmation.
-  const awaitingYourConfirmationAmount =
-    expenses
-      .filter(exp => exp.status === 'Pending' && exp.paidBy === otherParent)
-      .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[parent] / 100)), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0);
+  const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
 
+  pendingExpenses.forEach(exp => {
+    // If the other parent paid for the expense, it's awaiting my confirmation.
+    if (exp.paidBy === otherParent) {
+      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
+    }
+    // If I paid for the expense, it's awaiting their confirmation.
+    else if (exp.paidBy === parent) {
+      awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+    }
+  });
 
-  // What the OTHER PARENT needs to confirm.
-  // This is money YOU have sent that is awaiting their confirmation.
-  const awaitingOtherParentConfirmationAmount =
-    expenses
-      .filter(exp => exp.status === 'Pending' && exp.paidBy === parent)
-      .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[otherParent] / 100)), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0);
-  
+  if (childSupport.status === 'Pending') {
+    // If the other parent paid support, it's awaiting my confirmation.
+    if (childSupport.paidBy === otherParent) {
+      awaitingYourConfirmationAmount += childSupport.amount;
+    }
+    // If I paid support, it's awaiting their confirmation.
+    else if (childSupport.paidBy === parent) {
+      awaitingOtherParentConfirmationAmount += childSupport.amount;
+    }
+  }
 
   const isSettled = netBalance === 0 && awaitingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
   let transferDescription = 'All settled up';
@@ -101,9 +110,6 @@ export function SummaryCard({
     }
   }
   
-  const hasItemsToPay = expenses.some(e => e.paidBy === otherParent && e.status === 'Unpaid') || (childSupport.paidBy === parent && childSupport.status === 'Unpaid');
-  const hasItemsToConfirm = expenses.some(e => e.paidBy === otherParent && e.status === 'Pending') || (childSupport.paidBy === parent && childSupport.status === 'Pending');
-
   const isButtonDisabled = !(
       expenses.some(e => e.status === 'Unpaid') ||
       (childSupport.amount > 0 && childSupport.status === 'Unpaid') ||
