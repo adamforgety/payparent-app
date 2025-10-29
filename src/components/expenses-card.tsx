@@ -75,6 +75,14 @@ export function ExpensesCard({
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
+  const totalPaidByParent1 = allItems
+    .filter(item => item.paidBy === 'Parent 1')
+    .reduce((sum, item) => sum + item.amount, 0);
+  
+  const totalPaidByParent2 = allItems
+    .filter(item => item.paidBy === 'Parent 2')
+    .reduce((sum, item) => sum + item.amount, 0);
+
   const totalPaid = allItems
     .filter(item => item.status === 'Paid')
     .reduce((sum, item) => sum + item.amount, 0);
@@ -116,7 +124,7 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex flex-wrap items-center justify-end gap-2">
+          <div className="no-print flex flex-wrap items-center justify-start sm:justify-end gap-2">
             <ExportButton
               expenses={expenses}
               childSupport={childSupport}
@@ -214,17 +222,30 @@ export function ExpensesCard({
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="flex-col items-end gap-4 bg-secondary/50 p-4">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-semibold">Total Monthly Expenses:</span>
-          <span className="text-lg font-bold">
+      <CardFooter className="flex-col items-stretch gap-4 bg-secondary/50 p-4 text-sm">
+        <div className="flex justify-between items-center">
+          <span className="font-semibold">Total Monthly Expenses:</span>
+          <span className="font-bold text-base">
             ${totalExpenses.toFixed(2)}
           </span>
         </div>
         <Separator/>
-         <div className="flex items-center gap-4">
-          <span className="text-sm font-semibold text-green-600">Total Paid:</span>
-          <span className="text-lg font-bold text-green-600">
+        <div className="flex justify-between items-center">
+          <span className="text-muted-foreground">Total Paid by {parentNames['Parent 1']}:</span>
+          <span className="font-medium">
+            ${totalPaidByParent1.toFixed(2)}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-muted-foreground">Total Paid by {parentNames['Parent 2']}:</span>
+          <span className="font-medium">
+            ${totalPaidByParent2.toFixed(2)}
+          </span>
+        </div>
+         <Separator/>
+         <div className="flex justify-between items-center">
+          <span className="font-semibold text-green-600">Total Settled:</span>
+          <span className="font-bold text-green-600 text-base">
             ${totalPaid.toFixed(2)}
           </span>
         </div>
