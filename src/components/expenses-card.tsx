@@ -49,7 +49,7 @@ export function ExpensesCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
               <ReceiptText className="h-5 w-5 text-secondary-foreground" />
@@ -61,7 +61,7 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex items-center gap-2">
+          <div className="no-print flex items-center gap-2 self-end sm:self-auto">
             <ExportButton expenses={expenses} currentDate={currentDate} />
             {children}
           </div>
