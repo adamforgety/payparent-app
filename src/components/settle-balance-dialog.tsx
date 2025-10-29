@@ -147,10 +147,10 @@ export function SettleBalanceDialog({
           <DialogDescription>
             Manage payments between you and {otherParent}. Mark items as paid or confirm receipt of payments.
             <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
-              <p className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 {netBalance >= 0 ? `${otherParent} owes you` : `You owe ${otherParent}`}
-              </p>
-              <p
+              </div>
+              <div
                 className={cn(
                   'text-2xl font-bold',
                    netBalance < 0 && 'text-destructive',
@@ -158,7 +158,7 @@ export function SettleBalanceDialog({
                 )}
               >
                 ${Math.abs(netBalance).toFixed(2)}
-              </p>
+              </div>
             </div>
           </DialogDescription>
         </DialogHeader>
