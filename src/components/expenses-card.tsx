@@ -81,7 +81,7 @@ export function ExpensesCard({
   const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
   const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
-  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' || childSupport.paidBy === 'None' ? childSupport.amount : 0);
+  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' || childSupport.paidBy === 'None' ? 0 : childSupport.amount);
 
 
   return (
@@ -93,9 +93,9 @@ export function ExpensesCard({
               <ReceiptText className="h-5 w-5 text-secondary-foreground" />
             </span>
             <div>
-              <CardTitle>Transactions</CardTitle>
+              <CardTitle>Monthly Ledger</CardTitle>
               <CardDescription>
-                Expenses and child support for the current month.
+                All expenses and child support for the current month.
               </CardDescription>
             </div>
           </div>
