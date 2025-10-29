@@ -132,7 +132,7 @@ export function SettleBalanceDialog({
     }
   }
 
-  const totalOwedToMe = itemsOwedToMe.filter(i => i.status === 'Unpaid').reduce((acc, item) => acc + item.owedAmount, 0);
+  const totalOwedToMe = itemsOwedToMe.filter(i => i.status !== 'Paid').reduce((acc, item) => acc + item.owedAmount, 0);
   const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
   return (
@@ -162,7 +162,7 @@ export function SettleBalanceDialog({
                 actionLabel="Received"
                 onItemAction={handleMarkAsReceived}
                 actionVariant='default'
-                actionDisabled={item => item.status === 'Unpaid'}
+                actionDisabled={item => item.status === 'Unpaid' || item.status === 'Paid'}
                 parent={parent}
              />
           </TabsContent>

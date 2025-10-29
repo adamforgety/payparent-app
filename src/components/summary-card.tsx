@@ -44,9 +44,9 @@ export function SummaryCard({
     childSupport.paidBy === parent && childSupport.status !== 'Unpaid'
       ? childSupport.amount
       : 0;
-
-  const totalPaidByParent = totalExpensesPaidByParent + childSupportPaidByParent;
   
+  const totalPaidByParent = totalExpensesPaidByParent + childSupportPaidByParent;
+
   const pendingExpensesConfirmation = expenses
     .filter(
       (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
@@ -77,10 +77,10 @@ export function SummaryCard({
   let childSupportAdjustment = 0;
   if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // This parent pays support, so it increases what they are owed or decreases what they owe
+      // This parent pays support, which counts as a credit for them.
       childSupportAdjustment = childSupport.amount;
     } else {
-      // This parent receives support, so it decreases what they are owed or increases what they owe
+      // This parent receives support, which counts as a debit for them.
       childSupportAdjustment = -childSupport.amount;
     }
   }
@@ -89,19 +89,17 @@ export function SummaryCard({
 
   let transferDescription: string;
   let buttonText = 'Settle Balance';
-  let buttonDisabled = false;
+  let isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
 
-  if (Math.abs(netBalance) < 0.01) {
+  if (isSettled) {
     transferDescription = 'All settled up';
     buttonText = 'All Settled';
-    buttonDisabled = true;
   } else if (netBalance > 0) {
     transferDescription = `${otherParent} owes you`;
   } else {
     transferDescription = `You owe ${otherParent}`;
   }
-
-
+  
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -143,8 +141,8 @@ export function SummaryCard({
           <p
             className={cn(
               'text-2xl font-bold',
-              netBalance < 0 && 'text-destructive',
-              netBalance > 0 && 'text-green-600'
+               !isSettled && netBalance < 0 && 'text-destructive',
+               !isSettled && netBalance > 0 && 'text-green-600'
             )}
           >
             ${Math.abs(netBalance).toFixed(2)}
@@ -164,7 +162,7 @@ export function SummaryCard({
           onUpdateExpense={onUpdateExpense}
           onUpdateChildSupport={onUpdateChildSupport}
         >
-          <Button className="w-full">
+          <Button className="w-full" disabled={isSettled}>
             <HandCoins className="mr-2 h-4 w-4" />
             {buttonText}
           </Button>
