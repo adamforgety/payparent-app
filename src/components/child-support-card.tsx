@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ChildSupport, Parent } from '@/lib/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ChildSupportCardProps {
   childSupport: ChildSupport;
@@ -35,19 +35,27 @@ export function ChildSupportCard({
     childSupport.amount > 0 ? String(childSupport.amount) : ''
   );
 
+  useEffect(() => {
+     setInputValue(childSupport.amount > 0 ? String(childSupport.amount) : '');
+  }, [childSupport.amount])
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     // Allow empty string or numbers
     if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
       setInputValue(value);
-      const amount = Number(value);
-      onUpdate({ ...childSupport, amount: isNaN(amount) ? 0 : amount });
     }
   };
   
   const handleBlur = () => {
-    if (inputValue === '') {
-      setInputValue(childSupport.amount > 0 ? String(childSupport.amount) : '');
+    const amount = Number(inputValue);
+    const finalAmount = isNaN(amount) ? 0 : amount;
+    if (childSupport.amount !== finalAmount) {
+        onUpdate({ ...childSupport, amount: finalAmount });
+    }
+    // If the user leaves it empty, visually reset it to the last saved value
+    if(inputValue === '') {
+        setInputValue(finalAmount > 0 ? String(finalAmount) : '');
     }
   }
 
