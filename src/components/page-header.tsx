@@ -1,6 +1,7 @@
 'use client';
 
-import { Download, Sparkles } from 'lucide-react';
+import { Download, LogOut, Sparkles } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 import { AiAdviceSheet } from '@/components/ai-advice-sheet';
 import { Logo } from '@/components/logo';
@@ -19,6 +20,7 @@ interface PageHeaderProps {
 export function PageHeader({
   totalExpenses,
 }: PageHeaderProps) {
+  const { logout } = useAuth();
   const handlePrint = () => {
     window.print();
   };
@@ -59,6 +61,21 @@ export function PageHeader({
                   <p>Export Monthly Report</p>
                 </TooltipContent>
               </Tooltip>
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={logout}
+                      aria-label="Logout"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Logout</p>
+                  </TooltipContent>
+                </Tooltip>
             </TooltipProvider>
           </div>
         </div>
