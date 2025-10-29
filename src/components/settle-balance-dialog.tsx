@@ -21,15 +21,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Expense, Parent, ExpenseSplit } from '@/lib/types';
+import type { Expense, Parent, ExpenseSplit, ChildSupport } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { Separator } from './ui/separator';
 
 interface SettleBalanceDialogProps {
   parent: Parent;
   otherParent: Parent;
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
+  childSupport: ChildSupport;
   onUpdateExpense: (expense: Expense) => void;
   children: React.ReactNode;
 }
@@ -39,6 +41,7 @@ export function SettleBalanceDialog({
   otherParent,
   expenses,
   expenseSplit,
+  childSupport,
   onUpdateExpense,
   children,
 }: SettleBalanceDialogProps) {
@@ -49,8 +52,22 @@ export function SettleBalanceDialog({
 
   const expensesToSettle = useMemo(() => {
     // These are expenses paid by `parent` that `otherParent` has not paid their share for.
-    return expenses.filter((exp) => exp.paidBy === parent && exp.status === 'Unpaid');
+    return expenses.filter(
+      (exp) => exp.paidBy === parent && exp.status === 'Unpaid'
+    );
   }, [expenses, parent]);
+
+  const childSupportOwed = useMemo(() => {
+    // Child support is owed to `parent` if `otherParent` is the payer.
+    return childSupport.paidBy === otherParent ? childSupport.amount : 0;
+  }, [childSupport, otherParent]);
+
+  const totalOwedFromExpenses = expensesToSettle.reduce((acc, exp) => {
+      const amountOwed = exp.amount * (otherParentSplit / 100);
+      return acc + amountOwed;
+  }, 0);
+
+  const totalOwed = totalOwedFromExpenses + childSupportOwed;
 
   const handleToggleSelection = (expenseId: string) => {
     setSelectedExpenseIds((prev) =>
@@ -85,9 +102,7 @@ export function SettleBalanceDialog({
         <DialogHeader>
           <DialogTitle>Settle Balance with {otherParent}</DialogTitle>
           <DialogDescription>
-            These are the expenses you paid for, which {otherParent} owes their
-            share for ({otherParentSplit}%). Mark them as paid once you've
-            received the funds.
+            These are the amounts {otherParent} owes you for this month. Mark expenses as paid once you've received the funds.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[400px] border rounded-md">
@@ -101,6 +116,14 @@ export function SettleBalanceDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
+              {childSupportOwed > 0 && (
+                <TableRow>
+                    <TableCell></TableCell>
+                    <TableCell>Child Support</TableCell>
+                    <TableCell className="text-right">${childSupportOwed.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium">${childSupportOwed.toFixed(2)}</TableCell>
+                </TableRow>
+              )}
               {expensesToSettle.length > 0 ? (
                 expensesToSettle.map((expense) => {
                   const amountOwed =
@@ -127,15 +150,21 @@ export function SettleBalanceDialog({
                   );
                 })
               ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    No unpaid expenses to settle.
-                  </TableCell>
-                </TableRow>
+                childSupportOwed === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No unpaid expenses to settle.
+                    </TableCell>
+                  </TableRow>
+                )
               )}
             </TableBody>
           </Table>
         </ScrollArea>
+        <div className="flex justify-end items-center gap-4 p-4 rounded-md bg-secondary/50 font-semibold">
+            <span>Total Owed to You:</span>
+            <span className="text-xl text-primary font-bold">${totalOwed.toFixed(2)}</span>
+        </div>
         <DialogFooter className="sm:justify-between gap-2">
             <div>
                  <Button
@@ -143,7 +172,7 @@ export function SettleBalanceDialog({
                     onClick={handleMarkAllAsPaid}
                     disabled={expensesToSettle.length === 0}
                 >
-                    Mark All as Paid
+                    Mark All Expenses as Paid
                 </Button>
             </div>
             <div>

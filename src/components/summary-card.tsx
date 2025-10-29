@@ -145,8 +145,9 @@ export function SummaryCard({
           <SettleBalanceDialog
             parent={parent}
             otherParent={otherParent}
-            expenses={expensesOwedByOtherParent}
+            expenses={expenses}
             expenseSplit={expenseSplit}
+            childSupport={childSupport}
             onUpdateExpense={onUpdateExpense}
           >
             <Button className="w-full">
