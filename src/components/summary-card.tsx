@@ -79,7 +79,7 @@ export function SummaryCard({
       : 0);
 
 
-  const isSettled = Math.abs(netBalance) < 0.01 && pendingYourConfirmationAmount === 0;
+  const isSettled = netBalance >= 0 && pendingYourConfirmationAmount === 0;
   let transferDescription = 'All settled up';
   const otherParentName = parentNames[otherParent];
   if (!isSettled) {
