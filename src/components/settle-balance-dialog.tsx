@@ -65,7 +65,7 @@ export function SettleBalanceDialog({
   const parentSplit = expenseSplit[parent] / 100;
   const otherParentSplit = expenseSplit[otherParent] / 100;
 
-
+  // What you are owed OR what you need to confirm.
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
     // 1. Unpaid expenses YOU paid for, where the other parent owes you.
     const expensesPaidByMe = expenses
@@ -81,9 +81,9 @@ export function SettleBalanceDialog({
       }));
 
     // 2. Unpaid child support the OTHER parent owes you.
-    const childSupportOwedToMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
-      childSupportOwedToMe.push({
+    const childSupportToMe: ItemToSettle[] = [];
+    if (childSupport.paidBy === otherParent && childSupport.status === 'Unpaid' && childSupport.amount > 0) {
+      childSupportToMe.push({
         id: 'child-support',
         description: 'Child Support',
         totalAmount: childSupport.amount,
@@ -93,7 +93,7 @@ export function SettleBalanceDialog({
         originalPayer: otherParent,
       });
     }
-    
+
     // 3. Pending expenses paid by the OTHER parent, awaiting YOUR confirmation.
     const pendingConfirmationForMe = expenses
         .filter(exp => exp.paidBy === otherParent && exp.status === 'Pending')
@@ -106,9 +106,10 @@ export function SettleBalanceDialog({
             type: 'expense',
             originalPayer: exp.paidBy,
         }));
-    
-    // 4. Pending child support paid by the OTHER parent, awaiting YOUR confirmation.
-    if (childSupport.paidBy === otherParent && childSupport.status === 'Pending') {
+        
+    // 4. Pending child support paid by YOU (owed to OTHER), awaiting YOUR confirmation.
+    // This seems wrong, should be child support from other parent.
+     if (childSupport.paidBy === otherParent && childSupport.status === 'Pending') {
          pendingConfirmationForMe.push({
             id: 'child-support',
             description: 'Child Support',
@@ -120,15 +121,15 @@ export function SettleBalanceDialog({
         });
     }
 
-    return [...expensesPaidByMe, ...childSupportOwedToMe, ...pendingConfirmationForMe].filter(item => item.owedAmount > 0);
+    return [...expensesPaidByMe, ...childSupportToMe, ...pendingConfirmationForMe].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParent, parentSplit, otherParentSplit]);
 
 
-  // What YOU owe to the other parent, including things you've marked as paid.
+  // What YOU owe to the other parent.
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
-    // 1. Expenses the OTHER parent paid for, where you owe your share (Unpaid or Pending).
-    const unsettledExpensesPaidByOther = expenses
-      .filter((exp) => exp.paidBy === otherParent && (exp.status === 'Unpaid' || exp.status === 'Pending'))
+    // 1. Unpaid Expenses the OTHER parent paid for, where you owe your share.
+    const expensesPaidByOther = expenses
+      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
         description: exp.description,
@@ -139,10 +140,10 @@ export function SettleBalanceDialog({
         originalPayer: exp.paidBy,
       }));
 
-    // 2. Child support YOU owe (Unpaid or Pending).
-    const childSupportOwedByMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === parent && childSupport.amount > 0 && (childSupport.status === 'Unpaid' || childSupport.status === 'Pending')) {
-      childSupportOwedByMe.push({
+    // 2. Unpaid Child support YOU owe.
+    const childSupportFromMe: ItemToSettle[] = [];
+    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
+      childSupportFromMe.push({
         id: 'child-support',
         description: 'Child Support',
         totalAmount: childSupport.amount,
@@ -152,9 +153,34 @@ export function SettleBalanceDialog({
         originalPayer: parent,
       });
     }
+    
+    // 3. Pending items YOU paid for, waiting for OTHER parent's confirmation.
+    const pendingFromMe = expenses
+        .filter(exp => exp.paidBy === parent && exp.status === 'Pending')
+        .map((exp): ItemToSettle => ({
+            id: exp.id,
+            description: exp.description,
+            totalAmount: exp.amount,
+            owedAmount: exp.amount * otherParentSplit,
+            status: exp.status,
+            type: 'expense',
+            originalPayer: exp.paidBy,
+        }));
+    
+    if (childSupport.paidBy === parent && childSupport.status === 'Pending') {
+      pendingFromMe.push({
+        id: 'child-support',
+        description: 'Child Support',
+        totalAmount: childSupport.amount,
+        owedAmount: childSupport.amount,
+        status: childSupport.status,
+        type: 'child_support',
+        originalPayer: parent,
+      })
+    }
 
-    return [...unsettledExpensesPaidByOther, ...childSupportOwedByMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, parentSplit, otherParent]);
+    return [...expensesPaidByOther, ...childSupportFromMe].filter(item => item.owedAmount > 0);
+  }, [expenses, childSupport, parent, parentSplit, otherParent, otherParentSplit]);
 
 
   const handleMarkAsPaid = (item: ItemToSettle) => {
