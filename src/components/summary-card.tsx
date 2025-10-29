@@ -68,7 +68,19 @@ export function SummaryCard({
   const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
+  // Amount waiting for ME to confirm. Other parent paid me.
   const pendingYourConfirmationAmount =
+    expenses
+      .filter(
+        (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
+      )
+      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[parent] / 100), 0) +
+    (childSupport.status === 'Pending' && childSupport.paidBy === parent
+      ? childSupport.amount
+      : 0);
+
+  // Amount I paid, waiting for the OTHER parent to confirm.
+  const awaitingOtherParentConfirmationAmount =
     expenses
       .filter(
         (exp) => exp.status === 'Pending' && exp.paidBy === parent
@@ -77,7 +89,6 @@ export function SummaryCard({
     (childSupport.status === 'Pending' && childSupport.paidBy === otherParent
       ? childSupport.amount
       : 0);
-
 
   const isSettled = netBalance >= 0 && pendingYourConfirmationAmount === 0;
   let transferDescription = 'All settled up';
@@ -116,6 +127,12 @@ export function SummaryCard({
             <p className="font-semibold text-yellow-600">${pendingYourConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
+        {awaitingOtherParentConfirmationAmount > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-blue-600">Pending Confirmation</p>
+            <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
+          </div>
+        )}
         <div className="flex items-center justify-between text-sm">
           <p className="text-muted-foreground">Paid & Settled</p>
           <p className="font-semibold text-green-600">${totalSettled.toFixed(2)}</p>
@@ -152,7 +169,7 @@ export function SummaryCard({
           netBalance={netBalance}
           parentNames={parentNames}
         >
-          <Button className="w-full" disabled={isSettled}>
+          <Button className="w-full" disabled={netBalance <= 0 && pendingYourConfirmationAmount <= 0}>
             <HandCoins className="mr-2 h-4 w-4" />
             Settle Balance
           </Button>
