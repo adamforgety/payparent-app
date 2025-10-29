@@ -39,6 +39,7 @@ export function SummaryCard({
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+  const otherParentName = parentNames[otherParent];
 
   // Balance calculation is based on UNPAID items
   const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
@@ -54,25 +55,19 @@ export function SummaryCard({
   // Positive means you are owed money, negative means you owe money for expenses.
   const expenseBalance = unpaidPaidByParent - parentExpenseShare;
 
-  let netBalance = expenseBalance;
-
-  // Apply child support to the balance
+  let childSupportBalance = 0;
   if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
         // You are the payer. This amount is owed by you.
-        netBalance -= childSupport.amount;
+        childSupportBalance = -childSupport.amount;
       } else {
         // You are the receiver. This amount is owed to you.
-        netBalance += childSupport.amount;
+        childSupportBalance = childSupport.amount;
       }
   }
 
-
-  const paidItems = expenses.filter((exp) => exp.status === 'Paid');
-  const totalSettled = paidItems.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
+  const netBalance = expenseBalance + childSupportBalance;
   
-  const otherParentName = parentNames[otherParent];
-
   const isSettled = netBalance === 0;
   
   let transferDescription = 'All settled up';
@@ -89,14 +84,6 @@ export function SummaryCard({
       (childSupport.amount > 0 && childSupport.status === 'Unpaid')
   );
 
-  const expensesPaidByParent = expenses
-    .filter((exp) => exp.paidBy === parent)
-    .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const childSupportPaidByThisParent = childSupport.paidBy === parent ? childSupport.amount : 0;
-  const childSupportPaidByOtherParent = childSupport.paidBy === otherParent ? childSupport.amount : 0;
-
-
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -111,36 +98,42 @@ export function SummaryCard({
         </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">
-            Your Share of Total Expenses ({parentSplitPercentage}%)
-          </p>
-          <p className="font-semibold">${(totalExpenses * (parentSplitPercentage / 100)).toFixed(2)}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">Total Expenses You Paid</p>
-          <p className="font-semibold">${expensesPaidByParent.toFixed(2)}</p>
-        </div>
         
-        {childSupportPaidByThisParent > 0 && (
-            <div className="flex items-center justify-between">
-            <p className="text-muted-foreground">Child Support You Paid</p>
-            <p className="font-semibold">${childSupportPaidByThisParent.toFixed(2)}</p>
+        <div className='space-y-2 rounded-md bg-muted/30 p-3'>
+            <h4 className="font-medium text-sm">Shared Expense Balance</h4>
+            <div className="flex items-center justify-between text-sm">
+                <p className="text-muted-foreground">
+                    Your Share ({parentSplitPercentage}%)
+                </p>
+                <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
             </div>
-        )}
-        
-        {childSupportPaidByOtherParent > 0 && (
-             <div className="flex items-center justify-between">
-             <p className="text-muted-foreground">Child Support Received</p>
-             <p className="font-semibold text-green-600">+${childSupportPaidByOtherParent.toFixed(2)}</p>
-             </div>
-        )}
-       
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-muted-foreground">Total Paid & Settled This Month</p>
-          <p className="font-semibold text-green-600">${totalSettled.toFixed(2)}</p>
+            <div className="flex items-center justify-between text-sm">
+                <p className="text-muted-foreground">You Paid (unpaid items)</p>
+                <p className="font-semibold text-green-600">+${unpaidPaidByParent.toFixed(2)}</p>
+            </div>
+             <Separator/>
+             <div className="flex items-center justify-between text-sm">
+                <p className="text-muted-foreground">Expense Balance</p>
+                <p className={cn("font-semibold", expenseBalance > 0 && "text-green-600", expenseBalance < 0 && "text-destructive")}>
+                    {expenseBalance >= 0 ? `$${expenseBalance.toFixed(2)}` : `-$${Math.abs(expenseBalance).toFixed(2)}`}
+                </p>
+            </div>
         </div>
 
+        {childSupport.amount > 0 && (
+            <div className='space-y-2 rounded-md bg-muted/30 p-3'>
+                 <h4 className="font-medium text-sm">Child Support</h4>
+                 <div className="flex items-center justify-between text-sm">
+                    <p className="text-muted-foreground">
+                        {childSupport.paidBy === parent ? 'You owe' : `${otherParentName} owes you`}
+                    </p>
+                    <p className={cn("font-semibold", childSupportBalance > 0 && 'text-green-600', childSupportBalance < 0 && 'text-destructive')}>
+                        {childSupportBalance >= 0 ? `$${childSupportBalance.toFixed(2)}` : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
+                    </p>
+                </div>
+            </div>
+        )}
+       
         <Separator />
         <div className="rounded-lg bg-secondary/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">
