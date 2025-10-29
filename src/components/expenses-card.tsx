@@ -116,7 +116,7 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex items-center gap-2 self-end sm:self-auto">
+          <div className="no-print flex flex-wrap items-center justify-end gap-2">
             <ExportButton expenses={expenses} currentDate={currentDate} />
             <Button variant="outline" onClick={handleMarkAllAsPaid} disabled={!hasUnpaidItems}>
                 <CheckCheck className="mr-2 h-4 w-4" />
@@ -136,7 +136,7 @@ export function ExpensesCard({
               <TableHead>Paid By</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="w-[100px] no-print text-right">Actions</TableHead>
+              <TableHead className="w-[120px] no-print text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
