@@ -153,62 +153,64 @@ export function SettleBalanceDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-3xl w-full grid-rows-[auto,1fr,auto] max-h-screen">
+      <DialogContent className="max-w-3xl w-full grid-rows-[auto,minmax(0,1fr),auto] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
              Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
           </DialogDescription>
-           <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
-            <div className="text-sm text-muted-foreground">
-              {netBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
-            </div>
-            <div
-              className={cn(
-                'text-2xl font-bold',
-                  netBalance < 0 && 'text-destructive',
-                  netBalance > 0 && 'text-green-600'
-              )}
-            >
-              ${Math.abs(netBalance).toFixed(2)}
-            </div>
-          </div>
         </DialogHeader>
-        <div className='overflow-y-auto'>
-        <Tabs defaultValue="owed-to-me">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="owed-to-me">
-              Owed to You ({itemsOwedToMe.length})
-              <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
-              </TabsTrigger>
-            <TabsTrigger value="owed-by-me">
-              Owed by You ({itemsOwedByMe.length})
-               <span className="ml-2 text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
-              </TabsTrigger>
-          </TabsList>
-          <TabsContent value="owed-to-me">
-             <SettlementTable 
-                items={itemsOwedToMe}
-                actionLabel="Received"
-                onItemAction={handleMarkAsReceived}
-                actionVariant='default'
-                actionDisabled={item => item.status === 'Unpaid' || item.status === 'Paid'}
-                parent={parent}
-             />
-          </TabsContent>
-          <TabsContent value="owed-by-me">
+        
+        <div className='overflow-y-auto -mx-6 px-6'>
+          <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
+              <div className="text-sm text-muted-foreground">
+                {netBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
+              </div>
+              <div
+                className={cn(
+                  'text-2xl font-bold',
+                    netBalance < 0 && 'text-destructive',
+                    netBalance > 0 && 'text-green-600'
+                )}
+              >
+                ${Math.abs(netBalance).toFixed(2)}
+              </div>
+            </div>
+          <Tabs defaultValue="owed-to-me" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="owed-to-me">
+                Owed to You ({itemsOwedToMe.length})
+                <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
+                </TabsTrigger>
+              <TabsTrigger value="owed-by-me">
+                Owed by You ({itemsOwedByMe.length})
+                <span className="ml-2 text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="owed-to-me">
               <SettlementTable 
-                items={itemsOwedByMe}
-                actionLabel="Paid"
-                onItemAction={handleMarkAsPaid}
-                actionVariant='destructive'
-                actionDisabled={item => item.status === 'Pending' || item.status === 'Paid'}
-                parent={parent}
-                onMarkAllPaid={handleMarkAllAsPaid}
+                  items={itemsOwedToMe}
+                  actionLabel="Received"
+                  onItemAction={handleMarkAsReceived}
+                  actionVariant='default'
+                  actionDisabled={item => item.status === 'Unpaid' || item.status === 'Paid'}
+                  parent={parent}
               />
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+            <TabsContent value="owed-by-me">
+                <SettlementTable 
+                  items={itemsOwedByMe}
+                  actionLabel="Paid"
+                  onItemAction={handleMarkAsPaid}
+                  actionVariant='destructive'
+                  actionDisabled={item => item.status === 'Pending' || item.status === 'Paid'}
+                  parent={parent}
+                  onMarkAllPaid={handleMarkAllAsPaid}
+                />
+            </TabsContent>
+          </Tabs>
         </div>
+
         <DialogFooter className="mt-4">
           <DialogClose asChild>
             <Button variant="outline" className="w-full sm:w-auto">Close</Button>
@@ -244,13 +246,13 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
   return (
     <>
        {onMarkAllPaid && (
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end my-4">
             <Button onClick={onMarkAllPaid} disabled={!canMarkAllPaid} variant="destructive">
               Mark All as Paid
             </Button>
           </div>
         )}
-      <ScrollArea className="h-[300px] sm:h-[400px] border rounded-md mt-2">
+      <div className="border rounded-md">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
@@ -300,9 +302,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
             )}
           </TableBody>
         </Table>
-      </ScrollArea>
+      </div>
       </>
   )
 }
-
-    
