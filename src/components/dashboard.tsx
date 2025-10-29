@@ -159,29 +159,40 @@ export function Dashboard() {
           </TabsList>
           <TabsContent value="dashboard">
             <div className="mt-8">
-              <h2 className="text-2xl font-bold tracking-tight mb-4 sr-only">Monthly Summary</h2>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8 print-grid">
-                <SummaryCard
-                  parent="Parent 1"
-                  totalExpenses={totalExpenses}
-                  expenses={currentMonthData.expenses}
-                  expenseSplit={currentMonthData.expenseSplit}
-                  childSupport={currentMonthData.childSupport}
-                  onUpdateExpense={updateExpense}
-                  onUpdateChildSupport={updateChildSupport}
-                  parentNames={currentMonthData.parentNames}
-                />
-                <SummaryCard
-                  parent="Parent 2"
-                  totalExpenses={totalExpenses}
-                  expenses={currentMonthData.expenses}
-                  expenseSplit={currentMonthData.expenseSplit}
-                  childSupport={currentMonthData.childSupport}
-                  onUpdateExpense={updateExpense}
-                  onUpdateChildSupport={updateChildSupport}
-                  parentNames={currentMonthData.parentNames}
-                />
-              </div>
+              <Tabs defaultValue="parent-1" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
+                  <TabsTrigger value="parent-2">{currentMonthData.parentNames['Parent 2']}</TabsTrigger>
+                </TabsList>
+                <TabsContent value="parent-1">
+                  <div className="mt-6">
+                    <SummaryCard
+                      parent="Parent 1"
+                      totalExpenses={totalExpenses}
+                      expenses={currentMonthData.expenses}
+                      expenseSplit={currentMonthData.expenseSplit}
+                      childSupport={currentMonthData.childSupport}
+                      onUpdateExpense={updateExpense}
+                      onUpdateChildSupport={updateChildSupport}
+                      parentNames={currentMonthData.parentNames}
+                    />
+                  </div>
+                </TabsContent>
+                <TabsContent value="parent-2">
+                  <div className="mt-6">
+                    <SummaryCard
+                      parent="Parent 2"
+                      totalExpenses={totalExpenses}
+                      expenses={currentMonthData.expenses}
+                      expenseSplit={currentMonthData.expenseSplit}
+                      childSupport={currentMonthData.childSupport}
+                      onUpdateExpense={updateExpense}
+                      onUpdateChildSupport={updateChildSupport}
+                      parentNames={currentMonthData.parentNames}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
           <TabsContent value="expenses">
