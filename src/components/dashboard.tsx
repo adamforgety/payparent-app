@@ -61,7 +61,7 @@ export function Dashboard() {
   };
   
   const handleTabChange = (value: string) => {
-    if (currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
+    if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
       toast({
         variant: 'destructive',
         title: 'Incomplete Information',
