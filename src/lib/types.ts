@@ -22,6 +22,7 @@ export type Parent = 'Parent 1' | 'Parent 2';
 export interface ChildSupport {
   amount: number;
   paidBy: Parent | 'None';
+  status: 'Unpaid' | 'Paid';
 }
 
 export interface ExpenseSplit {

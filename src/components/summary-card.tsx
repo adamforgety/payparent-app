@@ -21,6 +21,7 @@ interface SummaryCardProps {
   expenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
   onUpdateExpense: (expense: Expense) => void;
+  onUpdateChildSupport: (childSupport: ChildSupport) => void;
 }
 
 export function SummaryCard({
@@ -30,6 +31,7 @@ export function SummaryCard({
   expenseSplit,
   childSupport,
   onUpdateExpense,
+  onUpdateChildSupport,
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
 
@@ -149,6 +151,7 @@ export function SummaryCard({
             expenseSplit={expenseSplit}
             childSupport={childSupport}
             onUpdateExpense={onUpdateExpense}
+            onUpdateChildSupport={onUpdateChildSupport}
           >
             <Button className="w-full">
               <HandCoins className="mr-2 h-4 w-4" />

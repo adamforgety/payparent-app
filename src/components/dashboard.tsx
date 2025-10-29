@@ -11,11 +11,11 @@ import { PageHeader } from '@/components/page-header';
 import { SummaryCard } from '@/components/summary-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialData } from '@/lib/data';
-import type { AppData, Expense, MonthData } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
 
 const defaultMonthData: MonthData = {
-  childSupport: { amount: 0, paidBy: 'None' },
+  childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
   expenseSplit: { 'Parent 1': 50, 'Parent 2': 50 },
   expenses: [],
 };
@@ -35,7 +35,7 @@ export function Dashboard() {
   if (!data[currentMonthKey]) {
     const lastMonthKey = format(subMonths(currentDate, 1), 'yyyy-MM');
     const newMonthData = data[lastMonthKey]
-      ? { ...data[lastMonthKey], expenses: [] }
+      ? { ...data[lastMonthKey], expenses: [], childSupport: {...data[lastMonthKey].childSupport, status: 'Unpaid' as 'Unpaid' | 'Paid'} }
       : defaultMonthData;
 
     setData((prevData) => ({
@@ -76,6 +76,10 @@ export function Dashboard() {
       ),
     });
   };
+
+  const updateChildSupport = (updatedChildSupport: ChildSupport) => {
+    updateMonthData({ childSupport: updatedChildSupport });
+  }
 
 
   const totalExpenses = currentMonthData.expenses.reduce(
@@ -121,6 +125,7 @@ export function Dashboard() {
                   expenseSplit={currentMonthData.expenseSplit}
                   childSupport={currentMonthData.childSupport}
                   onUpdateExpense={updateExpense}
+                  onUpdateChildSupport={updateChildSupport}
                 />
                 <SummaryCard
                   parent="Parent 2"
@@ -129,6 +134,7 @@ export function Dashboard() {
                   expenseSplit={currentMonthData.expenseSplit}
                   childSupport={currentMonthData.childSupport}
                   onUpdateExpense={updateExpense}
+                  onUpdateChildSupport={updateChildSupport}
                 />
               </div>
             </div>

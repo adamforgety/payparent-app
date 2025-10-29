@@ -33,6 +33,7 @@ interface SettleBalanceDialogProps {
   expenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
   onUpdateExpense: (expense: Expense) => void;
+  onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: React.ReactNode;
 }
 
@@ -43,10 +44,11 @@ export function SettleBalanceDialog({
   expenseSplit,
   childSupport,
   onUpdateExpense,
+  onUpdateChildSupport,
   children,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedExpenseIds, setSelectedExpenseIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const otherParentSplit = expenseSplit[otherParent];
 
@@ -57,43 +59,58 @@ export function SettleBalanceDialog({
     );
   }, [expenses, parent]);
 
-  const childSupportOwed = useMemo(() => {
-    // Child support is owed to `parent` if `otherParent` is the payer.
-    return childSupport.paidBy === otherParent ? childSupport.amount : 0;
+  const childSupportToSettle = useMemo(() => {
+    // Child support is owed to `parent` if `otherParent` is the payer and it's unpaid.
+    return childSupport.paidBy === otherParent && childSupport.status === 'Unpaid'
+      ? { ...childSupport, id: 'child-support' }
+      : null;
   }, [childSupport, otherParent]);
 
   const totalOwedFromExpenses = expensesToSettle.reduce((acc, exp) => {
-      const amountOwed = exp.amount * (otherParentSplit / 100);
-      return acc + amountOwed;
+    const amountOwed = exp.amount * (otherParentSplit / 100);
+    return acc + amountOwed;
   }, 0);
 
-  const totalOwed = totalOwedFromExpenses + childSupportOwed;
+  const totalOwedFromChildSupport = childSupportToSettle ? childSupportToSettle.amount : 0;
 
-  const handleToggleSelection = (expenseId: string) => {
-    setSelectedExpenseIds((prev) =>
-      prev.includes(expenseId)
-        ? prev.filter((id) => id !== expenseId)
-        : [...prev, expenseId]
+  const totalOwed = totalOwedFromExpenses + totalOwedFromChildSupport;
+
+  const handleToggleSelection = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((selectedId) => selectedId !== id)
+        : [...prev, id]
     );
   };
-
+  
   const handleMarkAllAsPaid = () => {
     expensesToSettle.forEach((exp) => {
       onUpdateExpense({ ...exp, status: 'Paid' });
     });
-    setSelectedExpenseIds([]);
+    if (childSupportToSettle) {
+        onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+    }
+    setSelectedIds([]);
     setIsOpen(false);
   };
 
+
   const handleMarkSelectedAsPaid = () => {
-    expensesToSettle.forEach((exp) => {
-      if (selectedExpenseIds.includes(exp.id)) {
-        onUpdateExpense({ ...exp, status: 'Paid' });
-      }
+    selectedIds.forEach((id) => {
+        if (id === 'child-support') {
+            onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+        } else {
+            const expense = expenses.find(exp => exp.id === id);
+            if (expense) {
+                onUpdateExpense({ ...expense, status: 'Paid' });
+            }
+        }
     });
-    setSelectedExpenseIds([]);
+    setSelectedIds([]);
     setIsOpen(false);
   };
+  
+  const allItemsToSettle = expensesToSettle.length + (childSupportToSettle ? 1 : 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -102,7 +119,7 @@ export function SettleBalanceDialog({
         <DialogHeader>
           <DialogTitle>Settle Balance with {otherParent}</DialogTitle>
           <DialogDescription>
-            These are the amounts {otherParent} owes you for this month. Mark expenses as paid once you've received the funds.
+            These are the amounts {otherParent} owes you for this month. Mark items as paid once you've received the funds.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[400px] border rounded-md">
@@ -116,12 +133,20 @@ export function SettleBalanceDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {childSupportOwed > 0 && (
+              {childSupportToSettle && (
                 <TableRow>
-                    <TableCell></TableCell>
+                    <TableCell>
+                         <Checkbox
+                          id="select-child-support"
+                          checked={selectedIds.includes('child-support')}
+                          onCheckedChange={() =>
+                            handleToggleSelection('child-support')
+                          }
+                        />
+                    </TableCell>
                     <TableCell>Child Support</TableCell>
-                    <TableCell className="text-right">${childSupportOwed.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">${childSupportOwed.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">${childSupportToSettle.amount.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium">${childSupportToSettle.amount.toFixed(2)}</TableCell>
                 </TableRow>
               )}
               {expensesToSettle.length > 0 ? (
@@ -133,7 +158,7 @@ export function SettleBalanceDialog({
                       <TableCell>
                         <Checkbox
                           id={`select-${expense.id}`}
-                          checked={selectedExpenseIds.includes(expense.id)}
+                          checked={selectedIds.includes(expense.id)}
                           onCheckedChange={() =>
                             handleToggleSelection(expense.id)
                           }
@@ -150,10 +175,10 @@ export function SettleBalanceDialog({
                   );
                 })
               ) : (
-                childSupportOwed === 0 && (
+                !childSupportToSettle && (
                   <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
-                      No unpaid expenses to settle.
+                      No unpaid items to settle.
                     </TableCell>
                   </TableRow>
                 )
@@ -170,17 +195,17 @@ export function SettleBalanceDialog({
                  <Button
                     variant="outline"
                     onClick={handleMarkAllAsPaid}
-                    disabled={expensesToSettle.length === 0}
+                    disabled={allItemsToSettle === 0}
                 >
-                    Mark All Expenses as Paid
+                    Mark All as Paid
                 </Button>
             </div>
             <div>
                  <Button
                     onClick={handleMarkSelectedAsPaid}
-                    disabled={selectedExpenseIds.length === 0}
+                    disabled={selectedIds.length === 0}
                 >
-                    Mark Selected as Paid ({selectedExpenseIds.length})
+                    Mark Selected as Paid ({selectedIds.length})
                 </Button>
             </div>
         </DialogFooter>

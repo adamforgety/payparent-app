@@ -10,6 +10,7 @@ export const initialData: AppData = {
     childSupport: {
       amount: 500,
       paidBy: 'Parent 2',
+      status: 'Unpaid',
     },
     expenseSplit: {
       'Parent 1': 50,
@@ -26,6 +27,7 @@ export const initialData: AppData = {
     childSupport: {
       amount: 500,
       paidBy: 'Parent 2',
+      status: 'Paid',
     },
     expenseSplit: {
       'Parent 1': 60,
@@ -41,6 +43,7 @@ export const initialData: AppData = {
     childSupport: {
       amount: 450,
       paidBy: 'Parent 2',
+      status: 'Paid',
     },
     expenseSplit: {
       'Parent 1': 50,
