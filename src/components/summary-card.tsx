@@ -88,7 +88,7 @@ export function SummaryCard({
     }
   });
 
-  // Handle CHILD SUPPORT confirmation amounts (this logic was correct)
+  // Handle CHILD SUPPORT confirmation amounts
   if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
     // If other parent paid child support, it's awaiting YOUR confirmation.
     if (childSupport.paidBy === otherParent) {
