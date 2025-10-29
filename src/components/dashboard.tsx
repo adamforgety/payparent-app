@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialData } from '@/lib/data';
 import type { AppData, ChildSupport, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
+import { useToast } from '@/hooks/use-toast';
 
 const defaultMonthData: MonthData = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
@@ -23,6 +24,9 @@ const defaultMonthData: MonthData = {
 export function Dashboard() {
   const [data, setData] = useState<AppData>(initialData);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const { toast } = useToast();
+
 
   const handleDateChange = (direction: 'next' | 'prev') => {
     setCurrentDate((prevDate) =>
@@ -55,6 +59,19 @@ export function Dashboard() {
       },
     }));
   };
+  
+  const handleTabChange = (value: string) => {
+    if (currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
+      toast({
+        variant: 'destructive',
+        title: 'Incomplete Information',
+        description: 'Please select who paid for child support before switching tabs.',
+      });
+      return;
+    }
+    setActiveTab(value);
+  };
+
 
   const addExpense = (newExpense: Omit<Expense, 'id'>) => {
     const expenseWithId = { ...newExpense, id: crypto.randomUUID() };
@@ -108,7 +125,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-3 no-print">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
@@ -154,7 +171,7 @@ export function Dashboard() {
             <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
                <ChildSupportCard
                 childSupport={currentMonthData.childSupport}
-                onUpdate={(childSupport) => updateMonthData({ childSupport })}
+                onUpdate={updateChildSupport}
               />
               <ParentSplitCard
                 expenseSplit={currentMonthData.expenseSplit}
