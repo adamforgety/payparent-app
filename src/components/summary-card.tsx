@@ -68,7 +68,7 @@ export function SummaryCard({
   const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
-  // Amount waiting for ME to confirm. Other parent paid me.
+  // Amount waiting for ME to confirm. This means the OTHER parent has paid.
   const pendingYourConfirmationAmount =
     expenses
       .filter(
