@@ -21,8 +21,7 @@ export const initialData: AppData = {
         description: 'Soccer registration',
         amount: 150,
         paidBy: 'Parent 2',
-        category: 'Activities',
-        status: 'Pending',
+        status: 'Unpaid',
       }
     ],
     parentNames: {
