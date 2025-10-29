@@ -1,9 +1,19 @@
+export type ExpenseCategory =
+  | 'Medical'
+  | 'Education'
+  | 'Child Care'
+  | 'Activities'
+  | 'Clothing'
+  | 'Food'
+  | 'Other';
+
 export interface Expense {
   id: string;
   date: string; // ISO string
   description: string;
   amount: number;
   paidBy: Parent;
+  category: ExpenseCategory;
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';

@@ -67,6 +67,7 @@ export function ExpensesCard({
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Description</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Paid By</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="w-[50px] no-print"></TableHead>
@@ -81,6 +82,9 @@ export function ExpensesCard({
                   </TableCell>
                   <TableCell className="font-medium">
                     {expense.description}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{expense.category}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{expense.paidBy}</Badge>
@@ -109,7 +113,7 @@ export function ExpensesCard({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No expenses logged for this month.
                 </TableCell>
               </TableRow>

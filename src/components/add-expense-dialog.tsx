@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Expense, Parent } from '@/lib/types';
+import type { Expense, Parent, ExpenseCategory } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const expenseSchema = z.object({
@@ -50,6 +50,10 @@ const expenseSchema = z.object({
   paidBy: z.enum(['Parent 1', 'Parent 2'], {
     required_error: 'Please select who paid.',
   }),
+  category: z.enum(
+    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
+    { required_error: 'Please select a category.' }
+  ),
 });
 
 interface AddExpenseDialogProps {
@@ -66,6 +70,7 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
       description: '',
       amount: undefined,
       date: new Date(),
+      category: 'Other',
     },
   });
 
@@ -74,6 +79,7 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
       ...values,
       date: values.date.toISOString(),
       paidBy: values.paidBy as Parent,
+      category: values.category as ExpenseCategory,
     });
     toast({
       title: 'Expense Added',
@@ -113,6 +119,35 @@ export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
                 </FormItem>
               )}
             />
+             <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Medical">Medical</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
+                        <SelectItem value="Child Care">Child Care</SelectItem>
+                        <SelectItem value="Activities">Activities</SelectItem>
+                        <SelectItem value="Clothing">Clothing</SelectItem>
+                        <SelectItem value="Food">Food</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
