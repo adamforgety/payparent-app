@@ -75,7 +75,7 @@ export function SummaryCard({
         (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
       )
       .reduce((sum, exp) => sum + exp.amount * (expenseSplit[parent] / 100), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === parent
+    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent
       ? childSupport.amount
       : 0);
 
@@ -86,7 +86,7 @@ export function SummaryCard({
         (exp) => exp.status === 'Pending' && exp.paidBy === parent
       )
       .reduce((sum, exp) => sum + exp.amount * (expenseSplit[otherParent] / 100), 0) +
-    (childSupport.status === 'Pending' && childSupport.paidBy === otherParent
+    (childSupport.status === 'Pending' && childSupport.paidBy === parent
       ? childSupport.amount
       : 0);
 
@@ -107,9 +107,9 @@ export function SummaryCard({
                              (childSupport.paidBy === parent && childSupport.status === 'Unpaid' ? 1 : 0);
                              
   const itemsToConfirmCount = expenses.filter(e => e.paidBy === otherParent && e.status === 'Pending').length +
-                              (childSupport.paidBy === parent && childSupport.status === 'Pending' ? 1 : 0);
+                              (childSupport.paidBy === otherParent && childSupport.status === 'Pending' ? 1 : 0);
 
-  const isButtonDisabled = itemsOwedByMeCount === 0 && itemsToConfirmCount === 0 && netBalance >= 0;
+  const isButtonDisabled = itemsOwedByMeCount === 0 && itemsToConfirmCount === 0;
   
   return (
     <Card className="flex flex-col">
@@ -143,7 +143,7 @@ export function SummaryCard({
         )}
         {awaitingOtherParentConfirmationAmount > 0 && (
           <div className="flex items-center justify-between text-sm">
-            <p className="text-blue-600">Pending Confirmation</p>
+            <p className="text-blue-600">Awaiting Other Parent's Confirmation</p>
             <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
