@@ -78,36 +78,47 @@ export function ExpensesCard({
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const grandTotal = totalExpenses + (childSupport.amount > 0 ? childSupport.amount : 0);
   
-  const calculateParentBalance = (parent: Parent) => {
-    const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
-    const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
+  const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+  const calculateParentOwes = (parent: Parent): number => {
+    const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
     
-    const unpaidPaidByParent = unpaidExpenses
-      .filter((exp) => exp.paidBy === parent)
-      .reduce((sum, exp) => sum + exp.amount, 0);
-      
+    const parentUnpaidPayments = unpaidExpenses
+      .filter(e => e.paidBy === parent)
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const otherParentUnpaidPayments = unpaidExpenses
+      .filter(e => e.paidBy === otherParent)
+      .reduce((sum, e) => sum + e.amount, 0);
+
     const parentExpenseShare = totalUnpaidExpenses * (expenseSplit[parent] / 100);
-    const expenseBalance = unpaidPaidByParent - parentExpenseShare;
-  
-    let netBalance = expenseBalance;
-  
+
+    let childSupportImpact = 0;
     if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
-        // Payer owes this, so it's a negative on their balance until paid
-        netBalance -= childSupport.amount;
+        // Payer owes this amount
+        childSupportImpact = -childSupport.amount;
       } else {
-        // Recipient is owed this, so it's a positive on their balance
-        netBalance += childSupport.amount;
+        // Recipient is owed this amount
+        childSupportImpact = childSupport.amount;
       }
     }
-    return netBalance;
-  }
 
-  const parent1NetBalance = calculateParentBalance('Parent 1');
-  const parent2NetBalance = calculateParentBalance('Parent 2');
+    const netBalance = parentUnpaidPayments - parentExpenseShare + childSupportImpact;
+    
+    // What a parent owes is the negative of the other parent's positive balance,
+    // or their own negative balance.
+    if (netBalance < 0) {
+      return Math.abs(netBalance);
+    }
+    
+    return 0;
+  };
+  
+  const parent1Owes = calculateParentOwes('Parent 1');
+  const parent2Owes = calculateParentOwes('Parent 2');
 
-  const parent1Owes = parent1NetBalance < 0 ? Math.abs(parent1NetBalance) : 0;
-  const parent2Owes = parent2NetBalance < 0 ? Math.abs(parent2NetBalance) : 0;
 
   const handleMarkAllAsPaid = () => {
     expenses.forEach(exp => {
@@ -190,7 +201,7 @@ export function ExpensesCard({
                     {item.paidBy && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                   </TableCell>
                   <TableCell>
-                     <Badge variant={item.status === 'Paid' ? 'secondary' : 'destructive'}>
+                     <Badge variant={item.status === 'Paid' ? 'secondary' : 'destructive'} className='w-[55px] justify-center'>
                         {item.status}
                       </Badge>
                   </TableCell>
