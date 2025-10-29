@@ -77,24 +77,24 @@ export function SummaryCard({
   const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
 
   pendingExpenses.forEach(exp => {
-    // If the other parent paid, it's awaiting YOUR confirmation.
-    if (exp.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
-    }
     // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
-    else if (exp.paidBy === parent) {
+    if (exp.paidBy === parent) {
       awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+    }
+    // If the other parent paid, it's awaiting YOUR confirmation.
+    else if (exp.paidBy === otherParent) {
+      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
     }
   });
 
   if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
-    // If other parent paid child support, it's awaiting YOUR confirmation.
-    if (childSupport.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += childSupport.amount;
-    }
     // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
-    else if (childSupport.paidBy === parent) {
+    if (childSupport.paidBy === parent) {
       awaitingOtherParentConfirmationAmount += childSupport.amount;
+    }
+    // If other parent paid child support, it's awaiting YOUR confirmation.
+    else if (childSupport.paidBy === otherParent) {
+      awaitingYourConfirmationAmount += childSupport.amount;
     }
   }
 
@@ -141,16 +141,16 @@ export function SummaryCard({
           <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
-        {awaitingOtherParentConfirmationAmount > 0 && (
+        {awaitingYourConfirmationAmount > 0 && (
            <div className="flex items-center justify-between text-sm">
             <p className="text-yellow-600">Awaiting Your Confirmation</p>
-            <p className="font-semibold text-yellow-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
+            <p className="font-semibold text-yellow-600">${awaitingYourConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
-        {awaitingYourConfirmationAmount > 0 && (
+        {awaitingOtherParentConfirmationAmount > 0 && (
           <div className="flex items-center justify-between text-sm">
             <p className="text-blue-600">Awaiting {otherParentName}'s Confirmation</p>
-            <p className="font-semibold text-blue-600">${awaitingYourConfirmationAmount.toFixed(2)}</p>
+            <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
         <div className="flex items-center justify-between text-sm">
