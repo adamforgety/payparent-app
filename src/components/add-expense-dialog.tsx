@@ -1,0 +1,164 @@
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from 'date-fns';
+import { CalendarIcon, PlusCircle } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { useToast } from '@/hooks/use-toast';
+import type { Expense } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const expenseSchema = z.object({
+  description: z.string().min(1, 'Description is required'),
+  amount: z.coerce.number().positive('Amount must be a positive number'),
+  date: z.date({ required_error: 'A date is required.' }),
+});
+
+interface AddExpenseDialogProps {
+  onAddExpense: (expense: Omit<Expense, 'id'>) => void;
+}
+
+export function AddExpenseDialog({ onAddExpense }: AddExpenseDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof expenseSchema>>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      description: '',
+      amount: undefined,
+      date: new Date(),
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof expenseSchema>) {
+    onAddExpense({
+      ...values,
+      date: values.date.toISOString(),
+    });
+    toast({
+      title: 'Expense Added',
+      description: `"${values.description}" has been logged.`,
+    });
+    form.reset();
+    setIsOpen(false);
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Expense
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Expense</DialogTitle>
+          <DialogDescription>
+            Log a new child-related expense for the current month.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., School supplies" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Amount ($)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="50.00" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Date of Expense</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={'outline'}
+                          className={cn(
+                            'pl-3 text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, 'PPP')
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit">Add Expense</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
