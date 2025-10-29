@@ -104,13 +104,6 @@ export function SummaryCard({
     }
   }
   
-  const itemsOwedByMe = expenses.filter(e => e.paidBy === otherParent && e.status === 'Unpaid');
-  const childSupportOwedByMe = (childSupport.paidBy === parent && childSupport.status === 'Unpaid') ? 1 : 0;
-
-  const itemsToConfirm = expenses.filter(e => e.paidBy === otherParent && e.status === 'Pending');
-  const childSupportToConfirm = (childSupport.paidBy === otherParent && childSupport.status === 'Pending') ? 1 : 0;
-  const itemsToConfirmCount = itemsToConfirm.length + childSupportToConfirm;
-
   // I owe the other parent for expenses they paid, OR I owe child support
   const hasItemsToPay = expenses.some(e => e.paidBy === otherParent && e.status === 'Unpaid') || (childSupport.paidBy === parent && childSupport.status === 'Unpaid');
   // The other parent has paid for something and is waiting for my confirmation
@@ -144,13 +137,13 @@ export function SummaryCard({
         </div>
         {pendingYourConfirmationAmount > 0 && (
            <div className="flex items-center justify-between text-sm">
-            <p className="text-yellow-600">Pending Your Confirmation</p>
+            <p className="text-yellow-600">Awaiting Your Confirmation</p>
             <p className="font-semibold text-yellow-600">${pendingYourConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
         {awaitingOtherParentConfirmationAmount > 0 && (
           <div className="flex items-center justify-between text-sm">
-            <p className="text-blue-600">Awaiting Other Parent's Confirmation</p>
+            <p className="text-blue-600">Awaiting {otherParentName}'s Confirmation</p>
             <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
