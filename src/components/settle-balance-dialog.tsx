@@ -35,6 +35,7 @@ interface SettleBalanceDialogProps {
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: React.ReactNode;
+  isEnabled: boolean;
 }
 
 export function SettleBalanceDialog({
@@ -46,6 +47,7 @@ export function SettleBalanceDialog({
   onUpdateExpense,
   onUpdateChildSupport,
   children,
+  isEnabled,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -111,6 +113,10 @@ export function SettleBalanceDialog({
   };
   
   const allItemsToSettle = expensesToSettle.length + (childSupportToSettle ? 1 : 0);
+
+  if (!isEnabled) {
+    return <>{children}</>;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
