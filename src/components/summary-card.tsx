@@ -38,11 +38,15 @@ export function SummaryCard({
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
-
-  const totalPaidByParent = expenses
+  const expensesPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-    
+
+  const childSupportPaidByParent =
+    childSupport.paidBy === parent ? childSupport.amount : 0;
+  
+  const totalPaidByParent = expensesPaidByParent + (childSupport.status === 'Paid' && childSupport.paidBy === parent ? childSupport.amount : 0);
+
   const unsettledExpenses = expenses.filter(e => e.status !== 'Paid');
 
   const unsettledPaidByParent = unsettledExpenses
@@ -80,13 +84,13 @@ export function SummaryCard({
 
   // Handle EXPENSES confirmation amounts
   pendingExpenses.forEach(exp => {
-    // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
-    if (exp.paidBy === parent) {
-      expenseAwaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
-    }
     // If the other parent paid, it's awaiting YOUR confirmation.
-    else if (exp.paidBy === otherParent) {
+    if (exp.paidBy === otherParent) {
       expenseAwaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
+    }
+    // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
+    else if (exp.paidBy === parent) {
+      expenseAwaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
     }
   });
 
@@ -148,16 +152,16 @@ export function SummaryCard({
           <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
-        {(expenseAwaitingOtherParentConfirmationAmount + csAwaitingYourConfirmationAmount) > 0 && (
+        {awaitingYourConfirmationAmount > 0 && (
            <div className="flex items-center justify-between text-sm">
             <p className="text-yellow-600">Awaiting Your Confirmation</p>
-            <p className="font-semibold text-yellow-600">${(expenseAwaitingOtherParentConfirmationAmount + csAwaitingYourConfirmationAmount).toFixed(2)}</p>
+            <p className="font-semibold text-yellow-600">${awaitingYourConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
-        {(expenseAwaitingYourConfirmationAmount + csAwaitingOtherParentConfirmationAmount) > 0 && (
+        {awaitingOtherParentConfirmationAmount > 0 && (
           <div className="flex items-center justify-between text-sm">
             <p className="text-blue-600">Awaiting {otherParentName}'s Confirmation</p>
-            <p className="font-semibold text-blue-600">${(expenseAwaitingYourConfirmationAmount + csAwaitingOtherParentConfirmationAmount).toFixed(2)}</p>
+            <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
           </div>
         )}
         <div className="flex items-center justify-between text-sm">
