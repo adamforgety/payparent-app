@@ -54,7 +54,7 @@ export function ParentNamesCard({
             id="parent1-name"
             value={parentNames['Parent 1']}
             onChange={(e) => handleNameChange('Parent 1', e)}
-            placeholder="e.g., Alex"
+            placeholder="e.g., Mother, Jane"
           />
         </div>
         <div className="space-y-2">
@@ -63,7 +63,7 @@ export function ParentNamesCard({
             id="parent2-name"
             value={parentNames['Parent 2']}
             onChange={(e) => handleNameChange('Parent 2', e)}
-            placeholder="e.g., Jordan"
+            placeholder="e.g., Father, Joe"
           />
         </div>
       </CardContent>
