@@ -71,20 +71,22 @@ export function SummaryCard({
   const otherParentName = parentNames[otherParent];
 
   // Logic for confirmation messages
-  let awaitingYourConfirmationAmount = 0;
-  let awaitingOtherParentConfirmationAmount = 0;
+  let expenseAwaitingYourConfirmationAmount = 0;
+  let expenseAwaitingOtherParentConfirmationAmount = 0;
+  let csAwaitingYourConfirmationAmount = 0;
+  let csAwaitingOtherParentConfirmationAmount = 0;
 
   const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
 
   // Handle EXPENSES confirmation amounts
   pendingExpenses.forEach(exp => {
-    // If the other parent paid, it's awaiting YOUR confirmation.
-    if (exp.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
-    }
     // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
-    else if (exp.paidBy === parent) {
-      awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+    if (exp.paidBy === parent) {
+      expenseAwaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+    }
+    // If the other parent paid, it's awaiting YOUR confirmation.
+    else if (exp.paidBy === otherParent) {
+      expenseAwaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
     }
   });
 
@@ -92,13 +94,16 @@ export function SummaryCard({
   if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
     // If other parent paid child support, it's awaiting YOUR confirmation.
     if (childSupport.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += childSupport.amount;
+      csAwaitingYourConfirmationAmount += childSupport.amount;
     }
     // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
     else if (childSupport.paidBy === parent) {
-      awaitingOtherParentConfirmationAmount += childSupport.amount;
+      csAwaitingOtherParentConfirmationAmount += childSupport.amount;
     }
   }
+  
+  const awaitingYourConfirmationAmount = expenseAwaitingYourConfirmationAmount + csAwaitingYourConfirmationAmount;
+  const awaitingOtherParentConfirmationAmount = expenseAwaitingOtherParentConfirmationAmount + csAwaitingOtherParentConfirmationAmount;
 
 
   const isSettled = netBalance === 0 && awaitingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
@@ -143,16 +148,16 @@ export function SummaryCard({
           <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
-        {awaitingYourConfirmationAmount > 0 && (
+        {(expenseAwaitingOtherParentConfirmationAmount + csAwaitingYourConfirmationAmount) > 0 && (
            <div className="flex items-center justify-between text-sm">
             <p className="text-yellow-600">Awaiting Your Confirmation</p>
-            <p className="font-semibold text-yellow-600">${awaitingYourConfirmationAmount.toFixed(2)}</p>
+            <p className="font-semibold text-yellow-600">${(expenseAwaitingOtherParentConfirmationAmount + csAwaitingYourConfirmationAmount).toFixed(2)}</p>
           </div>
         )}
-        {awaitingOtherParentConfirmationAmount > 0 && (
+        {(expenseAwaitingYourConfirmationAmount + csAwaitingOtherParentConfirmationAmount) > 0 && (
           <div className="flex items-center justify-between text-sm">
             <p className="text-blue-600">Awaiting {otherParentName}'s Confirmation</p>
-            <p className="font-semibold text-blue-600">${awaitingOtherParentConfirmationAmount.toFixed(2)}</p>
+            <p className="font-semibold text-blue-600">${(expenseAwaitingYourConfirmationAmount + csAwaitingOtherParentConfirmationAmount).toFixed(2)}</p>
           </div>
         )}
         <div className="flex items-center justify-between text-sm">
