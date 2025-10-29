@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'CoParent Finances',
-  description: 'Shared child support and expenses for divorced parents.',
+  title: 'PayParent',
+  description: 'Child Support & Expense Tracker',
 };
 
 export default function RootLayout({

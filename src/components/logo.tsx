@@ -7,7 +7,7 @@ export function Logo({ className }: { className?: string }) {
       <div className="bg-primary/20 text-primary rounded-lg p-2">
         <UsersRound className="h-6 w-6" />
       </div>
-      <h1 className="text-xl font-bold text-foreground">CoParent Finances</h1>
+      <h1 className="text-xl font-bold text-foreground">PayParent</h1>
     </div>
   );
 }

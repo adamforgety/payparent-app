@@ -2,6 +2,8 @@
 
 import { addMonths, format, subMonths } from 'date-fns';
 import { useState } from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -15,6 +17,7 @@ import type { AppData, ChildSupport, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
+import { Button } from './ui/button';
 
 const defaultMonthData: MonthData = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
@@ -63,7 +66,7 @@ export function Dashboard() {
   };
   
   const handleTabChange = (value: string) => {
-     if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
+    if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
       toast({
         variant: 'destructive',
         title: 'Incomplete Information',
@@ -109,9 +112,6 @@ export function Dashboard() {
   return (
     <div className="flex flex-col">
       <PageHeader
-        currentDate={currentDate}
-        onPreviousMonth={() => handleDateChange('prev')}
-        onNextMonth={() => handleDateChange('next')}
         totalExpenses={totalExpenses}
       />
       <main className="container mx-auto p-4 md:p-8">
@@ -126,6 +126,30 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        <div className="flex flex-col items-center justify-center gap-4 mb-8 no-print">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleDateChange('prev')}
+                aria-label="Previous month"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <span className="w-40 text-center text-lg font-semibold">
+                {format(currentDate, 'MMMM yyyy')}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handleDateChange('next')}
+                aria-label="Next month"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-3 no-print">

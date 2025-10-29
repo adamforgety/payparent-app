@@ -1,8 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, Download, Sparkles } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
+import { Download, Sparkles } from 'lucide-react';
 
 import { AiAdviceSheet } from '@/components/ai-advice-sheet';
 import { Logo } from '@/components/logo';
@@ -15,16 +13,10 @@ import {
 } from '@/components/ui/tooltip';
 
 interface PageHeaderProps {
-  currentDate: Date;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
   totalExpenses: number;
 }
 
 export function PageHeader({
-  currentDate,
-  onPreviousMonth,
-  onNextMonth,
   totalExpenses,
 }: PageHeaderProps) {
   const handlePrint = () => {
@@ -36,27 +28,6 @@ export function PageHeader({
       <div className="container mx-auto flex items-center justify-between">
         <Logo />
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onPreviousMonth}
-              aria-label="Previous month"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <span className="w-32 text-center font-semibold">
-              {format(currentDate, 'MMMM yyyy')}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onNextMonth}
-              aria-label="Next month"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
           <div className="flex items-center gap-2">
             <TooltipProvider>
               <AiAdviceSheet currentMonthlyExpenses={totalExpenses}>
