@@ -75,7 +75,6 @@ export function ExpensesCard({
 
   const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
   
-  const unpaidItems = allItems.filter(item => item.status === 'Unpaid');
   const paidItems = allItems.filter(item => item.status === 'Paid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -104,13 +103,13 @@ export function ExpensesCard({
     let netBalance = expenseBalance;
   
     if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
-        if (childSupport.paidBy === parent) {
-          // Payer owes this amount
-          netBalance -= childSupport.amount;
-        } else {
-          // Recipient is owed this amount
-          netBalance += childSupport.amount;
-        }
+      if (childSupport.paidBy === parent) {
+        // Payer owes this amount
+        netBalance -= childSupport.amount;
+      } else {
+        // Recipient is owed this amount
+        netBalance += childSupport.amount;
+      }
     }
     return netBalance;
   }
@@ -183,7 +182,7 @@ export function ExpensesCard({
               <TableHead>Description</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Paid By</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="w-[120px]">Status</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="w-[120px] no-print text-right">Actions</TableHead>
             </TableRow>
