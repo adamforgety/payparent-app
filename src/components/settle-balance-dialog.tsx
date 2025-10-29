@@ -162,7 +162,7 @@ export function SettleBalanceDialog({
         </DialogHeader>
         
         <div className='overflow-y-auto -mx-6 px-6'>
-          <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
+            <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
               <div className="text-sm text-muted-foreground">
                 {netBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
               </div>
@@ -252,7 +252,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
             </Button>
           </div>
         )}
-      <div className="border rounded-md">
+      <ScrollArea className="h-72 rounded-md border">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
@@ -302,7 +302,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
             )}
           </TableBody>
         </Table>
-      </div>
+      </ScrollArea>
       </>
   )
 }

@@ -68,7 +68,7 @@ export function SummaryCard({
   const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
-  // Amount waiting for ME to confirm. This means the OTHER parent has paid.
+  // Amount waiting for ME to confirm. This means the OTHER parent has paid and is waiting for my confirmation.
   const pendingYourConfirmationAmount =
     expenses
       .filter(
@@ -90,6 +90,7 @@ export function SummaryCard({
       ? childSupport.amount
       : 0);
 
+
   const isSettled = netBalance === 0 && pendingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
   let transferDescription = 'All settled up';
   const otherParentName = parentNames[otherParent];
@@ -102,12 +103,15 @@ export function SummaryCard({
         transferDescription = "Payments are pending confirmation";
     }
   }
+  
+  const itemsOwedByMe = expenses.filter(e => e.paidBy === otherParent && e.status === 'Unpaid');
+  const childSupportOwedByMe = (childSupport.paidBy === parent && childSupport.status === 'Unpaid') ? 1 : 0;
+  const itemsOwedByMeCount = itemsOwedByMe.length + childSupportOwedByMe;
 
-  const itemsOwedByMeCount = expenses.filter(e => e.paidBy === otherParent && e.status === 'Unpaid').length +
-                             (childSupport.paidBy === parent && childSupport.status === 'Unpaid' ? 1 : 0);
-                             
-  const itemsToConfirmCount = expenses.filter(e => e.paidBy === otherParent && e.status === 'Pending').length +
-                              (childSupport.paidBy === otherParent && childSupport.status === 'Pending' ? 1 : 0);
+  const itemsToConfirm = expenses.filter(e => e.paidBy === otherParent && e.status === 'Pending');
+  const childSupportToConfirm = (childSupport.paidBy === otherParent && childSupport.status === 'Pending') ? 1 : 0;
+  const itemsToConfirmCount = itemsToConfirm.length + childSupportToConfirm;
+
 
   const isButtonDisabled = itemsOwedByMeCount === 0 && itemsToConfirmCount === 0;
   
