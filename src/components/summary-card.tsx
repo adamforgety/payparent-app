@@ -35,30 +35,21 @@ export function SummaryCard({
 }: SummaryCardProps) {
   const parentSplitPercentage = expenseSplit[parent];
 
-  // Calculate total amount this parent has paid directly
   const totalPaidByParent = expenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
-  // This parent's share of the total expenses
   const expenseShare = totalExpenses * (parentSplitPercentage / 100);
 
-  // Determine child support obligation
   let childSupportAdjustment = 0;
   if (childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // This parent PAYS child support, so it's an added cost for them
       childSupportAdjustment = childSupport.amount;
     } else {
-      // This parent RECEIVES child support, so it's a credit
       childSupportAdjustment = -childSupport.amount;
     }
   }
 
-  // Final balance:
-  // (Total You Paid) - (Your Expense Share + Your Child Support Obligation)
-  // A positive balance means they are owed money.
-  // A negative balance means they owe money.
   const netBalance = totalPaidByParent - (expenseShare + childSupportAdjustment);
 
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
