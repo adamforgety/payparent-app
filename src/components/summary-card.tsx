@@ -90,12 +90,20 @@ export function SummaryCard({
       ? childSupport.amount
       : 0);
 
-  const isSettled = netBalance >= 0 && pendingYourConfirmationAmount === 0;
+  const isSettled = netBalance === 0 && pendingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
   let transferDescription = 'All settled up';
   const otherParentName = parentNames[otherParent];
   if (!isSettled) {
-    transferDescription = netBalance > 0 ? `You are owed by ${otherParentName}` : `You owe ${otherParentName}`;
+    if (netBalance > 0) {
+        transferDescription = `You are owed by ${otherParentName}`;
+    } else if (netBalance < 0) {
+        transferDescription = `You owe ${otherParentName}`;
+    } else if (pendingYourConfirmationAmount > 0 || awaitingOtherParentConfirmationAmount > 0) {
+        transferDescription = "Payments are pending confirmation";
+    }
   }
+
+  const isButtonDisabled = netBalance === 0 && pendingYourConfirmationAmount === 0;
   
   return (
     <Card className="flex flex-col">
@@ -169,7 +177,7 @@ export function SummaryCard({
           netBalance={netBalance}
           parentNames={parentNames}
         >
-          <Button className="w-full" disabled={netBalance <= 0 && pendingYourConfirmationAmount <= 0}>
+          <Button className="w-full" disabled={isButtonDisabled}>
             <HandCoins className="mr-2 h-4 w-4" />
             Settle Balance
           </Button>
