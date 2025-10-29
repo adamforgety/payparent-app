@@ -117,7 +117,12 @@ export function ExpensesCard({
             </div>
           </div>
           <div className="no-print flex flex-wrap items-center justify-end gap-2">
-            <ExportButton expenses={expenses} currentDate={currentDate} />
+            <ExportButton
+              expenses={expenses}
+              childSupport={childSupport}
+              currentDate={currentDate}
+              parentNames={parentNames}
+            />
             <Button variant="outline" onClick={handleMarkAllAsPaid} disabled={!hasUnpaidItems}>
                 <CheckCheck className="mr-2 h-4 w-4" />
                 Mark All Paid
@@ -174,7 +179,7 @@ export function ExpensesCard({
                     ${item.amount.toFixed(2)}
                   </TableCell>
                   <TableCell className="no-print text-right">
-                    <div className="flex justify-end gap-1 h-8">
+                    <div className="flex justify-end gap-1 h-8 w-full">
                       {item.id !== 'child-support' && (
                         <>
                             <EditExpenseDialog expense={item} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
