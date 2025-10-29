@@ -26,29 +26,45 @@ export function SummaryCard({
   expenseSplit,
   childSupport,
 }: SummaryCardProps) {
-  const parentSplit = expenseSplit[parent];
-  const expenseShare = totalExpenses * (parentSplit / 100);
-  const totalPaidByParent = expenses.filter(exp => exp.paidBy === parent).reduce((sum, exp) => sum + exp.amount, 0);
+  const parentSplitPercentage = expenseSplit[parent];
+  const expenseShare = totalExpenses * (parentSplitPercentage / 100);
+  const totalPaidByParent = expenses
+    .filter((exp) => exp.paidBy === parent)
+    .reduce((sum, exp) => sum + exp.amount, 0);
 
-  let childSupportEffect = 0;
-  if (childSupport.paidBy !== 'None') {
-    if (childSupport.paidBy === parent) {
-      childSupportEffect = -childSupport.amount;
-    } else {
-      childSupportEffect = childSupport.amount;
-    }
+  // Determine what this parent is responsible for paying in total
+  let totalOwedByParent = expenseShare;
+
+  // childSupport.paidBy is the one who PAYS support
+  // If this parent is the one who pays support, their total obligation increases.
+  if (childSupport.paidBy === parent) {
+    totalOwedByParent += childSupport.amount;
   }
 
-  const netBalance = totalPaidByParent - expenseShare - childSupportEffect;
+  // Calculate the net balance
+  // A positive balance means they paid more than they owe (other parent owes them)
+  // A negative balance means they paid less than they owe (they owe the other parent)
+  const netBalance = totalPaidByParent - totalOwedByParent;
   
-  let balanceDescription = "Amount you've paid is less than your share.";
-  if(netBalance > 0) balanceDescription = "You've paid more than your share.";
-  if(netBalance === 0) balanceDescription = "All settled up.";
-
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-  let transferDescription = `Owes ${otherParent}`;
-  if(netBalance < 0) transferDescription = `Receives from ${otherParent}`;
-  if(netBalance === 0) transferDescription = "No transfer needed";
+
+  let transferDescription: string;
+  let balanceDescription: string;
+  let amountDescription: string;
+
+  if (netBalance > 0) {
+    transferDescription = `Receives from ${otherParent}`;
+    balanceDescription = "You've paid more than your total share.";
+    amountDescription = `Amount to Receive`;
+  } else if (netBalance < 0) {
+    transferDescription = `Owes ${otherParent}`;
+    balanceDescription = "Your payments are less than your total share.";
+    amountDescription = `Amount Owed`;
+  } else {
+    transferDescription = "All settled up";
+    balanceDescription = "You've paid your exact share.";
+    amountDescription = 'Balance';
+  }
 
 
   return (
@@ -66,17 +82,17 @@ export function SummaryCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">Share of Expenses ({parentSplit}%)</p>
+          <p className="text-muted-foreground">Your Share of Expenses ({parentSplitPercentage}%)</p>
           <p className="font-semibold">${expenseShare.toFixed(2)}</p>
         </div>
          <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">Total Paid</p>
+          <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
         <div className="flex justify-between items-center">
             <p className="text-muted-foreground">Child Support</p>
-            <p className={`font-semibold ${childSupportEffect === 0 ? '' : childSupportEffect > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {childSupportEffect >= 0 ? '+' : '-'}${Math.abs(childSupportEffect).toFixed(2)}
+            <p className={`font-semibold ${childSupport.paidBy === 'None' ? '' : childSupport.paidBy === parent ? 'text-red-600' : 'text-green-600'}`}>
+                {childSupport.paidBy === 'None' ? '$0.00' : `${childSupport.paidBy === parent ? '-' : '+'}$${childSupport.amount.toFixed(2)}`}
             </p>
         </div>
         <Separator />
@@ -84,15 +100,15 @@ export function SummaryCard({
             <p className="text-sm text-muted-foreground">{transferDescription}</p>
             <p className={cn(
                 "text-2xl font-bold",
-                netBalance > 0 && "text-red-600",
-                netBalance < 0 && "text-green-600",
+                netBalance < 0 && "text-red-600",
+                netBalance > 0 && "text-green-600",
             )}>
               ${Math.abs(netBalance).toFixed(2)}
             </p>
             <p className="text-xs text-muted-foreground">{balanceDescription}</p>
         </div>
         <p className="text-xs text-muted-foreground pt-2">
-            This is the net balance for the month. A positive amount indicates you are owed money, and a negative amount means you owe money to the other parent.
+            This is the net balance for the month. A positive amount means you are owed money, and a negative amount means you owe the other parent. This is calculated as (Total Paid) - (Expense Share + Child Support).
         </p>
       </CardContent>
     </Card>
