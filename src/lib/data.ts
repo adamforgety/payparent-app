@@ -1,4 +1,4 @@
-import { AppData } from './types';
+import { AppData, PaymentStatus } from './types';
 import { format, subMonths } from 'date-fns';
 
 const today = new Date();

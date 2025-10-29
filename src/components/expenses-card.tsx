@@ -26,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense } from '@/lib/types';
+import type { Expense, PaymentStatus } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
@@ -38,6 +38,19 @@ interface ExpensesCardProps {
   children: ReactNode;
   currentDate: Date;
 }
+
+const statusVariant: Record<PaymentStatus, 'default' | 'secondary' | 'destructive'> = {
+    'Paid': 'default',
+    'Pending': 'secondary',
+    'Unpaid': 'destructive',
+};
+
+const statusStyle: Record<PaymentStatus, string> = {
+    'Paid': 'bg-green-600 hover:bg-green-700',
+    'Pending': 'bg-yellow-500 hover:bg-yellow-600 text-black',
+    'Unpaid': '',
+}
+
 
 export function ExpensesCard({
   expenses,
@@ -99,8 +112,8 @@ export function ExpensesCard({
                   </TableCell>
                   <TableCell>
                      <Badge
-                        variant={expense.status === 'Paid' ? 'default' : 'destructive'}
-                        className={cn(expense.status === 'Paid' && 'bg-green-600 hover:bg-green-700')}
+                        variant={statusVariant[expense.status]}
+                        className={cn(statusStyle[expense.status])}
                     >
                         {expense.status}
                     </Badge>

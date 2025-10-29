@@ -43,18 +43,21 @@ export function SummaryCard({
   const expenseShare = totalExpenses * (parentSplitPercentage / 100);
   
   let childSupportAdjustment = 0;
-  if (childSupport.paidBy !== 'None') {
+  // If child support is not 'Paid', it affects the balance.
+  if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // This parent paid child support, so it's part of their total contribution
+      // This parent PAYS child support, increasing their contribution.
       childSupportAdjustment = childSupport.amount;
     } else {
-      // This parent receives child support, so it counts against their contribution
+      // This parent RECEIVES child support, which is owed to them.
+      // This effectively reduces what they need to contribute from their pocket.
       childSupportAdjustment = -childSupport.amount;
     }
   }
 
-  // Net Balance = (Total you contributed: direct payments + child support paid) - (Your responsibility: expense share)
-  const netBalance = totalPaidByParent + childSupportAdjustment - expenseShare;
+  // Net Balance = (What you paid for shared items) - (Your share of expenses + child support you owe)
+  // Or for the receiver: (What you paid) - (Your share - child support you are owed)
+  const netBalance = totalPaidByParent - expenseShare + childSupportAdjustment;
 
   let transferDescription: string;
   if (netBalance > 0.005) { // Use a small epsilon for floating point comparison
@@ -111,7 +114,7 @@ export function SummaryCard({
           <p
             className={cn(
               'text-2xl font-bold',
-              netBalance < 0 && 'text-red-600',
+              netBalance < 0 && 'text-destructive',
               netBalance > 0 && 'text-green-600'
             )}
           >
@@ -119,7 +122,7 @@ export function SummaryCard({
           </p>
         </div>
         <p className="pt-2 text-xs text-muted-foreground">
-          This is the net balance for the month. A positive amount means you are owed money.
+          This is the net balance for the month. A positive amount means you are owed money from the other parent.
         </p>
       </CardContent>
       <CardFooter>
@@ -131,11 +134,10 @@ export function SummaryCard({
           childSupport={childSupport}
           onUpdateExpense={onUpdateExpense}
           onUpdateChildSupport={onUpdateChildSupport}
-          isEnabled={netBalance > 0}
         >
-          <Button className="w-full" disabled={netBalance <= 0}>
+          <Button className="w-full">
             <HandCoins className="mr-2 h-4 w-4" />
-            {netBalance > 0 ? 'Settle Balance' : 'Balance Settled'}
+            Settle Balance
           </Button>
         </SettleBalanceDialog>
       </CardFooter>

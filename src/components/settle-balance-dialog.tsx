@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { HandCoins } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,11 +19,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import type { Expense, Parent, ExpenseSplit, ChildSupport } from '@/lib/types';
+import type { Expense, Parent, ExpenseSplit, ChildSupport, PaymentStatus } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { cn } from '@/lib/utils';
 
 interface SettleBalanceDialogProps {
   parent: Parent;
@@ -35,8 +34,16 @@ interface SettleBalanceDialogProps {
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: React.ReactNode;
-  isEnabled: boolean;
 }
+
+type ItemToSettle = {
+  id: string;
+  description: string;
+  totalAmount: number;
+  owedAmount: number;
+  status: PaymentStatus;
+  type: 'expense' | 'child_support';
+};
 
 export function SettleBalanceDialog({
   parent,
@@ -47,175 +54,204 @@ export function SettleBalanceDialog({
   onUpdateExpense,
   onUpdateChildSupport,
   children,
-  isEnabled,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const otherParentSplit = expenseSplit[otherParent];
+  // Items where the other parent owes the current parent
+  const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
+    const owedExpenses = expenses
+      .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
+      .map((exp): ItemToSettle => ({
+        id: exp.id,
+        description: exp.description,
+        totalAmount: exp.amount,
+        owedAmount: exp.amount * (expenseSplit[otherParent] / 100),
+        status: exp.status,
+        type: 'expense',
+      }));
 
-  const expensesToSettle = useMemo(() => {
-    // These are expenses paid by `parent` that `otherParent` has not paid their share for.
-    return expenses.filter(
-      (exp) => exp.paidBy === parent && exp.status === 'Unpaid'
-    );
-  }, [expenses, parent]);
-
-  const childSupportToSettle = useMemo(() => {
-    // Child support is owed to `parent` if `otherParent` is the payer and it's unpaid.
-    return childSupport.paidBy === otherParent && childSupport.status === 'Unpaid'
-      ? { ...childSupport, id: 'child-support' }
-      : null;
-  }, [childSupport, otherParent]);
-
-  const totalOwedFromExpenses = expensesToSettle.reduce((acc, exp) => {
-    const amountOwed = exp.amount * (otherParentSplit / 100);
-    return acc + amountOwed;
-  }, 0);
-
-  const totalOwedFromChildSupport = childSupportToSettle ? childSupportToSettle.amount : 0;
-
-  const totalOwed = totalOwedFromExpenses + totalOwedFromChildSupport;
-
-  const handleToggleSelection = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((selectedId) => selectedId !== id)
-        : [...prev, id]
-    );
-  };
-  
-  const handleMarkAllAsPaid = () => {
-    expensesToSettle.forEach((exp) => {
-      onUpdateExpense({ ...exp, status: 'Paid' });
-    });
-    if (childSupportToSettle) {
-        onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+    const owedChildSupport: ItemToSettle[] = [];
+    if (childSupport.paidBy === otherParent && childSupport.status !== 'Paid') {
+      owedChildSupport.push({
+        id: 'child-support',
+        description: 'Child Support',
+        totalAmount: childSupport.amount,
+        owedAmount: childSupport.amount,
+        status: childSupport.status,
+        type: 'child_support',
+      });
     }
-    setSelectedIds([]);
-    setIsOpen(false);
-  };
+
+    return [...owedExpenses, ...owedChildSupport];
+  }, [expenses, childSupport, parent, otherParent, expenseSplit]);
+
+  // Items where the current parent owes the other parent
+  const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
+    const owedExpenses = expenses
+      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
+      .map((exp): ItemToSettle => ({
+        id: exp.id,
+        description: exp.description,
+        totalAmount: exp.amount,
+        owedAmount: exp.amount * (expenseSplit[parent] / 100),
+        status: exp.status,
+        type: 'expense',
+      }));
+    
+    const owedChildSupport: ItemToSettle[] = [];
+     if (childSupport.paidBy === parent && childSupport.status === 'Unpaid') {
+       owedChildSupport.push({
+         id: 'child-support',
+         description: 'Child Support',
+         totalAmount: childSupport.amount,
+         owedAmount: childSupport.amount,
+         status: childSupport.status,
+         type: 'child_support',
+       });
+     }
+
+    return [...owedExpenses, ...owedChildSupport];
+  }, [expenses, childSupport, parent, otherParent, expenseSplit]);
 
 
-  const handleMarkSelectedAsPaid = () => {
-    selectedIds.forEach((id) => {
-        if (id === 'child-support') {
-            onUpdateChildSupport({ ...childSupport, status: 'Paid' });
-        } else {
-            const expense = expenses.find(exp => exp.id === id);
-            if (expense) {
-                onUpdateExpense({ ...expense, status: 'Paid' });
-            }
-        }
-    });
-    setSelectedIds([]);
-    setIsOpen(false);
+  const handleMarkAsPaid = (item: ItemToSettle) => {
+    if (item.type === 'expense') {
+      const originalExpense = expenses.find(exp => exp.id === item.id);
+      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Pending' });
+    } else {
+      onUpdateChildSupport({ ...childSupport, status: 'Pending' });
+    }
   };
   
-  const allItemsToSettle = expensesToSettle.length + (childSupportToSettle ? 1 : 0);
-
-  if (!isEnabled) {
-    return <>{children}</>;
+  const handleMarkAsReceived = (item: ItemToSettle) => {
+     if (item.type === 'expense') {
+      const originalExpense = expenses.find(exp => exp.id === item.id);
+      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+    } else {
+      onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+    }
   }
+
+  const totalOwedToMe = itemsOwedToMe.filter(i => i.status === 'Unpaid').reduce((acc, item) => acc + item.owedAmount, 0);
+  const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Settle Balance with {otherParent}</DialogTitle>
+          <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
-            These are the amounts {otherParent} owes you for this month. Mark items as paid once you've received the funds.
+            Manage payments between you and {otherParent}. Mark items as paid or confirm receipt of payments.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="h-[400px] border rounded-md">
-          <Table>
-            <TableHeader className="sticky top-0 bg-secondary">
-              <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Total Amount</TableHead>
-                <TableHead className="text-right">Amount Owed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {childSupportToSettle && (
-                <TableRow>
-                    <TableCell>
-                         <Checkbox
-                          id="select-child-support"
-                          checked={selectedIds.includes('child-support')}
-                          onCheckedChange={() =>
-                            handleToggleSelection('child-support')
-                          }
-                        />
-                    </TableCell>
-                    <TableCell>Child Support</TableCell>
-                    <TableCell className="text-right">${childSupportToSettle.amount.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-medium">${childSupportToSettle.amount.toFixed(2)}</TableCell>
-                </TableRow>
-              )}
-              {expensesToSettle.length > 0 ? (
-                expensesToSettle.map((expense) => {
-                  const amountOwed =
-                    expense.amount * (otherParentSplit / 100);
-                  return (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        <Checkbox
-                          id={`select-${expense.id}`}
-                          checked={selectedIds.includes(expense.id)}
-                          onCheckedChange={() =>
-                            handleToggleSelection(expense.id)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{expense.description}</TableCell>
-                      <TableCell className="text-right">
-                        ${expense.amount.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        ${amountOwed.toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                !childSupportToSettle && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      No unpaid items to settle.
-                    </TableCell>
-                  </TableRow>
-                )
-              )}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-        <div className="flex justify-end items-center gap-4 p-4 rounded-md bg-secondary/50 font-semibold">
-            <span>Total Owed to You:</span>
-            <span className="text-xl text-primary font-bold">${totalOwed.toFixed(2)}</span>
-        </div>
-        <DialogFooter className="sm:justify-between gap-2">
-            <div>
-                 <Button
-                    variant="outline"
-                    onClick={handleMarkAllAsPaid}
-                    disabled={allItemsToSettle === 0}
-                >
-                    Mark All as Paid
-                </Button>
-            </div>
-            <div>
-                 <Button
-                    onClick={handleMarkSelectedAsPaid}
-                    disabled={selectedIds.length === 0}
-                >
-                    Mark Selected as Paid ({selectedIds.length})
-                </Button>
-            </div>
-        </DialogFooter>
+        <Tabs defaultValue="owed-to-me">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="owed-to-me">
+              Owed to You ({itemsOwedToMe.filter(i => i.status !== 'Paid').length})
+              <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
+              </TabsTrigger>
+            <TabsTrigger value="owed-by-me">
+              Owed by You ({itemsOwedByMe.length})
+               <span className="ml-2 text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
+              </TabsTrigger>
+          </TabsList>
+          <TabsContent value="owed-to-me">
+             <SettlementTable 
+                items={itemsOwedToMe}
+                actionLabel="Received"
+                onItemAction={handleMarkAsReceived}
+                actionVariant='default'
+                actionDisabled={item => item.status === 'Unpaid'}
+                parent={parent}
+             />
+          </TabsContent>
+          <TabsContent value="owed-by-me">
+              <SettlementTable 
+                items={itemsOwedByMe}
+                actionLabel="Paid"
+                onItemAction={handleMarkAsPaid}
+                actionVariant='destructive'
+                actionDisabled={item => item.status === 'Pending' || item.status === 'Paid'}
+                parent={parent}
+              />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
+}
+
+
+interface SettlementTableProps {
+  items: ItemToSettle[];
+  actionLabel: string;
+  onItemAction: (item: ItemToSettle) => void;
+  actionVariant: 'default' | 'destructive';
+  actionDisabled: (item: ItemToSettle) => boolean;
+  parent: Parent;
+}
+
+function SettlementTable({ items, actionLabel, onItemAction, actionVariant, actionDisabled, parent }: SettlementTableProps) {
+  
+  const getStatus = (item: ItemToSettle) => {
+    if(item.status === 'Pending' && actionLabel === 'Paid') return { text: 'Pending Confirmation', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
+    if(item.status === 'Pending' && actionLabel === 'Received') return { text: 'Confirmation Required', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
+    if(item.status === 'Unpaid') return { text: 'Unpaid', variant: 'destructive' as const, style: '' };
+    return { text: 'Paid', variant: 'default' as const, style: 'bg-green-600 hover:bg-green-700' };
+  }
+  
+  return (
+      <ScrollArea className="h-[400px] border rounded-md mt-4">
+        <Table>
+          <TableHeader className="sticky top-0 bg-secondary">
+            <TableRow>
+              <TableHead>Description</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Owed Amount</TableHead>
+              <TableHead className="w-[100px]">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.length > 0 ? (
+              items.map((item) => {
+                const status = getStatus(item);
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <p className="font-medium">{item.description}</p>
+                      <p className="text-xs text-muted-foreground">Total: ${item.totalAmount.toFixed(2)}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant} className={cn(status.style)}>
+                        {status.text}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ${item.owedAmount.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                       <Button
+                        variant={actionVariant}
+                        size="sm"
+                        onClick={() => onItemAction(item)}
+                        disabled={actionDisabled(item)}
+                      >
+                        Mark as {actionLabel}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  No items in this category.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+  )
 }

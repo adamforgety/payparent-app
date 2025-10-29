@@ -7,6 +7,8 @@ export type ExpenseCategory =
   | 'Food'
   | 'Other';
 
+export type PaymentStatus = 'Unpaid' | 'Pending' | 'Paid';
+
 export interface Expense {
   id: string;
   date: string; // ISO string
@@ -14,7 +16,7 @@ export interface Expense {
   amount: number;
   paidBy: Parent;
   category: ExpenseCategory;
-  status: 'Unpaid' | 'Paid';
+  status: PaymentStatus;
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';
@@ -22,7 +24,7 @@ export type Parent = 'Parent 1' | 'Parent 2';
 export interface ChildSupport {
   amount: number;
   paidBy: Parent | 'None';
-  status: 'Unpaid' | 'Paid';
+  status: PaymentStatus;
 }
 
 export interface ExpenseSplit {
