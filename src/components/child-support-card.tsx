@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ChildSupport, Parent } from '@/lib/types';
+import { useState } from 'react';
 
 interface ChildSupportCardProps {
   childSupport: ChildSupport;
@@ -29,10 +30,26 @@ export function ChildSupportCard({
   childSupport,
   onUpdate,
 }: ChildSupportCardProps) {
+  // Use local state to manage the input's value to allow for empty strings
+  const [inputValue, setInputValue] = useState<string>(
+    childSupport.amount > 0 ? String(childSupport.amount) : ''
+  );
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const amount = Number(e.target.value);
-    onUpdate({ ...childSupport, amount: isNaN(amount) ? 0 : amount });
+    const value = e.target.value;
+    // Allow empty string or numbers
+    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      setInputValue(value);
+      const amount = Number(value);
+      onUpdate({ ...childSupport, amount: isNaN(amount) ? 0 : amount });
+    }
   };
+  
+  const handleBlur = () => {
+    if (inputValue === '') {
+      setInputValue(childSupport.amount > 0 ? String(childSupport.amount) : '');
+    }
+  }
 
   const handlePayerChange = (value: Parent | 'None') => {
     onUpdate({ ...childSupport, paidBy: value });
@@ -56,10 +73,11 @@ export function ChildSupportCard({
           <Label htmlFor="support-amount">Amount ($)</Label>
           <Input
             id="support-amount"
-            type="number"
-            placeholder="500"
-            value={childSupport.amount}
+            type="text" // Use text to allow empty string
+            placeholder="e.g., 500"
+            value={inputValue}
             onChange={handleAmountChange}
+            onBlur={handleBlur}
           />
         </div>
         <div className="space-y-2">
