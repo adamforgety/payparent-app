@@ -49,11 +49,11 @@ export function SummaryCard({
   
   const pendingExpensesConfirmation = expenses
     .filter(
-      (exp) => exp.status === 'Pending' && exp.paidBy === parent
+      (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
     )
     .reduce((sum, exp) => sum + exp.amount, 0)
   
-  const pendingChildSupportConfirmation = childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0;
+  const pendingChildSupportConfirmation = childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0;
 
   const pendingConfirmation = pendingExpensesConfirmation + pendingChildSupportConfirmation;
 
@@ -74,13 +74,13 @@ export function SummaryCard({
   let childSupportAdjustment = 0;
   if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      childSupportAdjustment = childSupport.amount;
-    } else {
       childSupportAdjustment = -childSupport.amount;
+    } else {
+      childSupportAdjustment = childSupport.amount;
     }
   }
 
-  const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
+  const netBalance = unsettledPaidByParent - expenseShare - childSupportAdjustment;
 
   let transferDescription: string;
   if (netBalance > 0.005) { 
@@ -155,9 +155,9 @@ export function SummaryCard({
           onUpdateExpense={onUpdateExpense}
           onUpdateChildSupport={onUpdateChildSupport}
         >
-          <Button className="w-full" disabled={!isOwedMoney}>
+          <Button className="w-full">
             <HandCoins className="mr-2 h-4 w-4" />
-            {isOwedMoney ? 'Settle Balance' : 'Balance Settled'}
+            Settle Balance
           </Button>
         </SettleBalanceDialog>
       </CardFooter>
