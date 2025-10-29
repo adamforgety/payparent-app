@@ -29,17 +29,20 @@ import {
 import type { Expense } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { ExportButton } from './export-button';
 
 interface ExpensesCardProps {
   expenses: Expense[];
   onDelete: (expenseId: string) => void;
   children: ReactNode;
+  currentDate: Date;
 }
 
 export function ExpensesCard({
   expenses,
   onDelete,
   children,
+  currentDate,
 }: ExpensesCardProps) {
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
@@ -58,7 +61,10 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print">{children}</div>
+          <div className="no-print flex items-center gap-2">
+            <ExportButton expenses={expenses} currentDate={currentDate} />
+            {children}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

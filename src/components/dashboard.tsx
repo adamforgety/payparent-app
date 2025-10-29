@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialData } from '@/lib/data';
 import type { AppData, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
+import { ExportButton } from './export-button';
 
 const defaultMonthData: MonthData = {
   childSupport: { amount: 0, paidBy: 'None' },
@@ -127,6 +128,7 @@ export function Dashboard() {
                 <ExpensesCard
                   expenses={currentMonthData.expenses}
                   onDelete={deleteExpense}
+                  currentDate={currentDate}
                 >
                   <AddExpenseDialog onAddExpense={addExpense} />
                 </ExpensesCard>
