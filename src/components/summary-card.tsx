@@ -49,17 +49,19 @@ export function SummaryCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
 
   let childSupportAdjustment = 0;
-  if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
-    if (childSupport.paidBy === parent) {
-      // I am the payer, so I owe this amount. It's a negative adjustment to my balance.
-      childSupportAdjustment = -childSupport.amount;
+   if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
+      if (childSupport.paidBy === parent) {
+        // Parent is the payer, so this amount is credited to them (reduces what they owe overall)
+        childSupportAdjustment = unpaidPaidByParent - expenseShare + childSupport.amount;
+      } else {
+        // Parent is the receiver, so this amount is debited from them (increases what they owe)
+        childSupportAdjustment = unpaidPaidByParent - expenseShare - childSupport.amount;
+      }
     } else {
-      // The other parent is the payer, so I am owed this amount. It's a positive adjustment.
-      childSupportAdjustment = childSupport.amount;
+      childSupportAdjustment = unpaidPaidByParent - expenseShare;
     }
-  }
-
-  const netBalance = (unpaidPaidByParent - expenseShare) + childSupportAdjustment;
+    
+  const netBalance = childSupportAdjustment;
 
   const paidItems = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidItems.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);

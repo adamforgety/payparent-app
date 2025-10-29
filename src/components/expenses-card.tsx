@@ -75,53 +75,59 @@ export function ExpensesCard({
 
   const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
   
-  const unpaidItems = allItems.filter(item => item.status === 'Unpaid');
-  const unpaidExpenses = expenses.filter(exp => exp.status === 'Unpaid');
+  const unpaidExpenses = expenses.filter(item => item.status === 'Unpaid');
+  const paidItems = allItems.filter(item => item.status === 'Paid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const grandTotal = totalExpenses + (childSupport.amount > 0 ? childSupport.amount : 0);
+  const totalSettled = paidItems.reduce((sum, item) => sum + item.amount, 0);
 
+  // --- Calculation Logic (Mirrored from SummaryCard) ---
   const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-  const totalPaidByParent1Unpaid = unpaidItems
-    .filter(item => item.paidBy === 'Parent 1')
-    .reduce((sum, item) => sum + item.amount, 0);
-  
-  const totalPaidByParent2Unpaid = unpaidItems
-    .filter(item => item.paidBy === 'Parent 2')
-    .reduce((sum, item) => sum + item.amount, 0);
-  
-  const parent1ExpenseShareUnpaid = totalUnpaidExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent2ExpenseShareUnpaid = totalUnpaidExpenses * (expenseSplit['Parent 2'] / 100);
-  
-  let parent1Owes = 0;
-  let parent2Owes = 0;
-  
-  const unpaidChildSupportAmount = (childSupportAsExpense && childSupportAsExpense.status === 'Unpaid') ? childSupport.amount : 0;
-  
-  if(childSupport.paidBy === 'Parent 1' && unpaidChildSupportAmount > 0) {
-    // Parent 1 paid child support. This is a credit for P1 in the settlement.
-    parent1Owes = parent1ExpenseShareUnpaid - totalPaidByParent1Unpaid;
-    parent2Owes = parent2ExpenseShareUnpaid - totalPaidByParent2Unpaid + unpaidChildSupportAmount;
-  } else if (childSupport.paidBy === 'Parent 2' && unpaidChildSupportAmount > 0) {
-    // Parent 2 paid child support. This is a credit for P2.
-    parent1Owes = parent1ExpenseShareUnpaid - totalPaidByParent1Unpaid + unpaidChildSupportAmount;
-    parent2Owes = parent2ExpenseShareUnpaid - totalPaidByParent2Unpaid;
-  } else {
-    // No child support, or it's paid.
-    parent1Owes = parent1ExpenseShareUnpaid - totalPaidByParent1Unpaid;
-    parent2Owes = parent2ExpenseShareUnpaid - totalPaidByParent2Unpaid;
-  }
-  
-  // The amounts should balance out. A positive value means they owe that much to the "pot".
-  // A negative value means they are owed that much from the "pot".
-  // The settlement is the difference between what each person owes.
-  
-  const settlementAmount = (parent1Owes - parent2Owes) / 2;
-  
-  const finalParent1Owes = settlementAmount > 0 ? settlementAmount : 0;
-  const finalParent2Owes = settlementAmount < 0 ? Math.abs(settlementAmount) : 0;
+  const calculateParentBalance = (parent: 'Parent 1' | 'Parent 2') => {
+    const expenseShare = totalUnpaidExpenses * (expenseSplit[parent] / 100);
+    
+    const unpaidPaidByParent = unpaidExpenses
+      .filter((exp) => exp.paidBy === parent)
+      .reduce((sum, exp) => sum + exp.amount, 0);
 
+    let childSupportAdjustment = 0;
+    if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
+      if (childSupport.paidBy === parent) {
+        // Parent is the payer, so this amount is credited to them (reduces what they owe overall)
+        childSupportAdjustment = unpaidPaidByParent - expenseShare + childSupport.amount;
+      } else {
+        // Parent is the receiver, so this amount is debited from them (increases what they owe)
+        childSupportAdjustment = unpaidPaidByParent - expenseShare - childSupport.amount;
+      }
+    } else {
+      childSupportAdjustment = unpaidPaidByParent - expenseShare;
+    }
+
+    return childSupportAdjustment;
+  }
+
+  const parent1NetBalance = calculateParentBalance('Parent 1');
+  const parent2NetBalance = calculateParentBalance('Parent 2');
+
+  // Positive balance means they are owed money, negative means they owe money.
+  // The settlement amount is what one person pays to the other to make balances zero.
+  // If P1 has a net of -50 and P2 has a net of +50, P1 owes P2 $50.
+  let parent1Owes = parent1NetBalance < 0 ? Math.abs(parent1NetBalance) : 0;
+  let parent2Owes = parent2NetBalance < 0 ? Math.abs(parent2NetBalance) : 0;
+
+  if (parent1NetBalance + parent2NetBalance !== 0) {
+      if (parent1NetBalance < 0 && parent2NetBalance > 0) {
+        parent1Owes = Math.abs(parent1NetBalance);
+        parent2Owes = 0;
+      } else if (parent2NetBalance < 0 && parent1NetBalance > 0) {
+        parent2Owes = Math.abs(parent2NetBalance);
+        parent1Owes = 0;
+      }
+  }
+
+  // --- End Calculation Logic ---
 
   const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
     if (item.id === 'child-support') {
@@ -283,14 +289,14 @@ export function ExpensesCard({
         <Separator/>
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">{parentNames['Parent 1']} Owes:</span>
-          <span className={cn("font-semibold", finalParent1Owes > 0 && "text-destructive")}>
-            ${finalParent1Owes.toFixed(2)}
+          <span className={cn("font-semibold", parent1Owes > 0 && "text-destructive")}>
+            ${parent1Owes.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">{parentNames['Parent 2']} Owes:</span>
-          <span className={cn("font-semibold", finalParent2Owes > 0 && "text-destructive")}>
-            ${finalParent2Owes.toFixed(2)}
+          <span className={cn("font-semibold", parent2Owes > 0 && "text-destructive")}>
+            ${parent2Owes.toFixed(2)}
           </span>
         </div>
       </CardFooter>
