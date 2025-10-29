@@ -78,48 +78,6 @@ export function ExpensesCard({
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const grandTotal = totalExpenses + (childSupport.amount > 0 ? childSupport.amount : 0);
   
-  const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
-  const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-
-  const calculateParentOwes = (parent: Parent): number => {
-    const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-    
-    const parentUnpaidPayments = unpaidExpenses
-      .filter(e => e.paidBy === parent)
-      .reduce((sum, e) => sum + e.amount, 0);
-
-    const otherParentUnpaidPayments = unpaidExpenses
-      .filter(e => e.paidBy === otherParent)
-      .reduce((sum, e) => sum + e.amount, 0);
-
-    const parentExpenseShare = totalUnpaidExpenses * (expenseSplit[parent] / 100);
-
-    let childSupportImpact = 0;
-    if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
-      if (childSupport.paidBy === parent) {
-        // Payer owes this amount
-        childSupportImpact = -childSupport.amount;
-      } else {
-        // Recipient is owed this amount
-        childSupportImpact = childSupport.amount;
-      }
-    }
-
-    const netBalance = parentUnpaidPayments - parentExpenseShare + childSupportImpact;
-    
-    // What a parent owes is the negative of the other parent's positive balance,
-    // or their own negative balance.
-    if (netBalance < 0) {
-      return Math.abs(netBalance);
-    }
-    
-    return 0;
-  };
-  
-  const parent1Owes = calculateParentOwes('Parent 1');
-  const parent2Owes = calculateParentOwes('Parent 2');
-
-
   const handleMarkAllAsPaid = () => {
     expenses.forEach(exp => {
       if (exp.status === 'Unpaid') {
@@ -140,6 +98,12 @@ export function ExpensesCard({
     .filter(e => e.paidBy === 'Parent 2')
     .reduce((sum, e) => sum + e.amount, 0) +
     (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
+
+  const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
+  const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
+
+  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
+  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
 
   return (
     <Card>
@@ -267,23 +231,21 @@ export function ExpensesCard({
           </span>
         </div>
         <Separator/>
-        {hasUnpaidItems ? (
+        <div className="flex justify-between items-center">
+          <span className="text-muted-foreground">{parentNames['Parent 1']}'s Total Share:</span>
+          <span className="font-semibold text-primary">
+            ${parent1TotalShare.toFixed(2)}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-muted-foreground">{parentNames['Parent 2']}'s Total Share:</span>
+          <span className="font-semibold text-primary">
+            ${parent2TotalShare.toFixed(2)}
+          </span>
+        </div>
+        {!hasUnpaidItems && (
             <>
-                <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">{parentNames['Parent 1']} Owes:</span>
-                <span className={cn("font-semibold", parent1Owes > 0 && "text-destructive")}>
-                    ${parent1Owes.toFixed(2)}
-                </span>
-                </div>
-                <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">{parentNames['Parent 2']} Owes:</span>
-                <span className={cn("font-semibold", parent2Owes > 0 && "text-destructive")}>
-                    ${parent2Owes.toFixed(2)}
-                </span>
-                </div>
-            </>
-        ) : (
-            <>
+                <Separator/>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{parentNames['Parent 1']} Paid Total:</span>
                   <span className="font-semibold text-primary">
