@@ -6,18 +6,28 @@ const today = new Date();
 export const initialData: AppData = {
   [format(today, 'yyyy-MM')]: {
     childSupport: {
-      amount: 0,
-      paidBy: 'None',
+      amount: 200,
+      paidBy: 'Parent 1',
       status: 'Unpaid',
     },
     expenseSplit: {
       'Parent 1': 50,
       'Parent 2': 50,
     },
-    expenses: [],
+    expenses: [
+      {
+        id: 'dummy-expense-1',
+        date: new Date().toISOString(),
+        description: 'Soccer registration',
+        amount: 150,
+        paidBy: 'Parent 2',
+        category: 'Activities',
+        status: 'Pending',
+      }
+    ],
     parentNames: {
-      'Parent 1': 'Parent 1',
-      'Parent 2': 'Parent 2',
+      'Parent 1': 'Alex',
+      'Parent 2': 'Jordan',
     },
   },
 };
