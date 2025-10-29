@@ -62,7 +62,6 @@ export function SettleBalanceDialog({
   const parentSplit = expenseSplit[parent] / 100;
   const otherParentSplit = expenseSplit[otherParent] / 100;
 
-  // Items where the other parent owes the current parent
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
     const unsettledExpensesPaidByMe = expenses
       .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
@@ -76,7 +75,7 @@ export function SettleBalanceDialog({
       }));
 
     const childSupportOwedToMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === otherParent && childSupport.status !== 'Paid') {
+    if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status !== 'Paid') {
       childSupportOwedToMe.push({
         id: 'child-support',
         description: 'Child Support',
@@ -90,7 +89,6 @@ export function SettleBalanceDialog({
     return [...unsettledExpensesPaidByMe, ...childSupportOwedToMe].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParentSplit, otherParent]);
 
-  // Items where the current parent owes the other parent
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
     const unsettledExpensesPaidByOther = expenses
       .filter((exp) => exp.paidBy === otherParent && exp.status !== 'Paid')
@@ -102,18 +100,18 @@ export function SettleBalanceDialog({
         status: exp.status,
         type: 'expense',
       }));
-    
+
     const childSupportOwedByMe: ItemToSettle[] = [];
-     if (childSupport.paidBy === parent && childSupport.status !== 'Paid') {
-       childSupportOwedByMe.push({
-         id: 'child-support',
-         description: 'Child Support',
-         totalAmount: childSupport.amount,
-         owedAmount: childSupport.amount,
-         status: childSupport.status,
-         type: 'child_support',
-       });
-     }
+    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status !== 'Paid') {
+      childSupportOwedByMe.push({
+        id: 'child-support',
+        description: 'Child Support',
+        totalAmount: childSupport.amount,
+        owedAmount: childSupport.amount,
+        status: childSupport.status,
+        type: 'child_support',
+      });
+    }
 
     return [...unsettledExpensesPaidByOther, ...childSupportOwedByMe].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, parentSplit, otherParent]);
