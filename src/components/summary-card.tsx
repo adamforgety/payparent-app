@@ -76,24 +76,26 @@ export function SummaryCard({
 
   const pendingItems = expenses.filter(exp => exp.status === 'Pending');
 
-  // Calculate amounts awaiting YOUR confirmation (paid by OTHER parent)
   pendingItems.forEach(exp => {
+    // If the other parent paid, it's awaiting YOUR confirmation.
     if (exp.paidBy === otherParent) {
       awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
     }
-  });
-  if (childSupport.status === 'Pending' && childSupport.paidBy === otherParent) {
-    awaitingYourConfirmationAmount += childSupport.amount;
-  }
-
-  // Calculate amounts awaiting the OTHER parent's confirmation (paid by YOU)
-  pendingItems.forEach(exp => {
-    if (exp.paidBy === parent) {
+    // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
+    else if (exp.paidBy === parent) {
       awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
     }
   });
-  if (childSupport.status === 'Pending' && childSupport.paidBy === parent) {
-    awaitingOtherParentConfirmationAmount += childSupport.amount;
+
+  if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
+    // If other parent paid child support, it's awaiting YOUR confirmation.
+    if (childSupport.paidBy === otherParent) {
+      awaitingYourConfirmationAmount += childSupport.amount;
+    }
+    // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
+    else if (childSupport.paidBy === parent) {
+      awaitingOtherParentConfirmationAmount += childSupport.amount;
+    }
   }
 
 
@@ -110,10 +112,8 @@ export function SummaryCard({
   }
   
   const isButtonDisabled = !(
-      expenses.some(e => e.status === 'Unpaid') ||
-      (childSupport.amount > 0 && childSupport.status === 'Unpaid') ||
-      expenses.some(e => e.status === 'Pending') ||
-      (childSupport.amount > 0 && childSupport.status === 'Pending')
+      expenses.some(e => e.status === 'Unpaid' || e.status === 'Pending') ||
+      (childSupport.amount > 0 && (childSupport.status === 'Unpaid' || childSupport.status === 'Pending'))
   );
 
 
