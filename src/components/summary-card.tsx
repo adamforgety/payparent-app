@@ -59,11 +59,11 @@ export function SummaryCard({
   // Apply child support to the balance
   if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
-        // You are the payer. This payment is a "credit" for you, reducing what you owe for other expenses.
-        netBalance += childSupport.amount;
+        // You are the payer. This amount is owed by you.
+        netBalance -= childSupport.amount;
       } else {
         // You are the receiver. This amount is owed to you.
-        netBalance -= childSupport.amount;
+        netBalance += childSupport.amount;
       }
   }
 

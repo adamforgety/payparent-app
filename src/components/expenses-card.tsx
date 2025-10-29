@@ -105,9 +105,11 @@ export function ExpensesCard({
   
     if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
         if (childSupport.paidBy === parent) {
-          netBalance += childSupport.amount;
-        } else {
+          // Payer owes this amount
           netBalance -= childSupport.amount;
+        } else {
+          // Recipient is owed this amount
+          netBalance += childSupport.amount;
         }
     }
     return netBalance;
