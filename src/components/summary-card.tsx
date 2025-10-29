@@ -66,16 +66,18 @@ export function SummaryCard({
   const paidAndSettledExpenses = expenses.filter((exp) => exp.status === 'Paid');
   const totalSettled = paidAndSettledExpenses.reduce((sum, exp) => sum + exp.amount, 0) + (childSupport.status === 'Paid' ? childSupport.amount : 0);
   
-  const pendingConfirmation = expenses
-    .filter(
-      (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
-    )
-    .reduce((sum, exp) => {
-       return sum + exp.amount * (parentSplitPercentage / 100);
-    }, 0) + ((childSupport.status === 'Pending' && childSupport.paidBy === otherParent) ? childSupport.amount : 0);
+  const pendingYourConfirmationAmount =
+    expenses
+      .filter(
+        (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
+      )
+      .reduce((sum, exp) => sum + exp.amount * (expenseSplit[parent] / 100), 0) +
+    (childSupport.status === 'Pending' && childSupport.paidBy === parent
+      ? childSupport.amount
+      : 0);
 
 
-  const isSettled = Math.abs(netBalance) < 0.01 && pendingConfirmation === 0;
+  const isSettled = Math.abs(netBalance) < 0.01 && pendingYourConfirmationAmount === 0;
   let transferDescription = 'All settled up';
   if (!isSettled) {
     transferDescription = netBalance > 0 ? `You are owed by ${otherParent}` : `You owe ${otherParent}`;
@@ -105,10 +107,12 @@ export function SummaryCard({
           <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-muted-foreground">Pending Confirmation</p>
-          <p className="font-semibold text-yellow-600">${pendingConfirmation.toFixed(2)}</p>
-        </div>
+        {pendingYourConfirmationAmount > 0 && (
+           <div className="flex items-center justify-between text-sm">
+            <p className="text-yellow-600">Pending Your Confirmation</p>
+            <p className="font-semibold text-yellow-600">${pendingYourConfirmationAmount.toFixed(2)}</p>
+          </div>
+        )}
         <div className="flex items-center justify-between text-sm">
           <p className="text-muted-foreground">Paid & Settled</p>
           <p className="font-semibold text-green-600">${totalSettled.toFixed(2)}</p>
