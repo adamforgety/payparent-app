@@ -72,7 +72,7 @@ export function SummaryCard({
 
 
   // What YOU need to confirm.
-  // This is money the OTHER parent has sent you that is awaiting your confirmation.
+  // This is money the OTHER parent has sent that is awaiting your confirmation.
   const awaitingYourConfirmationAmount =
     expenses
       .filter(exp => exp.status === 'Pending' && exp.paidBy === otherParent)
