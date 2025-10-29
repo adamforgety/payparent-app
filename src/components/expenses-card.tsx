@@ -89,16 +89,6 @@ export function ExpensesCard({
     }
   };
 
-  const totalPaidByParent1 = expenses
-    .filter(e => e.paidBy === 'Parent 1')
-    .reduce((sum, e) => sum + e.amount, 0) + 
-    (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
-
-  const totalPaidByParent2 = expenses
-    .filter(e => e.paidBy === 'Parent 2')
-    .reduce((sum, e) => sum + e.amount, 0) +
-    (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
-
   const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
 
@@ -243,23 +233,6 @@ export function ExpensesCard({
             ${parent2TotalShare.toFixed(2)}
           </span>
         </div>
-        {!hasUnpaidItems && (
-            <>
-                <Separator/>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">{parentNames['Parent 1']} Paid Total:</span>
-                  <span className="font-semibold text-primary">
-                    ${totalPaidByParent1.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">{parentNames['Parent 2']} Paid Total:</span>
-                  <span className="font-semibold text-primary">
-                    ${totalPaidByParent2.toFixed(2)}
-                  </span>
-                </div>
-            </>
-        )}
       </CardFooter>
     </Card>
   );
