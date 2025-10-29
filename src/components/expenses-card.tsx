@@ -26,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
@@ -73,20 +73,12 @@ export function ExpensesCard({
 
   const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
   
-  const paidItems = allItems.filter(item => item.status === 'Paid');
+  const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const grandTotal = totalExpenses + (childSupport.amount > 0 ? childSupport.amount : 0);
   
-  const expensesPaidByP1 = expenses
-    .filter((exp) => exp.paidBy === 'Parent 1')
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  const expensesPaidByP2 = expenses
-    .filter((exp) => exp.paidBy === 'Parent 2')
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  const totalSettled = paidItems.reduce((sum, item) => sum + item.amount, 0);
-
-  const calculateParentBalance = (parent: 'Parent 1' | 'Parent 2') => {
+  const calculateParentBalance = (parent: Parent) => {
     const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
     const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
     
@@ -101,8 +93,10 @@ export function ExpensesCard({
   
     if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
+        // Payer owes this, so it's a negative on their balance until paid
         netBalance -= childSupport.amount;
       } else {
+        // Recipient is owed this, so it's a positive on their balance
         netBalance += childSupport.amount;
       }
     }
@@ -112,16 +106,8 @@ export function ExpensesCard({
   const parent1NetBalance = calculateParentBalance('Parent 1');
   const parent2NetBalance = calculateParentBalance('Parent 2');
 
-  let parent1Owes = parent1NetBalance < 0 ? Math.abs(parent1NetBalance) : 0;
-  let parent2Owes = parent2NetBalance < 0 ? Math.abs(parent2NetBalance) : 0;
-
-  const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
-    if (item.id === 'child-support') {
-      onUpdateChildSupport({ ...childSupport, status: newStatus });
-    } else {
-      onUpdateExpense({ ...item, status: newStatus });
-    }
-  };
+  const parent1Owes = parent1NetBalance < 0 ? Math.abs(parent1NetBalance) : 0;
+  const parent2Owes = parent2NetBalance < 0 ? Math.abs(parent2NetBalance) : 0;
 
   const handleMarkAllAsPaid = () => {
     expenses.forEach(exp => {
@@ -133,9 +119,16 @@ export function ExpensesCard({
       onUpdateChildSupport({ ...childSupport, status: 'Paid' });
     }
   };
-  
-  const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
 
+  const totalPaidByParent1 = expenses
+    .filter(e => e.paidBy === 'Parent 1')
+    .reduce((sum, e) => sum + e.amount, 0) + 
+    (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
+
+  const totalPaidByParent2 = expenses
+    .filter(e => e.paidBy === 'Parent 2')
+    .reduce((sum, e) => sum + e.amount, 0) +
+    (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
 
   return (
     <Card>
@@ -263,18 +256,37 @@ export function ExpensesCard({
           </span>
         </div>
         <Separator/>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">{parentNames['Parent 1']} Owes:</span>
-          <span className={cn("font-semibold", parent1Owes > 0 && "text-destructive")}>
-            ${parent1Owes.toFixed(2)}
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">{parentNames['Parent 2']} Owes:</span>
-          <span className={cn("font-semibold", parent2Owes > 0 && "text-destructive")}>
-            ${parent2Owes.toFixed(2)}
-          </span>
-        </div>
+        {hasUnpaidItems ? (
+            <>
+                <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">{parentNames['Parent 1']} Owes:</span>
+                <span className={cn("font-semibold", parent1Owes > 0 && "text-destructive")}>
+                    ${parent1Owes.toFixed(2)}
+                </span>
+                </div>
+                <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">{parentNames['Parent 2']} Owes:</span>
+                <span className={cn("font-semibold", parent2Owes > 0 && "text-destructive")}>
+                    ${parent2Owes.toFixed(2)}
+                </span>
+                </div>
+            </>
+        ) : (
+            <>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">{parentNames['Parent 1']} Paid Total:</span>
+                  <span className="font-semibold text-primary">
+                    ${totalPaidByParent1.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">{parentNames['Parent 2']} Paid Total:</span>
+                  <span className="font-semibold text-primary">
+                    ${totalPaidByParent2.toFixed(2)}
+                  </span>
+                </div>
+            </>
+        )}
       </CardFooter>
     </Card>
   );
