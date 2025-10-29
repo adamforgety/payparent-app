@@ -1,6 +1,7 @@
 'use client';
 
 import { Landmark } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 import {
   Card,
@@ -18,9 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { ChildSupport, Parent } from '@/lib/types';
-import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import type { ChildSupport, Parent } from '@/lib/types';
 
 interface ChildSupportCardProps {
   childSupport: ChildSupport;
@@ -36,29 +36,30 @@ export function ChildSupportCard({
   );
 
   useEffect(() => {
-     setInputValue(childSupport.amount > 0 ? String(childSupport.amount) : '');
-  }, [childSupport.amount])
+    // Sync local state if prop changes from parent
+    setInputValue(childSupport.amount > 0 ? String(childSupport.amount) : '');
+  }, [childSupport.amount]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-      setInputValue(value);
+    setInputValue(value);
+    
+    // Convert to number for state update
+    const amount = Number(value);
+    const finalAmount = isNaN(amount) || value === '' ? 0 : amount;
+    
+    // Update parent immediately
+    if (childSupport.amount !== finalAmount) {
+      onUpdate({ ...childSupport, amount: finalAmount });
     }
   };
-  
-  const handleBlur = () => {
-    const amount = Number(inputValue);
-    const finalAmount = isNaN(amount) ? 0 : amount;
-    if (childSupport.amount !== finalAmount) {
-        onUpdate({ ...childSupport, amount: finalAmount });
-    }
-  }
 
   const handlePayerChange = (value: Parent | 'None') => {
     onUpdate({ ...childSupport, paidBy: value });
   };
 
-  const requiresPayer = Number(inputValue) > 0 && childSupport.paidBy === 'None';
+  const requiresPayer =
+    childSupport.amount > 0 && childSupport.paidBy === 'None';
 
   return (
     <Card>
@@ -78,11 +79,10 @@ export function ChildSupportCard({
           <Label htmlFor="support-amount">Amount ($)</Label>
           <Input
             id="support-amount"
-            type="text"
+            type="number"
             placeholder="e.g., 500"
             value={inputValue}
             onChange={handleAmountChange}
-            onBlur={handleBlur}
           />
         </div>
         <div className="space-y-2">
