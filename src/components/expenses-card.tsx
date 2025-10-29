@@ -74,50 +74,54 @@ export function ExpensesCard({
       : null;
 
   const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
+  
+  const unpaidItems = allItems.filter(item => item.status === 'Unpaid');
+  const unpaidExpenses = expenses.filter(exp => exp.status === 'Unpaid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const grandTotal = totalExpenses + (childSupport.amount > 0 ? childSupport.amount : 0);
 
-  const totalPaidByParent1 = allItems
+  const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+  const totalPaidByParent1Unpaid = unpaidItems
     .filter(item => item.paidBy === 'Parent 1')
     .reduce((sum, item) => sum + item.amount, 0);
   
-  const totalPaidByParent2 = allItems
+  const totalPaidByParent2Unpaid = unpaidItems
     .filter(item => item.paidBy === 'Parent 2')
     .reduce((sum, item) => sum + item.amount, 0);
   
-  const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
+  const parent1ExpenseShareUnpaid = totalUnpaidExpenses * (expenseSplit['Parent 1'] / 100);
+  const parent2ExpenseShareUnpaid = totalUnpaidExpenses * (expenseSplit['Parent 2'] / 100);
   
   let parent1Owes = 0;
   let parent2Owes = 0;
-
-  if(childSupport.paidBy === 'Parent 1') {
-    parent1Owes = parent1ExpenseShare + childSupport.amount - totalPaidByParent1;
-    parent2Owes = parent2ExpenseShare - totalPaidByParent2;
-  } else if (childSupport.paidBy === 'Parent 2') {
-    parent1Owes = parent1ExpenseShare - totalPaidByParent1;
-    parent2Owes = parent2ExpenseShare + childSupport.amount - totalPaidByParent2;
+  
+  const unpaidChildSupportAmount = (childSupportAsExpense && childSupportAsExpense.status === 'Unpaid') ? childSupport.amount : 0;
+  
+  if(childSupport.paidBy === 'Parent 1' && unpaidChildSupportAmount > 0) {
+    // Parent 1 paid child support. This is a credit for P1 in the settlement.
+    parent1Owes = parent1ExpenseShareUnpaid - totalPaidByParent1Unpaid;
+    parent2Owes = parent2ExpenseShareUnpaid - totalPaidByParent2Unpaid + unpaidChildSupportAmount;
+  } else if (childSupport.paidBy === 'Parent 2' && unpaidChildSupportAmount > 0) {
+    // Parent 2 paid child support. This is a credit for P2.
+    parent1Owes = parent1ExpenseShareUnpaid - totalPaidByParent1Unpaid + unpaidChildSupportAmount;
+    parent2Owes = parent2ExpenseShareUnpaid - totalPaidByParent2Unpaid;
   } else {
-    parent1Owes = parent1ExpenseShare - totalPaidByParent1;
-    parent2Owes = parent2ExpenseShare - totalPaidByParent2;
+    // No child support, or it's paid.
+    parent1Owes = parent1ExpenseShareUnpaid - totalPaidByParent1Unpaid;
+    parent2Owes = parent2ExpenseShareUnpaid - totalPaidByParent2Unpaid;
   }
   
-  // The amounts should balance out, if one parent owes a negative amount, it means the other parent owes them.
-  if (parent1Owes + parent2Owes !== 0) {
-      // Adjust based on who has overpaid.
-      const difference = parent1Owes + parent2Owes;
-      // This logic is simplified. A real scenario might need more complex reconciliation.
-      // For now, let's assume the difference is settled by one parent to the other.
-      // A positive balance for parent1Owes means they have underpaid their share.
-      // A negative balance means they have overpaid.
-  }
+  // The amounts should balance out. A positive value means they owe that much to the "pot".
+  // A negative value means they are owed that much from the "pot".
+  // The settlement is the difference between what each person owes.
   
-  // Final settlement amount:
-  const settlementAmount = parent2Owes; // If positive, P2 owes P1. If negative, P1 owes P2.
+  const settlementAmount = (parent1Owes - parent2Owes) / 2;
+  
+  const finalParent1Owes = settlementAmount > 0 ? settlementAmount : 0;
+  const finalParent2Owes = settlementAmount < 0 ? Math.abs(settlementAmount) : 0;
 
-  const finalParent1Owes = settlementAmount < 0 ? Math.abs(settlementAmount) : 0;
-  const finalParent2Owes = settlementAmount > 0 ? settlementAmount : 0;
 
   const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
     if (item.id === 'child-support') {
