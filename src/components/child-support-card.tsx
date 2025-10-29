@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import type { ChildSupport, Parent } from '@/lib/types';
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 interface ChildSupportCardProps {
   childSupport: ChildSupport;
@@ -30,7 +31,6 @@ export function ChildSupportCard({
   childSupport,
   onUpdate,
 }: ChildSupportCardProps) {
-  // Use local state to manage the input's value to allow for empty strings
   const [inputValue, setInputValue] = useState<string>(
     childSupport.amount > 0 ? String(childSupport.amount) : ''
   );
@@ -41,7 +41,6 @@ export function ChildSupportCard({
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow empty string or numbers
     if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
       setInputValue(value);
     }
@@ -53,15 +52,13 @@ export function ChildSupportCard({
     if (childSupport.amount !== finalAmount) {
         onUpdate({ ...childSupport, amount: finalAmount });
     }
-    // If the user leaves it empty, visually reset it to the last saved value
-    if(inputValue === '') {
-        setInputValue(finalAmount > 0 ? String(finalAmount) : '');
-    }
   }
 
   const handlePayerChange = (value: Parent | 'None') => {
     onUpdate({ ...childSupport, paidBy: value });
   };
+
+  const requiresPayer = Number(inputValue) > 0 && childSupport.paidBy === 'None';
 
   return (
     <Card>
@@ -81,7 +78,7 @@ export function ChildSupportCard({
           <Label htmlFor="support-amount">Amount ($)</Label>
           <Input
             id="support-amount"
-            type="text" // Use text to allow empty string
+            type="text"
             placeholder="e.g., 500"
             value={inputValue}
             onChange={handleAmountChange}
@@ -94,8 +91,15 @@ export function ChildSupportCard({
             onValueChange={handlePayerChange}
             value={childSupport.paidBy ?? 'None'}
           >
-            <SelectTrigger id="paid-by">
-              <SelectValue placeholder="Select parent" />
+            <SelectTrigger
+              id="paid-by"
+              className={cn(requiresPayer && 'ring-2 ring-destructive')}
+            >
+              <SelectValue
+                placeholder={
+                  requiresPayer ? 'Please select a payer' : 'Select parent'
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="None">None</SelectItem>
