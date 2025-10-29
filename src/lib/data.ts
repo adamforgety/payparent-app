@@ -22,6 +22,16 @@ export const initialData: AppData = {
         amount: 150,
         paidBy: 'Parent 2',
         status: 'Unpaid',
+        category: 'Activities'
+      },
+      {
+        id: 'dummy-expense-2',
+        date: new Date().toISOString(),
+        description: 'School supplies',
+        amount: 75,
+        paidBy: 'Parent 1',
+        status: 'Unpaid',
+        category: 'Education'
       }
     ],
     parentNames: {

@@ -25,6 +25,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface SettleBalanceDialogProps {
   parent: Parent;
@@ -62,18 +63,13 @@ export function SettleBalanceDialog({
   parentNames,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
   const parentSplit = expenseSplit[parent] / 100;
   const otherParentSplit = expenseSplit[otherParent] / 100;
 
-  // Items where the OTHER parent needs to take an action for YOU.
-  // This includes:
-  // 1. Unpaid expenses YOU paid for (they need to pay you).
-  // 2. Pending expenses YOU paid for (they need to confirm receipt).
-  // 3. Child support THEY owe you.
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
-    // 1. Unpaid/Pending expenses YOU paid for
     const expensesPaidByMe = expenses
-      .filter((exp) => exp.paidBy === parent && (exp.status === 'Unpaid' || exp.status === 'Pending'))
+      .filter((exp) => exp.paidBy === parent && exp.status === 'Unpaid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
         description: exp.description,
@@ -84,9 +80,8 @@ export function SettleBalanceDialog({
         originalPayer: exp.paidBy
       }));
 
-    // 2. Child support the OTHER parent owes you (Unpaid or Pending their confirmation)
     const childSupportToMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === otherParent && childSupport.amount > 0 && (childSupport.status === 'Unpaid' || childSupport.status === 'Pending')) {
+    if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
       childSupportToMe.push({
         id: 'child-support',
         description: 'Child Support',
@@ -101,16 +96,9 @@ export function SettleBalanceDialog({
     return [...expensesPaidByMe, ...childSupportToMe].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParent, otherParentSplit]);
 
-
-  // Items where YOU need to take an action for the OTHER parent.
-  // This includes:
-  // 1. Unpaid expenses THEY paid for (you need to pay them).
-  // 2. Pending expenses THEY paid for (you need to confirm receipt).
-  // 3. Child support YOU owe them.
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
-    // 1. Unpaid/Pending expenses the OTHER parent paid for
     const expensesPaidByOther = expenses
-      .filter((exp) => exp.paidBy === otherParent && (exp.status === 'Unpaid' || exp.status === 'Pending'))
+      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
         description: exp.description,
@@ -121,9 +109,8 @@ export function SettleBalanceDialog({
         originalPayer: exp.paidBy,
       }));
 
-    // 2. Child support YOU owe (Unpaid or Pending your confirmation)
     const childSupportFromMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === parent && childSupport.amount > 0 && (childSupport.status === 'Unpaid' || childSupport.status === 'Pending')) {
+    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
       childSupportFromMe.push({
         id: 'child-support',
         description: 'Child Support',
@@ -138,35 +125,38 @@ export function SettleBalanceDialog({
     return [...expensesPaidByOther, ...childSupportFromMe].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParent, parentSplit]);
 
-
   const handleMarkAsPaid = (item: ItemToSettle) => {
     if (item.type === 'expense') {
-      const originalExpense = expenses.find(exp => exp.id === item.id);
-      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Pending' });
-    } else {
-      onUpdateChildSupport({ ...childSupport, status: 'Pending' });
-    }
-  };
-  
-  const handleMarkAllAsPaid = () => {
-    itemsOwedByMe.forEach(item => {
-      if (item.status === 'Unpaid') {
-        handleMarkAsPaid(item);
-      }
-    });
-  };
-
-  const handleMarkAsReceived = (item: ItemToSettle) => {
-     if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
       if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
     } else {
       onUpdateChildSupport({ ...childSupport, status: 'Paid' });
     }
-  }
+    toast({
+      title: 'Payment Marked as Paid',
+      description: `"${item.description}" has been marked as paid.`,
+    });
+  };
+  
+  const handleMarkAllAsPaid = () => {
+    itemsOwedByMe.forEach(item => {
+      if (item.status === 'Unpaid') {
+        if (item.type === 'expense') {
+          const originalExpense = expenses.find(exp => exp.id === item.id);
+          if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+        } else {
+          onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+        }
+      }
+    });
+     toast({
+      title: 'All Owed Items Marked as Paid',
+      description: `All items you owed have been updated.`,
+    });
+  };
 
-  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + (item.status !== 'Paid' ? item.owedAmount : 0), 0);
-  const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + (item.status !== 'Paid' ? item.owedAmount : 0), 0);
+  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + item.owedAmount, 0);
+  const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
   const otherParentName = parentNames[otherParent];
 
@@ -177,7 +167,7 @@ export function SettleBalanceDialog({
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
-             Manage payments between you and {otherParentName}. Mark items as paid or confirm receipt of payments.
+             Review unpaid items and mark them as paid to settle the balance with {otherParentName}.
           </DialogDescription>
         </DialogHeader>
         
@@ -199,21 +189,21 @@ export function SettleBalanceDialog({
           <Tabs defaultValue="owed-by-me" className="mt-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="owed-to-me">
-                Owed to You ({itemsOwedToMe.filter(i => i.status !== 'Paid').length})
+                Owed to You ({itemsOwedToMe.length})
                 <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
                 </TabsTrigger>
               <TabsTrigger value="owed-by-me">
-                Owed by You ({itemsOwedByMe.filter(i => i.status !== 'Paid').length})
+                Owed by You ({itemsOwedByMe.length})
                 <span className="ml-2 text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="owed-to-me">
               <SettlementTable 
                   items={itemsOwedToMe}
-                  actionLabel="Mark as Received"
-                  onItemAction={handleMarkAsReceived}
+                  actionLabel="Mark as Paid"
+                  onItemAction={handleMarkAsPaid}
                   actionVariant='default'
-                  parent={parent}
+                  isReceiving={true}
               />
             </TabsContent>
             <TabsContent value="owed-by-me">
@@ -222,8 +212,8 @@ export function SettleBalanceDialog({
                   actionLabel="Mark as Paid"
                   onItemAction={handleMarkAsPaid}
                   actionVariant='destructive'
-                  parent={parent}
                   onMarkAllPaid={handleMarkAllAsPaid}
+                  isReceiving={false}
                 />
             </TabsContent>
           </Tabs>
@@ -245,20 +235,12 @@ interface SettlementTableProps {
   actionLabel: string;
   onItemAction: (item: ItemToSettle) => void;
   actionVariant: 'default' | 'destructive';
-  parent: Parent;
+  isReceiving: boolean;
   onMarkAllPaid?: () => void;
 }
 
-function SettlementTable({ items, actionLabel, onItemAction, actionVariant, parent, onMarkAllPaid }: SettlementTableProps) {
+function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isReceiving, onMarkAllPaid }: SettlementTableProps) {
   
-  const getStatus = (item: ItemToSettle) => {
-    if (item.status === 'Pending') {
-      return { text: 'Pending Confirmation', variant: 'secondary' as const, style: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
-    }
-    if(item.status === 'Unpaid') return { text: 'Unpaid', variant: 'destructive' as const, style: '' };
-    return { text: 'Paid', variant: 'default' as const, style: 'bg-green-600 hover:bg-green-700' };
-  }
-
   const canMarkAllPaid = items.some(item => item.status === 'Unpaid');
   
   return (
@@ -277,56 +259,42 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, pare
               <TableHead>Description</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Owed Amount</TableHead>
-              <TableHead className="w-[100px]">Action</TableHead>
+              {!isReceiving && <TableHead className="w-[120px]">Action</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.length > 0 ? (
-              items.map((item) => {
-                const status = getStatus(item);
-                const isMyPaymentPending = item.status === 'Pending' && item.originalPayer === parent;
-                const isTheirPaymentPending = item.status === 'Pending' && item.originalPayer !== parent;
-                
-                let buttonDisabled = false;
-                let buttonText = actionLabel;
-
-                if(actionLabel === "Mark as Paid") { // Owed By Me tab
-                    buttonDisabled = item.status === 'Paid' || item.status === 'Pending';
-                } else { // Owed to Me tab
-                    buttonDisabled = item.status === 'Paid' || item.status === 'Unpaid';
-                }
-
-                return (
+              items.map((item) => (
                   <TableRow key={`${item.id}-${item.type}`}>
                     <TableCell>
                       <p className="font-medium">{item.description}</p>
                       <p className="text-xs text-muted-foreground">Total: ${item.totalAmount.toFixed(2)}</p>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={status.variant} className={cn(status.style)}>
-                        {status.text}
+                      <Badge variant="destructive">
+                        Unpaid
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       ${item.owedAmount.toFixed(2)}
                     </TableCell>
-                    <TableCell>
-                       <Button
-                        variant={actionVariant}
-                        size="sm"
-                        onClick={() => onItemAction(item)}
-                        disabled={buttonDisabled}
-                      >
-                        {buttonText}
-                      </Button>
-                    </TableCell>
+                    {!isReceiving && (
+                      <TableCell>
+                        <Button
+                          variant={actionVariant}
+                          size="sm"
+                          onClick={() => onItemAction(item)}
+                        >
+                          {actionLabel}
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
-                )
-              })
+                ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  No items in this category.
+                <TableCell colSpan={isReceiving ? 3 : 4} className="h-24 text-center">
+                  No unpaid items in this category.
                 </TableCell>
               </TableRow>
             )}

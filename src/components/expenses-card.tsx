@@ -42,15 +42,13 @@ interface ExpensesCardProps {
   parentNames: ParentNames;
 }
 
-const statusVariant: Record<PaymentStatus, 'default' | 'secondary' | 'destructive'> = {
+const statusVariant: Record<PaymentStatus, 'default' | 'destructive'> = {
     'Paid': 'default',
-    'Pending': 'secondary',
     'Unpaid': 'destructive',
 };
 
 const statusStyle: Record<PaymentStatus, string> = {
     'Paid': 'bg-green-600 hover:bg-green-700',
-    'Pending': 'bg-yellow-500 hover:bg-yellow-600 text-black',
     'Unpaid': '',
 }
 

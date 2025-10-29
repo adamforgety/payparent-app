@@ -7,7 +7,7 @@ export type ExpenseCategory =
   | 'Food'
   | 'Other';
 
-export type PaymentStatus = 'Unpaid' | 'Pending' | 'Paid';
+export type PaymentStatus = 'Unpaid' | 'Paid';
 
 export interface Expense {
   id: string;
