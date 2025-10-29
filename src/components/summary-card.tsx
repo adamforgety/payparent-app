@@ -103,7 +103,13 @@ export function SummaryCard({
     }
   }
 
-  const isButtonDisabled = netBalance === 0 && pendingYourConfirmationAmount === 0;
+  const itemsOwedByMeCount = expenses.filter(e => e.paidBy === otherParent && e.status === 'Unpaid').length +
+                             (childSupport.paidBy === parent && childSupport.status === 'Unpaid' ? 1 : 0);
+                             
+  const itemsToConfirmCount = expenses.filter(e => e.paidBy === otherParent && e.status === 'Pending').length +
+                              (childSupport.paidBy === parent && childSupport.status === 'Pending' ? 1 : 0);
+
+  const isButtonDisabled = itemsOwedByMeCount === 0 && itemsToConfirmCount === 0 && netBalance >= 0;
   
   return (
     <Card className="flex flex-col">
