@@ -5,6 +5,7 @@ export type ExpenseCategory =
   | 'Activities'
   | 'Clothing'
   | 'Food'
+  | 'Child Support'
   | 'Other';
 
 export type PaymentStatus = 'Unpaid' | 'Paid';

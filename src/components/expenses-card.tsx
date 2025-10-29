@@ -1,6 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { ReceiptText, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -26,17 +26,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus, ParentNames } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames, ChildSupport } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
 import { cn } from '@/lib/utils';
 import { EditExpenseDialog } from './edit-expense-dialog';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 interface ExpensesCardProps {
   expenses: Expense[];
+  childSupport: ChildSupport;
   onDelete: (expenseId: string) => void;
-  onUpdate: (expense: Expense) => void;
+  onUpdateExpense: (expense: Expense) => void;
+  onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -55,13 +59,40 @@ const statusStyle: Record<PaymentStatus, string> = {
 
 export function ExpensesCard({
   expenses,
+  childSupport,
   onDelete,
-  onUpdate,
+  onUpdateExpense,
+  onUpdateChildSupport,
   children,
   currentDate,
   parentNames,
 }: ExpensesCardProps) {
+  
+  const childSupportAsExpense: Expense | null =
+    childSupport.amount > 0 && childSupport.paidBy !== 'None'
+      ? {
+          id: 'child-support',
+          date: startOfMonth(currentDate).toISOString(),
+          description: 'Child Support',
+          amount: childSupport.amount,
+          paidBy: childSupport.paidBy,
+          status: childSupport.status,
+          category: 'Child Support',
+        }
+      : null;
+
+  const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
+
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+  const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
+    if (item.id === 'child-support') {
+      onUpdateChildSupport({ ...childSupport, status: newStatus });
+    } else {
+      onUpdateExpense({ ...item, status: newStatus });
+    }
+  };
+
 
   return (
     <Card>
@@ -72,9 +103,9 @@ export function ExpensesCard({
               <ReceiptText className="h-5 w-5 text-secondary-foreground" />
             </span>
             <div>
-              <CardTitle>Expenses</CardTitle>
+              <CardTitle>Transactions</CardTitle>
               <CardDescription>
-                Logged expenses for the current month.
+                Expenses and child support for the current month.
               </CardDescription>
             </div>
           </div>
@@ -98,50 +129,61 @@ export function ExpensesCard({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {expenses.length > 0 ? (
-              expenses.map((expense) => (
-                <TableRow key={expense.id}>
+            {allItems.length > 0 ? (
+              allItems.map((item) => (
+                <TableRow key={item.id}>
                   <TableCell>
-                    {format(new Date(expense.date), 'MMM d, yyyy')}
+                    {format(new Date(item.date), 'MMM d, yyyy')}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {expense.description}
+                    {item.description}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{expense.category}</Badge>
+                    <Badge variant={item.id === 'child-support' ? 'default' : 'outline'}>{item.category}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[expense.paidBy]}</Badge>
+                    {item.paidBy && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                   </TableCell>
                   <TableCell>
-                     <Badge
-                        variant={statusVariant[expense.status]}
-                        className={cn(statusStyle[expense.status])}
-                    >
-                        {expense.status}
-                    </Badge>
+                     <div className="flex items-center space-x-2">
+                        <Switch
+                            id={`status-switch-${item.id}`}
+                            checked={item.status === 'Paid'}
+                            onCheckedChange={(checked) =>
+                                handleStatusChange(item, checked ? 'Paid' : 'Unpaid')
+                            }
+                            aria-label={`Mark as ${item.status === 'Paid' ? 'Unpaid' : 'Paid'}`}
+                        />
+                        <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Paid' ? 'text-green-600' : 'text-destructive')}>
+                          {item.status}
+                        </Label>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    ${expense.amount.toFixed(2)}
+                    ${item.amount.toFixed(2)}
                   </TableCell>
                   <TableCell className="no-print text-right">
-                    <div className="flex justify-end gap-1">
-                      <EditExpenseDialog expense={expense} onUpdateExpense={onUpdate} parentNames={parentNames} />
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => onDelete(expense.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                    <div className="flex justify-end gap-1 h-8">
+                      {item.id !== 'child-support' && (
+                        <>
+                            <EditExpenseDialog expense={item} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
+                            <TooltipProvider>
+                                <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => onDelete(item.id)}
+                                    >
+                                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -149,7 +191,7 @@ export function ExpensesCard({
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                  No expenses logged for this month.
+                  No transactions logged for this month.
                 </TableCell>
               </TableRow>
             )}
@@ -158,7 +200,7 @@ export function ExpensesCard({
       </CardContent>
       <CardFooter className="justify-end bg-secondary/50 p-4">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-semibold">Total Expenses:</span>
+          <span className="text-sm font-semibold">Total Monthly Expenses:</span>
           <span className="text-lg font-bold">
             ${totalExpenses.toFixed(2)}
           </span>

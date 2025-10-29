@@ -18,7 +18,6 @@ import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
 import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
 
 const defaultMonthData: MonthData = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
@@ -200,8 +199,10 @@ export function Dashboard() {
              <div className="mt-6">
                 <ExpensesCard
                   expenses={currentMonthData.expenses}
+                  childSupport={currentMonthData.childSupport}
                   onDelete={deleteExpense}
-                  onUpdate={updateExpense}
+                  onUpdateExpense={updateExpense}
+                  onUpdateChildSupport={updateChildSupport}
                   currentDate={currentDate}
                   parentNames={currentMonthData.parentNames}
                 >
