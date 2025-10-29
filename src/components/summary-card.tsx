@@ -144,7 +144,7 @@ export function SummaryCard({
           onUpdateChildSupport={onUpdateChildSupport}
           netBalance={netBalance}
         >
-          <Button className="w-full">
+          <Button className="w-full" disabled={isSettled}>
             <HandCoins className="mr-2 h-4 w-4" />
             Settle Balance
           </Button>
