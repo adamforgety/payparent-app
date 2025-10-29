@@ -38,25 +38,15 @@ export function SummaryCard({
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
-  // Total paid directly includes all items marked as "Paid"
-  const expensesPaidByParent = expenses
-    .filter((exp) => exp.paidBy === parent)
-    .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const childSupportPaidByParent =
-    childSupport.paidBy === parent ? childSupport.amount : 0;
-  
-  const totalPaidByParent = expensesPaidByParent + childSupportPaidByParent;
-
   // Balance calculation is based on UNPAID items
   const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
   const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   
+  const expenseShare = totalUnpaidExpenses * (parentSplitPercentage / 100);
+
   const unpaidPaidByParent = unpaidExpenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-  
-  const expenseShare = totalUnpaidExpenses * (parentSplitPercentage / 100);
 
   let childSupportAdjustment = 0;
   if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
@@ -92,6 +82,13 @@ export function SummaryCard({
       (childSupport.amount > 0 && childSupport.status === 'Unpaid')
   );
 
+  const expensesPaidByParent = expenses
+    .filter((exp) => exp.paidBy === parent)
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const childSupportPaidByThisParent = childSupport.paidBy === parent ? childSupport.amount : 0;
+  const childSupportPaidByOtherParent = childSupport.paidBy === otherParent ? childSupport.amount : 0;
+
 
   return (
     <Card className="flex flex-col">
@@ -114,16 +111,26 @@ export function SummaryCard({
           <p className="font-semibold">${(totalExpenses * (parentSplitPercentage / 100)).toFixed(2)}</p>
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">Total You Paid Directly</p>
+          <p className="text-muted-foreground">Total Expenses You Paid</p>
           <p className="font-semibold">${expensesPaidByParent.toFixed(2)}</p>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">Child Support You Paid</p>
-          <p className="font-semibold">${childSupportPaidByParent.toFixed(2)}</p>
-        </div>
+        
+        {childSupportPaidByThisParent > 0 && (
+            <div className="flex items-center justify-between">
+            <p className="text-muted-foreground">Child Support You Paid</p>
+            <p className="font-semibold">${childSupportPaidByThisParent.toFixed(2)}</p>
+            </div>
+        )}
+        
+        {childSupportPaidByOtherParent > 0 && (
+             <div className="flex items-center justify-between">
+             <p className="text-muted-foreground">Child Support Received</p>
+             <p className="font-semibold text-green-600">+${childSupportPaidByOtherParent.toFixed(2)}</p>
+             </div>
+        )}
        
         <div className="flex items-center justify-between text-sm">
-          <p className="text-muted-foreground">Total Paid & Settled</p>
+          <p className="text-muted-foreground">Total Paid & Settled This Month</p>
           <p className="font-semibold text-green-600">${totalSettled.toFixed(2)}</p>
         </div>
 
