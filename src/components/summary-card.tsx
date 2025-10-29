@@ -76,10 +76,6 @@ export function SummaryCard({
     transferDescription = 'All settled up';
     balanceDescription = "You've paid your exact share.";
   }
-  
-  const expensesOwedByOtherParent = expenses.filter(
-      (exp) => exp.paidBy === parent && exp.status === 'Unpaid'
-  );
 
   return (
     <Card className="flex flex-col">
