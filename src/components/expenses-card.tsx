@@ -31,10 +31,12 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
 import { cn } from '@/lib/utils';
+import { EditExpenseDialog } from './edit-expense-dialog';
 
 interface ExpensesCardProps {
   expenses: Expense[];
   onDelete: (expenseId: string) => void;
+  onUpdate: (expense: Expense) => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -56,6 +58,7 @@ const statusStyle: Record<PaymentStatus, string> = {
 export function ExpensesCard({
   expenses,
   onDelete,
+  onUpdate,
   children,
   currentDate,
   parentNames,
@@ -93,7 +96,7 @@ export function ExpensesCard({
               <TableHead>Paid By</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="w-[50px] no-print"></TableHead>
+              <TableHead className="w-[100px] no-print text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -123,22 +126,25 @@ export function ExpensesCard({
                   <TableCell className="text-right">
                     ${expense.amount.toFixed(2)}
                   </TableCell>
-                  <TableCell className="no-print">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => onDelete(expense.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  <TableCell className="no-print text-right">
+                    <div className="flex justify-end gap-1">
+                      <EditExpenseDialog expense={expense} onUpdateExpense={onUpdate} parentNames={parentNames} />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => onDelete(expense.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

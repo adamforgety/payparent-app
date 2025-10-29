@@ -201,6 +201,7 @@ export function Dashboard() {
                 <ExpensesCard
                   expenses={currentMonthData.expenses}
                   onDelete={deleteExpense}
+                  onUpdate={updateExpense}
                   currentDate={currentDate}
                   parentNames={currentMonthData.parentNames}
                 >
