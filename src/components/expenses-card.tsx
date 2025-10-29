@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2 } from 'lucide-react';
+import { ReceiptText, Trash2, CheckCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import {
@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { Separator } from './ui/separator';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -45,17 +46,6 @@ interface ExpensesCardProps {
   currentDate: Date;
   parentNames: ParentNames;
 }
-
-const statusVariant: Record<PaymentStatus, 'default' | 'destructive'> = {
-    'Paid': 'default',
-    'Unpaid': 'destructive',
-};
-
-const statusStyle: Record<PaymentStatus, string> = {
-    'Paid': 'bg-green-600 hover:bg-green-700',
-    'Unpaid': '',
-}
-
 
 export function ExpensesCard({
   expenses,
@@ -85,6 +75,10 @@ export function ExpensesCard({
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
+  const totalPaid = allItems
+    .filter(item => item.status === 'Paid')
+    .reduce((sum, item) => sum + item.amount, 0);
+
   const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
     if (item.id === 'child-support') {
       onUpdateChildSupport({ ...childSupport, status: newStatus });
@@ -92,6 +86,19 @@ export function ExpensesCard({
       onUpdateExpense({ ...item, status: newStatus });
     }
   };
+
+  const handleMarkAllAsPaid = () => {
+    expenses.forEach(exp => {
+      if (exp.status === 'Unpaid') {
+        onUpdateExpense({ ...exp, status: 'Paid' });
+      }
+    });
+    if (childSupportAsExpense && childSupport.status === 'Unpaid') {
+      onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+    }
+  };
+  
+  const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
 
 
   return (
@@ -111,6 +118,10 @@ export function ExpensesCard({
           </div>
           <div className="no-print flex items-center gap-2 self-end sm:self-auto">
             <ExportButton expenses={expenses} currentDate={currentDate} />
+            <Button variant="outline" onClick={handleMarkAllAsPaid} disabled={!hasUnpaidItems}>
+                <CheckCheck className="mr-2 h-4 w-4" />
+                Mark All Paid
+            </Button>
             {children}
           </div>
         </div>
@@ -198,11 +209,18 @@ export function ExpensesCard({
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="justify-end bg-secondary/50 p-4">
+      <CardFooter className="flex-col items-end gap-4 bg-secondary/50 p-4">
         <div className="flex items-center gap-4">
           <span className="text-sm font-semibold">Total Monthly Expenses:</span>
           <span className="text-lg font-bold">
             ${totalExpenses.toFixed(2)}
+          </span>
+        </div>
+        <Separator/>
+         <div className="flex items-center gap-4">
+          <span className="text-sm font-semibold text-green-600">Total Paid:</span>
+          <span className="text-lg font-bold text-green-600">
+            ${totalPaid.toFixed(2)}
           </span>
         </div>
       </CardFooter>
