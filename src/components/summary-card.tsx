@@ -40,19 +40,23 @@ export function SummaryCard({
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
-  const childSupportPaidByParent = 
-    childSupport.paidBy === parent && childSupport.status !== 'Unpaid' 
-    ? childSupport.amount 
-    : 0;
+  const childSupportPaidByParent =
+    childSupport.paidBy === parent && childSupport.status !== 'Unpaid'
+      ? childSupport.amount
+      : 0;
 
   const totalPaidByParent = totalExpensesPaidByParent + childSupportPaidByParent;
-
-  const pendingConfirmation = expenses
+  
+  const pendingExpensesConfirmation = expenses
     .filter(
-      (exp) => exp.status === 'Pending'
+      (exp) => exp.status === 'Pending' && exp.paidBy === parent
     )
     .reduce((sum, exp) => sum + exp.amount, 0)
-    + (childSupport.status === 'Pending' ? childSupport.amount : 0);
+  
+  const pendingChildSupportConfirmation = childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0;
+
+  const pendingConfirmation = pendingExpensesConfirmation + pendingChildSupportConfirmation;
+
 
   const totalSettled = expenses
     .filter((exp) => exp.status === 'Paid')
@@ -86,6 +90,8 @@ export function SummaryCard({
   } else {
     transferDescription = 'All settled up';
   }
+
+  const isOwedMoney = netBalance > 0.005;
 
   return (
     <Card className="flex flex-col">
@@ -140,7 +146,7 @@ export function SummaryCard({
         </p>
       </CardContent>
       <CardFooter>
-        <SettleBalanceDialog
+         <SettleBalanceDialog
           parent={parent}
           otherParent={otherParent}
           expenses={expenses}
@@ -149,9 +155,9 @@ export function SummaryCard({
           onUpdateExpense={onUpdateExpense}
           onUpdateChildSupport={onUpdateChildSupport}
         >
-          <Button className="w-full">
+          <Button className="w-full" disabled={!isOwedMoney}>
             <HandCoins className="mr-2 h-4 w-4" />
-            Settle Balance
+            {isOwedMoney ? 'Settle Balance' : 'Balance Settled'}
           </Button>
         </SettleBalanceDialog>
       </CardFooter>
