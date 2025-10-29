@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2, CheckCheck } from 'lucide-react';
+import { ReceiptText, Trash2, CheckCheck, MoreVertical } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import {
@@ -33,6 +33,7 @@ import { ExportButton } from './export-button';
 import { cn } from '@/lib/utils';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Separator } from './ui/separator';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -76,8 +77,7 @@ export function ExpensesCard({
   const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const grandTotal = totalExpenses + (childSupport.amount > 0 ? childSupport.amount : 0);
-  
+
   const handleMarkAllAsPaid = () => {
     expenses.forEach(exp => {
       if (exp.status === 'Unpaid') {
@@ -90,7 +90,7 @@ export function ExpensesCard({
   };
 
   const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
+  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' || childSupport.paidBy === 'None' ? childSupport.amount : 0);
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
   const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
 
@@ -111,17 +111,28 @@ export function ExpensesCard({
             </div>
           </div>
           <div className="no-print flex flex-wrap items-center justify-start sm:justify-end gap-2">
-             <ExportButton
-              expenses={expenses}
-              childSupport={childSupport}
-              currentDate={currentDate}
-              parentNames={parentNames}
-            />
-            <Button variant="outline" onClick={handleMarkAllAsPaid} disabled={!hasUnpaidItems}>
-                <CheckCheck className="mr-2 h-4 w-4" />
-                Mark All Paid
-            </Button>
             {children}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">More actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleMarkAllAsPaid} disabled={!hasUnpaidItems}>
+                  <CheckCheck className="mr-2 h-4 w-4" />
+                  Mark All Paid
+                </DropdownMenuItem>
+                 <ExportButton
+                  expenses={expenses}
+                  childSupport={childSupport}
+                  currentDate={currentDate}
+                  parentNames={parentNames}
+                  asChild
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardHeader>
@@ -198,7 +209,7 @@ export function ExpensesCard({
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="flex-col items-stretch gap-4 bg-secondary/50 p-4 text-sm">
+       <CardFooter className="flex-col items-stretch gap-4 bg-secondary/50 p-4 text-sm">
          <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Expense Total:</span>
           <span className="font-medium">
@@ -215,21 +226,14 @@ export function ExpensesCard({
         )}
         <Separator/>
         <div className="flex justify-between items-center">
-          <span className="font-semibold">Grand Total:</span>
-          <span className="font-bold text-base">
-            ${grandTotal.toFixed(2)}
-          </span>
-        </div>
-        <Separator/>
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">{parentNames['Parent 1']}'s Total Share:</span>
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-primary">{parentNames['Parent 1']}'s Total Share:</span>
+          <span className="font-bold text-base text-primary">
             ${parent1TotalShare.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">{parentNames['Parent 2']}'s Total Share:</span>
-          <span className="font-semibold text-primary">
+          <span className="font-semibold text-primary">{parentNames['Parent 2']}'s Total Share:</span>
+          <span className="font-bold text-base text-primary">
             ${parent2TotalShare.toFixed(2)}
           </span>
         </div>

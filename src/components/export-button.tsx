@@ -7,12 +7,14 @@ import * as XLSX from 'xlsx';
 import type { ChildSupport, Expense, ParentNames } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { DropdownMenuItem } from './ui/dropdown-menu';
 
 interface ExportButtonProps {
   expenses: Expense[];
   childSupport: ChildSupport;
   currentDate: Date;
   parentNames: ParentNames;
+  asChild?: boolean;
 }
 
 export function ExportButton({
@@ -20,6 +22,7 @@ export function ExportButton({
   childSupport,
   currentDate,
   parentNames,
+  asChild = false,
 }: ExportButtonProps) {
   const handleExport = () => {
     const childSupportAsExpense: Omit<Expense, 'id' | 'status'> | null =
@@ -52,6 +55,17 @@ export function ExportButton({
       `transactions-${format(currentDate, 'MMMM-yyyy')}.xlsx`
     );
   };
+  
+  const isDisabled = expenses.length === 0 && childSupport.amount === 0;
+
+  if (asChild) {
+    return (
+      <DropdownMenuItem onSelect={handleExport} disabled={isDisabled}>
+        <Sheet className="mr-2 h-4 w-4" />
+        Export to Excel
+      </DropdownMenuItem>
+    );
+  }
 
   return (
      <TooltipProvider>
@@ -61,7 +75,7 @@ export function ExportButton({
             variant="outline"
             size="icon"
             onClick={handleExport}
-            disabled={expenses.length === 0 && childSupport.amount === 0}
+            disabled={isDisabled}
             aria-label="Export to Excel"
           >
             <Sheet className="h-4 w-4" />
