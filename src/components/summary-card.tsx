@@ -43,9 +43,9 @@ export function SummaryCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
 
   const childSupportPaidByParent =
-    childSupport.paidBy === parent ? childSupport.amount : 0;
+    childSupport.status === 'Paid' && childSupport.paidBy === parent ? childSupport.amount : 0;
   
-  const totalPaidByParent = expensesPaidByParent + (childSupport.status === 'Paid' && childSupport.paidBy === parent ? childSupport.amount : 0);
+  const totalPaidByParent = expensesPaidByParent + childSupportPaidByParent;
 
   const unsettledExpenses = expenses.filter(e => e.status !== 'Paid');
 
@@ -75,10 +75,8 @@ export function SummaryCard({
   const otherParentName = parentNames[otherParent];
 
   // Logic for confirmation messages
-  let expenseAwaitingYourConfirmationAmount = 0;
-  let expenseAwaitingOtherParentConfirmationAmount = 0;
-  let csAwaitingYourConfirmationAmount = 0;
-  let csAwaitingOtherParentConfirmationAmount = 0;
+  let awaitingYourConfirmationAmount = 0;
+  let awaitingOtherParentConfirmationAmount = 0;
 
   const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
 
@@ -86,11 +84,11 @@ export function SummaryCard({
   pendingExpenses.forEach(exp => {
     // If the other parent paid, it's awaiting YOUR confirmation.
     if (exp.paidBy === otherParent) {
-      expenseAwaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
+      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
     }
     // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
     else if (exp.paidBy === parent) {
-      expenseAwaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+      awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
     }
   });
 
@@ -98,17 +96,13 @@ export function SummaryCard({
   if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
     // If other parent paid child support, it's awaiting YOUR confirmation.
     if (childSupport.paidBy === otherParent) {
-      csAwaitingYourConfirmationAmount += childSupport.amount;
+      awaitingYourConfirmationAmount += childSupport.amount;
     }
     // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
     else if (childSupport.paidBy === parent) {
-      csAwaitingOtherParentConfirmationAmount += childSupport.amount;
+      awaitingOtherParentConfirmationAmount += childSupport.amount;
     }
   }
-  
-  const awaitingYourConfirmationAmount = expenseAwaitingYourConfirmationAmount + csAwaitingYourConfirmationAmount;
-  const awaitingOtherParentConfirmationAmount = expenseAwaitingOtherParentConfirmationAmount + csAwaitingOtherParentConfirmationAmount;
-
 
   const isSettled = netBalance === 0 && awaitingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
   let transferDescription = 'All settled up';
