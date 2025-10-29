@@ -51,9 +51,12 @@ export function SummaryCard({
     .filter(
       (exp) => exp.status === 'Pending' && exp.paidBy === otherParent
     )
-    .reduce((sum, exp) => sum + exp.amount, 0)
+    .reduce((sum, exp) => {
+       const expenseShareOwed = exp.amount * (parentSplitPercentage / 100);
+       return sum + expenseShareOwed;
+    }, 0);
   
-  const pendingChildSupportConfirmation = childSupport.status === 'Pending' && childSupport.paidBy === otherParent ? childSupport.amount : 0;
+  const pendingChildSupportConfirmation = (childSupport.status === 'Pending' && childSupport.paidBy === otherParent) ? childSupport.amount : 0;
 
   const pendingConfirmation = pendingExpensesConfirmation + pendingChildSupportConfirmation;
 
@@ -74,24 +77,30 @@ export function SummaryCard({
   let childSupportAdjustment = 0;
   if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      childSupportAdjustment = -childSupport.amount;
-    } else {
+      // This parent pays support, so it increases what they are owed or decreases what they owe
       childSupportAdjustment = childSupport.amount;
+    } else {
+      // This parent receives support, so it decreases what they are owed or increases what they owe
+      childSupportAdjustment = -childSupport.amount;
     }
   }
-
-  const netBalance = unsettledPaidByParent - expenseShare - childSupportAdjustment;
+  
+  const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
 
   let transferDescription: string;
-  if (netBalance > 0.005) { 
-    transferDescription = `${otherParent} owes you`;
-  } else if (netBalance < -0.005) {
-    transferDescription = `You owe ${otherParent}`;
-  } else {
+  let buttonText = 'Settle Balance';
+  let buttonDisabled = false;
+
+  if (Math.abs(netBalance) < 0.01) {
     transferDescription = 'All settled up';
+    buttonText = 'All Settled';
+    buttonDisabled = true;
+  } else if (netBalance > 0) {
+    transferDescription = `${otherParent} owes you`;
+  } else {
+    transferDescription = `You owe ${otherParent}`;
   }
 
-  const isOwedMoney = netBalance > 0.005;
 
   return (
     <Card className="flex flex-col">
@@ -157,7 +166,7 @@ export function SummaryCard({
         >
           <Button className="w-full">
             <HandCoins className="mr-2 h-4 w-4" />
-            Settle Balance
+            {buttonText}
           </Button>
         </SettleBalanceDialog>
       </CardFooter>
