@@ -200,6 +200,7 @@ export function Dashboard() {
                 <ExpensesCard
                   expenses={currentMonthData.expenses}
                   childSupport={currentMonthData.childSupport}
+                  expenseSplit={currentMonthData.expenseSplit}
                   onDelete={deleteExpense}
                   onUpdateExpense={updateExpense}
                   onUpdateChildSupport={updateChildSupport}
