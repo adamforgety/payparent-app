@@ -41,7 +41,7 @@ interface ExpensesCardProps {
   expenseSplit: ExpenseSplit;
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense) => void;
-  onUpdateChildSupport: (childSupport: ChildSupport) => void;
+  onMarkAllAsPaid: () => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -53,7 +53,7 @@ export function ExpensesCard({
   expenseSplit,
   onDelete,
   onUpdateExpense,
-  onUpdateChildSupport,
+  onMarkAllAsPaid,
   children,
   currentDate,
   parentNames,
@@ -78,21 +78,10 @@ export function ExpensesCard({
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-  const handleMarkAllAsPaid = () => {
-    expenses.forEach(exp => {
-      if (exp.status === 'Unpaid') {
-        onUpdateExpense({ ...exp, status: 'Paid' });
-      }
-    });
-    if (childSupportAsExpense && childSupport.status === 'Unpaid') {
-      onUpdateChildSupport({ ...childSupport, status: 'Paid' });
-    }
-  };
-
   const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' || childSupport.paidBy === 'None' ? childSupport.amount : 0);
+  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
-  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' ? childSupport.amount : 0);
+  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' || childSupport.paidBy === 'None' ? childSupport.amount : 0);
 
 
   return (
@@ -120,7 +109,7 @@ export function ExpensesCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleMarkAllAsPaid} disabled={!hasUnpaidItems}>
+                <DropdownMenuItem onClick={onMarkAllAsPaid} disabled={!hasUnpaidItems}>
                   <CheckCheck className="mr-2 h-4 w-4" />
                   Mark All Paid
                 </DropdownMenuItem>

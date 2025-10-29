@@ -103,6 +103,26 @@ export function Dashboard() {
     updateMonthData({ childSupport: updatedChildSupport });
   }
 
+  const handleMarkAllAsPaid = () => {
+    const updatedExpenses = currentMonthData.expenses.map(exp => 
+      exp.status === 'Unpaid' ? { ...exp, status: 'Paid' as const } : exp
+    );
+    
+    const updatedChildSupport = currentMonthData.childSupport.status === 'Unpaid' 
+      ? { ...currentMonthData.childSupport, status: 'Paid' as const } 
+      : currentMonthData.childSupport;
+
+    updateMonthData({
+      expenses: updatedExpenses,
+      childSupport: updatedChildSupport,
+    });
+
+    toast({
+      title: 'All Items Marked as Paid',
+      description: 'All unpaid expenses and child support for this month are now paid.',
+    });
+  };
+
 
   const totalExpenses = currentMonthData.expenses.reduce(
     (sum, exp) => sum + exp.amount,
@@ -203,7 +223,7 @@ export function Dashboard() {
                   expenseSplit={currentMonthData.expenseSplit}
                   onDelete={deleteExpense}
                   onUpdateExpense={updateExpense}
-                  onUpdateChildSupport={updateChildSupport}
+                  onMarkAllAsPaid={handleMarkAllAsPaid}
                   currentDate={currentDate}
                   parentNames={currentMonthData.parentNames}
                 >
