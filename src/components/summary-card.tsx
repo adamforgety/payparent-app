@@ -70,16 +70,17 @@ export function SummaryCard({
   
   const otherParentName = parentNames[otherParent];
 
-  // Logic for what is AWAITING YOUR CONFIRMATION
-  // These are 'Pending' items that the OTHER parent paid and marked. You need to confirm receipt.
+  // What YOU need to confirm.
+  // Pending items where the OTHER parent is owed money by you.
   const awaitingYourConfirmationAmount =
     expenses
       .filter(exp => exp.status === 'Pending' && exp.paidBy === otherParent)
       .reduce((sum, exp) => sum + (exp.amount * (expenseSplit[parent] / 100)), 0) +
     (childSupport.status === 'Pending' && childSupport.paidBy === parent ? childSupport.amount : 0);
 
-  // Logic for what is AWAITING THE OTHER PARENT'S CONFIRMATION
-  // These are 'Pending' items that YOU paid and marked. They need to confirm receipt.
+
+  // What the OTHER PARENT needs to confirm.
+  // Pending items where YOU are owed money by them.
   const awaitingOtherParentConfirmationAmount =
     expenses
       .filter(exp => exp.status === 'Pending' && exp.paidBy === parent)

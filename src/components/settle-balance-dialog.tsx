@@ -65,9 +65,8 @@ export function SettleBalanceDialog({
   const otherParentSplit = expenseSplit[otherParent] / 100;
 
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
-    // Expenses I paid for that are not settled yet.
-    // The other parent owes me their share.
-    const unsettledExpensesPaidByMe = expenses
+    // Expenses I paid for that I am owed for.
+    const expensesPaidByMe = expenses
       .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
       .map((exp): ItemToSettle => ({
         id: exp.id,
@@ -78,7 +77,7 @@ export function SettleBalanceDialog({
         type: 'expense',
       }));
 
-    // Child support the other parent owes me that is not settled.
+    // Child support the other parent owes me.
     const childSupportOwedToMe: ItemToSettle[] = [];
     if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status !== 'Paid') {
       childSupportOwedToMe.push({
@@ -90,13 +89,25 @@ export function SettleBalanceDialog({
         type: 'child_support',
       });
     }
+    
+    // Also include 'Pending' expenses paid by the other parent, which means I have paid my share
+    // and am waiting for them to confirm receipt. From my perspective, I am owed a completed transaction.
+     const pendingExpensesPaidByOther = expenses
+      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Pending')
+      .map((exp): ItemToSettle => ({
+        id: exp.id,
+        description: exp.description,
+        totalAmount: exp.amount,
+        owedAmount: exp.amount * parentSplit,
+        status: exp.status,
+        type: 'expense',
+      }));
 
-    return [...unsettledExpensesPaidByMe, ...childSupportOwedToMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParentSplit, otherParent]);
+    return [...expensesPaidByMe, ...childSupportOwedToMe, ...pendingExpensesPaidByOther].filter(item => item.owedAmount > 0);
+  }, [expenses, childSupport, parent, otherParentSplit, otherParent, parentSplit]);
 
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
-    // Expenses the other parent paid for that are not settled.
-    // I owe my share.
+    // Expenses the other parent paid for that I need to pay my share of.
     const unsettledExpensesPaidByOther = expenses
       .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
       .map((exp): ItemToSettle => ({
@@ -108,7 +119,7 @@ export function SettleBalanceDialog({
         type: 'expense',
       }));
 
-    // Child support I owe that is not settled.
+    // Child support I owe.
     const childSupportOwedByMe: ItemToSettle[] = [];
     if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
       childSupportOwedByMe.push({
@@ -158,7 +169,7 @@ export function SettleBalanceDialog({
     }
   }
 
-  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + item.owedAmount, 0);
+  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + (item.status !== 'Paid' ? item.owedAmount : 0), 0);
   const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
   const otherParentName = parentNames[otherParent];
@@ -192,7 +203,7 @@ export function SettleBalanceDialog({
           <Tabs defaultValue="owed-to-me" className="mt-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="owed-to-me">
-                Owed to You ({itemsOwedToMe.length})
+                Owed to You ({itemsOwedToMe.filter(i => i.status !== 'Paid').length})
                 <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
                 </TabsTrigger>
               <TabsTrigger value="owed-by-me">
@@ -266,7 +277,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
             </Button>
           </div>
         )}
-      <ScrollArea className="h-64 rounded-md border">
+      <ScrollArea className="h-60 rounded-md border">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
@@ -281,7 +292,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, acti
               items.map((item) => {
                 const status = getStatus(item);
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={`${item.id}-${item.type}`}>
                     <TableCell>
                       <p className="font-medium">{item.description}</p>
                       <p className="text-xs text-muted-foreground">Total: ${item.totalAmount.toFixed(2)}</p>
