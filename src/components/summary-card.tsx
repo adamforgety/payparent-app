@@ -45,7 +45,7 @@ export function SummaryCard({
   const childSupportPaidByParent =
     childSupport.status === 'Paid' && childSupport.paidBy === parent ? childSupport.amount : 0;
   
-  const totalPaidByParent = expensesPaidByParent + childSupportPaidByParent;
+  const totalPaidByParent = expensesPaidByParent;
 
   const unsettledExpenses = expenses.filter(e => e.status !== 'Paid');
 
@@ -77,32 +77,48 @@ export function SummaryCard({
   // Logic for confirmation messages
   let awaitingYourConfirmationAmount = 0;
   let awaitingOtherParentConfirmationAmount = 0;
+  
+  const pendingItems = expenses
+    .filter(e => e.status === 'Pending')
+    .map(e => ({...e, type: 'expense'}));
 
-  const pendingExpenses = expenses.filter(exp => exp.status === 'Pending');
+  if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
+      pendingItems.push({
+          id: 'child-support',
+          description: 'Child Support',
+          amount: childSupport.amount,
+          paidBy: childSupport.paidBy,
+          type: 'child_support',
+          // These are just to satisfy the type, not used in this logic
+          date: new Date().toISOString(),
+          category: 'Other',
+          status: 'Pending',
+      });
+  }
 
-  // Handle EXPENSES confirmation amounts
-  pendingExpenses.forEach(exp => {
-    // If the other parent paid, it's awaiting YOUR confirmation.
-    if (exp.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += exp.amount * (expenseSplit[parent] / 100);
+  pendingItems.forEach(item => {
+    let amountToConfirm = 0;
+    if (item.type === 'expense') {
+        // If I paid, the other parent owes their share for confirmation
+        if (item.paidBy === parent) {
+            amountToConfirm = item.amount * (expenseSplit[otherParent] / 100);
+        } else { // If other parent paid, I owe my share for confirmation
+            amountToConfirm = item.amount * (expenseSplit[parent] / 100);
+        }
+    } else { // Child support
+        amountToConfirm = item.amount;
     }
-    // If you paid, it's awaiting THE OTHER PARENT'S confirmation.
-    else if (exp.paidBy === parent) {
-      awaitingOtherParentConfirmationAmount += exp.amount * (expenseSplit[otherParent] / 100);
+
+    // If the other parent paid, it's awaiting YOUR confirmation
+    if (item.paidBy === otherParent) {
+        awaitingYourConfirmationAmount += amountToConfirm;
+    }
+    // If you paid, it's awaiting THE OTHER PARENT'S confirmation
+    else if (item.paidBy === parent) {
+        awaitingOtherParentConfirmationAmount += amountToConfirm;
     }
   });
 
-  // Handle CHILD SUPPORT confirmation amounts
-  if (childSupport.status === 'Pending' && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
-    // If other parent paid child support, it's awaiting YOUR confirmation.
-    if (childSupport.paidBy === otherParent) {
-      awaitingYourConfirmationAmount += childSupport.amount;
-    }
-    // If you paid child support, it's awaiting THE OTHER PARENT'S confirmation.
-    else if (childSupport.paidBy === parent) {
-      awaitingOtherParentConfirmationAmount += childSupport.amount;
-    }
-  }
 
   const isSettled = netBalance === 0 && awaitingYourConfirmationAmount === 0 && awaitingOtherParentConfirmationAmount === 0;
   let transferDescription = 'All settled up';
@@ -144,7 +160,7 @@ export function SummaryCard({
         </div>
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground">Total You Paid Directly</p>
-          <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
+          <p className="font-semibold">${(expensesPaidByParent + childSupportPaidByParent).toFixed(2)}</p>
         </div>
         {awaitingYourConfirmationAmount > 0 && (
            <div className="flex items-center justify-between text-sm">
