@@ -69,7 +69,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       description: '',
-      amount: undefined,
+      amount: '' as any,
       date: new Date(),
       category: 'Other',
     },
@@ -87,7 +87,13 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
       title: 'Expense Added',
       description: `"${values.description}" has been logged.`,
     });
-    form.reset();
+    form.reset({
+      description: '',
+      amount: '' as any,
+      date: new Date(),
+      paidBy: undefined,
+      category: 'Other',
+    });
     setIsOpen(false);
   }
 
