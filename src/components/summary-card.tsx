@@ -40,27 +40,39 @@ export function SummaryCard({
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
-  const expenseShare = totalExpenses * (parentSplitPercentage / 100);
+  const pendingConfirmation = expenses
+    .filter(
+      (exp) =>
+        (exp.paidBy === parent && exp.status === 'Pending') ||
+        (exp.paidBy === otherParent && exp.status === 'Pending')
+    )
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const totalSettled = expenses
+    .filter((exp) => exp.status === 'Paid')
+    .reduce((sum, exp) => sum + exp.amount, 0);
   
+  const unsettledExpenses = totalExpenses - totalSettled;
+
+  const expenseShare = unsettledExpenses * (parentSplitPercentage / 100);
+  
+  const unsettledPaidByParent = expenses
+    .filter((exp) => exp.paidBy === parent && exp.status !== 'Paid')
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
   let childSupportAdjustment = 0;
-  // If child support is not 'Paid', it affects the balance.
   if (childSupport.status !== 'Paid' && childSupport.paidBy !== 'None') {
     if (childSupport.paidBy === parent) {
-      // This parent PAYS child support, increasing their contribution.
       childSupportAdjustment = childSupport.amount;
     } else {
-      // This parent RECEIVES child support, which is owed to them.
-      // This effectively reduces what they need to contribute from their pocket.
       childSupportAdjustment = -childSupport.amount;
     }
   }
 
-  // Net Balance = (What you paid for shared items) - (Your share of expenses + child support you owe)
-  // Or for the receiver: (What you paid) - (Your share - child support you are owed)
-  const netBalance = totalPaidByParent - expenseShare + childSupportAdjustment;
+  const netBalance = unsettledPaidByParent - expenseShare + childSupportAdjustment;
 
   let transferDescription: string;
-  if (netBalance > 0.005) { // Use a small epsilon for floating point comparison
+  if (netBalance > 0.005) { 
     transferDescription = `${otherParent} owes you`;
   } else if (netBalance < -0.005) {
     transferDescription = `You owe ${otherParent}`;
@@ -86,26 +98,21 @@ export function SummaryCard({
           <p className="text-muted-foreground">
             Your Share of Expenses ({parentSplitPercentage}%)
           </p>
-          <p className="font-semibold">${expenseShare.toFixed(2)}</p>
+          <p className="font-semibold">${(totalExpenses * (parentSplitPercentage / 100)).toFixed(2)}</p>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground">Total You Paid Directly</p>
           <p className="font-semibold">${totalPaidByParent.toFixed(2)}</p>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">Child Support Adjustment</p>
-          <p
-            className={cn(
-              'font-semibold',
-               childSupportAdjustment > 0 ? 'text-red-600' :
-               childSupportAdjustment < 0 ? 'text-green-600' : ''
-            )}
-          >
-            {childSupportAdjustment >= 0
-              ? `+ $${childSupportAdjustment.toFixed(2)}`
-              : `- $${Math.abs(childSupportAdjustment).toFixed(2)}`}
-          </p>
+        <div className="flex items-center justify-between text-sm">
+          <p className="text-muted-foreground">Pending Confirmation</p>
+          <p className="font-semibold text-yellow-600">${pendingConfirmation.toFixed(2)}</p>
         </div>
+        <div className="flex items-center justify-between text-sm">
+          <p className="text-muted-foreground">Paid & Settled</p>
+          <p className="font-semibold text-green-600">${totalSettled.toFixed(2)}</p>
+        </div>
+
         <Separator />
         <div className="rounded-lg bg-secondary/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">
@@ -122,7 +129,7 @@ export function SummaryCard({
           </p>
         </div>
         <p className="pt-2 text-xs text-muted-foreground">
-          This is the net balance for the month. A positive amount means you are owed money from the other parent.
+          This is the outstanding balance for the month based on unpaid and pending items.
         </p>
       </CardContent>
       <CardFooter>
