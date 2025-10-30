@@ -35,7 +35,6 @@ export function SummaryCard({
   parentNames,
 }: SummaryCardProps) {
   const { onUpdateExpense, onUpdateChildSupport } = useDashboard();
-  const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 
@@ -136,7 +135,7 @@ export function SummaryCard({
             </div>
         </div>
 
-        {childSupport.amount > 0 && (
+        {childSupport.amount > 0 && childSupport.status === 'Unpaid' && (
             <div className='space-y-2 rounded-md bg-muted/30 p-3'>
                  <h4 className="font-medium text-sm">Child Support</h4>
                  <div className="flex items-center justify-between text-sm">
@@ -175,6 +174,7 @@ export function SummaryCard({
           otherParent={otherParent}
           expenses={expenses}
           expenseSplit={expenseSplit}
+          medicalExpenseSplit={medicalExpenseSplit}
           childSupport={childSupport}
           netBalance={netBalance}
           parentNames={parentNames}
