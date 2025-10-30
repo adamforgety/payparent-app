@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Expense, Parent, ExpenseSplit, ChildSupport, PaymentStatus, ParentNames } from '@/lib/types';
+import type { Expense, Parent, ExpenseSplit, ChildSupport, PaymentStatus, ParentNames, MedicalExpenseSplit } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -33,7 +33,7 @@ interface SettleBalanceDialogProps {
   otherParent: Parent;
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: ExpenseSplit;
+  medicalExpenseSplit: MedicalExpenseSplit;
   childSupport: ChildSupport;
   children: React.ReactNode;
   netBalance: number;
@@ -268,7 +268,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
               <TableHead>Description</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Owed Amount</TableHead>
-              {!isReceiving && <TableHead className="w-[120px]">Action</TableHead>}
+              {!isReceiving && <TableHead className="w-[120px] text-right">Action</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -288,7 +288,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
                       ${item.owedAmount.toFixed(2)}
                     </TableCell>
                     {!isReceiving && (
-                      <TableCell>
+                      <TableCell className='text-right'>
                         <Button
                           variant={actionVariant}
                           size="sm"
