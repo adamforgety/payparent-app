@@ -1,22 +1,23 @@
 'use client';
 
 import { Dashboard } from '@/components/dashboard';
-import { useAuth } from '@/context/auth-context';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated === false) { // Check for explicit false to avoid redirect during initial load
+    // Redirect to login if auth check is done and there's no user.
+    if (!isUserLoading && !user) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [user, isUserLoading, router]);
 
-  if (!isAuthenticated) {
-    // You can render a loading spinner here while checking auth status
+  // Show a loading state while Firebase is checking the auth status.
+  if (isUserLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p>Loading...</p>
@@ -24,9 +25,15 @@ export default function Home() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Dashboard />
-    </div>
-  );
+  // If there's a user, show the dashboard.
+  if (user) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Dashboard />
+      </div>
+    );
+  }
+
+  // If no user and not loading, this will soon redirect, but we can show nothing or a message.
+  return null;
 }

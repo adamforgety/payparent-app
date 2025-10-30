@@ -1,121 +1,68 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { HandCoins, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Logo } from './logo';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { useUser, useAuth } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
-const pinSchema = z.object({
-  pin: z.string().min(4, 'PIN must be 4 digits').max(4, 'PIN must be 4 digits'),
-});
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
-
-  const form = useForm<z.infer<typeof pinSchema>>({
-    resolver: zodResolver(pinSchema),
-    defaultValues: {
-      pin: '',
-    },
-  });
-
-  async function onSubmit(values: z.infer<typeof pinSchema>) {
-    setIsLoading(true);
-    const success = await login(values.pin);
-    if (success) {
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back!',
-      });
+  
+  useEffect(() => {
+    // If the user is already logged in, redirect them to the homepage.
+    if (user) {
       router.push('/');
-    } else {
+    }
+  }, [user, router]);
+
+
+  const handleAnonymousLogin = async () => {
+    setIsLoading(true);
+    try {
+      initiateAnonymousSignIn(auth);
+      // The onAuthStateChanged listener in FirebaseProvider will handle the redirect
+      toast({
+        title: 'Logging in...',
+        description: 'You will be redirected shortly.',
+      });
+    } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'Invalid PIN',
-        description: 'The PIN you entered is incorrect. Please try again.',
+        title: 'Login Failed',
+        description: error.message || 'An unexpected error occurred.',
       });
-      form.reset();
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }
+  };
 
   return (
-    <AlertDialog>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <div className='flex justify-center mb-4'>
               <Logo />
           </div>
-          <CardTitle>Enter PIN</CardTitle>
-          <CardDescription>Enter the shared 4-digit PIN to access the dashboard.</CardDescription>
+          <CardTitle>Welcome to PayParent</CardTitle>
+          <CardDescription>Click below to start managing your expenses securely.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="pin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••"
-                        maxLength={4}
-                        className="text-center text-2xl tracking-[1rem]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Login
+          <div className="space-y-6">
+              <Button onClick={handleAnonymousLogin} disabled={isLoading || isUserLoading} className="w-full">
+                {isLoading || isUserLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <HandCoins className='mr-2'/>}
+                Enter Securely
               </Button>
-            </form>
-          </Form>
-          <div className="mt-4 text-center text-sm">
-            <AlertDialogTrigger asChild>
-                <Button variant="link" className="p-0 h-auto">Forgot PIN?</Button>
-            </AlertDialogTrigger>
           </div>
         </CardContent>
       </Card>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Forgot Your PIN?</AlertDialogTitle>
-          <AlertDialogDescription>
-            To reset your PIN, please contact support for assistance. We need to verify your identity to protect your account.
-            <br /><br />
-            Email us at: <a href="mailto:support@example.com" className="text-primary hover:underline">support@example.com</a>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction>Got it</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
