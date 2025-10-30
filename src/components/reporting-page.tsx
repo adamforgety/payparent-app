@@ -107,7 +107,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   }, [appData, selectedYear]);
 
   const chartConfig = useMemo(() => {
-    const config: any = {};
+    const config: any = {
+      amount: {
+        label: "Amount",
+        color: "hsl(var(--primary))",
+      },
+    };
     yearlyData.forEach((item, index) => {
       config[item.name] = {
         label: item.name,
@@ -164,22 +169,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     tickMargin={10}
                     axisLine={false}
                   />
-                  <YAxis />
+                  <YAxis
+                    tickFormatter={(value) => `$${value}`}
+                   />
                   <Tooltip
                     cursor={false}
                     content={<ChartTooltipContent indicator="dot" />}
                   />
-                  <Bar dataKey="amount" fill="var(--color-amount)" radius={4}>
-                    {yearlyData.map((entry) => (
-                      <div
-                        key={entry.name}
-                        style={{
-                          background:
-                            chartConfig[entry.name]?.color || '#8884d8',
-                        }}
-                      />
-                    ))}
-                  </Bar>
+                  <Bar dataKey="amount" fill="var(--color-amount)" radius={4} />
                 </RechartsBarChart>
               </ChartContainer>
             </div>
