@@ -49,48 +49,53 @@ export function Dashboard() {
   
   // Effect to initialize data for new users or new months
   useEffect(() => {
-    // Don't run if still loading or if there's no user or doc reference
-    if (isLoadingUser || !user || !userDocRef) return;
-    
-    // If the user document doesn't exist at all, create it.
-    if (!appData) {
-        const initialMonthData: MonthData = {
-            ...defaultMonthData,
-            id: monthId,
-            year: getYear(currentDate),
-            month: getMonth(currentDate) + 1,
-        };
-        const initialUserData: AppData = {
-            id: user.uid,
-            months: { [monthId]: initialMonthData },
-        };
-        setDocumentNonBlocking(userDocRef, initialUserData);
-        return;
+    // This effect should only run AFTER the initial user loading is complete.
+    if (isLoadingUser || !user || !userDocRef) {
+      return;
     }
-    
-    // If the user document exists, but the currently selected month doesn't have data, create it.
+  
+    // SCENARIO 1: The user document does not exist at all. This is a new user.
+    if (!appData) {
+      const initialMonthData: MonthData = {
+        ...defaultMonthData,
+        id: monthId,
+        year: getYear(currentDate),
+        month: getMonth(currentDate) + 1,
+      };
+      const initialUserData: AppData = {
+        id: user.uid,
+        months: { [monthId]: initialMonthData },
+      };
+      // Create the user document for the first time.
+      setDocumentNonBlocking(userDocRef, initialUserData);
+      return; // Stop here for this render cycle.
+    }
+  
+    // SCENARIO 2: The user document EXISTS, but the data for the CURRENTLY VIEWED month is missing.
     const monthDataExists = appData.months && appData.months[monthId];
     if (appData && !monthDataExists) {
-        const lastMonth = subMonths(currentDate, 1);
-        const lastMonthId = format(lastMonth, 'yyyy-MM');
-        const lastMonthData = appData.months?.[lastMonthId];
-
-        const newMonthData: MonthData = {
-          id: monthId,
-          year: getYear(currentDate),
-          month: getMonth(currentDate) + 1,
-          // Carry over settings from previous month if they exist, otherwise use defaults
-          childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
-          expenseSplit: lastMonthData?.expenseSplit || defaultMonthData.expenseSplit,
-          parentNames: lastMonthData?.parentNames || defaultMonthData.parentNames,
-          expenses: [], // Always start a new month with no expenses
-        };
-        
-        // Persist only the new month's data to avoid race conditions
-        setDocumentNonBlocking(userDocRef, { months: { [monthId]: newMonthData } }, { merge: true });
+      const lastMonth = subMonths(currentDate, 1);
+      const lastMonthId = format(lastMonth, 'yyyy-MM');
+      // Try to get settings from the previous month to carry them over.
+      const lastMonthData = appData.months?.[lastMonthId];
+  
+      const newMonthData: MonthData = {
+        id: monthId,
+        year: getYear(currentDate),
+        month: getMonth(currentDate) + 1,
+        // Carry over settings from previous month if they exist, otherwise use defaults
+        childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
+        expenseSplit: lastMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+        parentNames: lastMonthData?.parentNames || defaultMonthData.parentNames,
+        expenses: [], // Always start a new month with no expenses
+      };
+      
+      // Persist only the new month's data to avoid race conditions. Use merge: true.
+      setDocumentNonBlocking(userDocRef, { months: { [monthId]: newMonthData } }, { merge: true });
     }
-
+  
   }, [appData, isLoadingUser, user, userDocRef, monthId, currentDate]);
+  
 
 
   const currentMonthData = useMemo((): MonthData | null => {
@@ -107,6 +112,7 @@ export function Dashboard() {
   // This function now directly prepares data for Firestore, without intermediate state.
   const updateFirestoreMonthData = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
       if (!userDocRef || !currentMonthData) return;
+      // Merge the updates with the existing data for the month before sending to Firestore
       const updatedMonthData = { ...currentMonthData, ...dataToUpdate };
       setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonthData } }, { merge: true });
   }
@@ -124,7 +130,7 @@ export function Dashboard() {
   };
 
   const addExpense = (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => {
-    if (!user || !userDocRef) return;
+    if (!user || !userDocRef || !appData) return; // Guard against no user or appData
   
     const expenseDate = new Date(newExpense.date);
     const targetMonthId = format(expenseDate, 'yyyy-MM');
@@ -137,13 +143,13 @@ export function Dashboard() {
     };
   
     // Determine the state of the target month from the most recent appData
-    const targetMonthData = appData?.months?.[targetMonthId] || {
+    const targetMonthData = appData.months?.[targetMonthId] || {
         id: targetMonthId,
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
-        childSupport: currentMonthData?.childSupport || defaultMonthData.childSupport,
-        expenseSplit: currentMonthData?.expenseSplit || defaultMonthData.expenseSplit,
-        parentNames: currentMonthData?.parentNames || defaultMonthData.parentNames,
+        childSupport: defaultMonthData.childSupport,
+        expenseSplit: defaultMonthData.expenseSplit,
+        parentNames: defaultMonthData.parentNames,
         expenses: [],
     };
     
@@ -192,7 +198,8 @@ export function Dashboard() {
     }
   };
   
-  // While loading user data or if the month's data hasn't been created yet, show a skeleton UI.
+  // While loading user data OR if the month's data hasn't been created yet, show a skeleton UI.
+  // This is the critical gate that prevents rendering with incomplete/missing data.
   if (isLoadingUser || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
@@ -348,3 +355,5 @@ export function Dashboard() {
     </div>
   );
 }
+
+    
