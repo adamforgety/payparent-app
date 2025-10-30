@@ -65,7 +65,9 @@ export function Dashboard() {
       };
       setAppData(initialUserData);
       // Persist this initial data to Firestore
-      setDocumentNonBlocking(userDocRef!, initialUserData, { merge: true });
+      if (userDocRef) {
+        setDocumentNonBlocking(userDocRef, initialUserData, { merge: true });
+      }
     }
   }, [userData, isLoadingUser, user, monthId, currentDate, userDocRef]);
 
@@ -100,7 +102,7 @@ export function Dashboard() {
   };
   
   const updateMonthData = (updatedData: Partial<Omit<MonthData, 'id' | 'year' | 'month' | 'expenses'>>) => {
-    if (!user || !appData) return;
+    if (!user || !appData || !userDocRef) return;
   
     const newAppData = { ...appData };
     const updatedMonth = { ...currentMonthData, ...updatedData };
@@ -111,7 +113,7 @@ export function Dashboard() {
     newAppData.months[monthId] = updatedMonth;
   
     setAppData(newAppData);
-    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
+    setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
   
   const handleTabChange = (value: string) => {
@@ -126,29 +128,51 @@ export function Dashboard() {
     setActiveTab(value);
   };
 
-  const addExpense = async (newExpense: Omit<Expense, 'id'>) => {
-    if (!user || !appData) return;
-
+  const addExpense = async (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => {
+    if (!user || !appData || !userDocRef) return;
+  
+    const expenseDate = new Date(newExpense.date);
+    const targetMonthId = format(expenseDate, 'yyyy-MM');
+  
     const newExpenseWithId: Expense = {
       ...newExpense,
       id: `${Date.now()}-${Math.random()}`, // Simple unique ID
-      year: getYear(currentDate),
-      month: getMonth(currentDate) + 1,
+      year: getYear(expenseDate),
+      month: getMonth(expenseDate) + 1,
     };
-    
+  
     const newAppData = { ...appData };
-    const updatedMonth = { ...currentMonthData };
-    updatedMonth.expenses = [...updatedMonth.expenses, newExpenseWithId];
-    
-    if (!newAppData.months) newAppData.months = {};
-    newAppData.months[monthId] = updatedMonth;
-
+    // Ensure the months object exists
+    if (!newAppData.months) {
+      newAppData.months = {};
+    }
+  
+    // Get the data for the month the expense belongs to, or create it if it doesn't exist
+    const targetMonthData = newAppData.months[targetMonthId] || {
+      id: targetMonthId,
+      year: getYear(expenseDate),
+      month: getMonth(expenseDate) + 1,
+      // Carry over settings from the currently viewed month if creating a new one
+      childSupport: currentMonthData.childSupport,
+      expenseSplit: currentMonthData.expenseSplit,
+      parentNames: currentMonthData.parentNames,
+      expenses: [],
+    };
+  
+    // Add the new expense to that month's expenses
+    const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
+    const updatedMonth = { ...targetMonthData, expenses: updatedExpenses };
+  
+    // Update the app data state
+    newAppData.months[targetMonthId] = updatedMonth;
     setAppData(newAppData);
-    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
+  
+    // Persist the change to Firestore for the correct month
+    setDocumentNonBlocking(userDocRef, { months: { [targetMonthId]: updatedMonth } }, { merge: true });
   };
 
   const deleteExpense = (expenseId: string) => {
-    if (!user || !appData) return;
+    if (!user || !appData || !userDocRef) return;
     
     const newAppData = { ...appData };
     const updatedMonth = { ...currentMonthData };
@@ -158,11 +182,11 @@ export function Dashboard() {
     newAppData.months[monthId] = updatedMonth;
 
     setAppData(newAppData);
-    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
+    setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
   
   const updateExpense = (updatedExpense: Expense) => {
-    if (!user || !appData) return;
+    if (!user || !appData || !userDocRef) return;
 
     const newAppData = { ...appData };
     const updatedMonth = { ...currentMonthData };
@@ -172,7 +196,7 @@ export function Dashboard() {
     newAppData.months[monthId] = updatedMonth;
 
     setAppData(newAppData);
-    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
+    setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
 
   const updateChildSupport = (updatedChildSupport: ChildSupport) => {
@@ -180,7 +204,7 @@ export function Dashboard() {
   }
 
   const handleMarkAllAsPaid = async () => {
-    if (!user || !appData) return;
+    if (!user || !appData || !userDocRef) return;
 
     const newAppData = { ...appData };
     const updatedMonth = { ...currentMonthData };
@@ -197,7 +221,7 @@ export function Dashboard() {
     newAppData.months[monthId] = updatedMonth;
 
     setAppData(newAppData);
-    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
+    setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonth } }, { merge: true });
 
     toast({
       title: 'All Items Marked as Paid',

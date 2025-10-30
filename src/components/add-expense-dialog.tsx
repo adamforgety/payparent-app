@@ -57,7 +57,7 @@ const expenseSchema = z.object({
 });
 
 interface AddExpenseDialogProps {
-  onAddExpense: (expense: Omit<Expense, 'id'>) => void;
+  onAddExpense: (expense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   parentNames: ParentNames;
 }
 
@@ -109,7 +109,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
-            Log a new child-related expense for the current month.
+            Log a new child-related expense. It will be added to the correct month based on the date you select.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

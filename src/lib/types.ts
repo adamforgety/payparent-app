@@ -53,7 +53,7 @@ export interface MonthData {
 // This represents the structure of the entire user document in Firestore
 export interface AppData {
   id: string; // user UID
-  months: {
+  months?: {
     [monthId: string]: MonthData; // key is yyyy-MM
   };
 }
