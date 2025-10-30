@@ -3,6 +3,8 @@
 import { format, startOfMonth } from 'date-fns';
 import { ReceiptText, Trash2, CheckCheck, MoreVertical } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useState, useMemo } from 'react';
+
 
 import {
   Card,
@@ -47,6 +49,8 @@ interface ExpensesCardProps {
   parentNames: ParentNames;
 }
 
+type StatusFilter = 'all' | 'paid' | 'unpaid';
+
 export function ExpensesCard({
   expenses,
   childSupport,
@@ -58,6 +62,7 @@ export function ExpensesCard({
   currentDate,
   parentNames,
 }: ExpensesCardProps) {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   
   const childSupportAsExpenseItem = // This is not a real expense, just for display
     childSupport.amount > 0 && childSupport.paidBy !== 'None'
@@ -73,6 +78,14 @@ export function ExpensesCard({
       : null;
 
   const allItems = [...(childSupportAsExpenseItem ? [childSupportAsExpenseItem] : []), ...expenses];
+
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'all') {
+      return allItems;
+    }
+    const filterStatus: PaymentStatus = statusFilter === 'paid' ? 'Paid' : 'Unpaid';
+    return allItems.filter(item => item.status === filterStatus);
+  }, [allItems, statusFilter]);
   
   const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
 
@@ -127,6 +140,11 @@ export function ExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
+        <div className="no-print flex items-center gap-2 mb-4">
+          <Button variant={statusFilter === 'all' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All ({allItems.length})</Button>
+          <Button variant={statusFilter === 'unpaid' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('unpaid')}>Unpaid ({allItems.filter(i => i.status === 'Unpaid').length})</Button>
+          <Button variant={statusFilter === 'paid' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('paid')}>Paid ({allItems.filter(i => i.status === 'Paid').length})</Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -140,8 +158,8 @@ export function ExpensesCard({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {allItems.length > 0 ? (
-              allItems.map((item) => (
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     {format(new Date(item.date), 'MMM d, yyyy')}
@@ -195,7 +213,7 @@ export function ExpensesCard({
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
-                  No transactions logged for this month.
+                  No {statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.
                 </TableCell>
               </TableRow>
             )}
