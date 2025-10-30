@@ -26,6 +26,7 @@ import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useDashboard } from './dashboard-provider';
 
 interface SettleBalanceDialogProps {
   parent: Parent;
@@ -33,8 +34,6 @@ interface SettleBalanceDialogProps {
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
-  onUpdateExpense: (expense: Expense) => void;
-  onUpdateChildSupport: (childSupport: ChildSupport) => void;
   children: React.ReactNode;
   netBalance: number;
   parentNames: ParentNames;
@@ -56,14 +55,13 @@ export function SettleBalanceDialog({
   expenses,
   expenseSplit,
   childSupport,
-  onUpdateExpense,
-  onUpdateChildSupport,
   children,
   netBalance,
   parentNames,
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
+  const { onUpdateExpense, onUpdateChildSupport } = useDashboard();
   const parentSplit = expenseSplit[parent] / 100;
   const otherParentSplit = expenseSplit[otherParent] / 100;
 
@@ -128,9 +126,9 @@ export function SettleBalanceDialog({
   const handleMarkAsPaid = (item: ItemToSettle) => {
     if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
-      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+      if(originalExpense && onUpdateExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
     } else {
-      onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+      if(onUpdateChildSupport) onUpdateChildSupport({ ...childSupport, status: 'Paid' });
     }
     toast({
       title: 'Payment Marked as Paid',
@@ -143,9 +141,9 @@ export function SettleBalanceDialog({
       if (item.status === 'Unpaid') {
         if (item.type === 'expense') {
           const originalExpense = expenses.find(exp => exp.id === item.id);
-          if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+          if(originalExpense && onUpdateExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
         } else {
-          onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+          if(onUpdateChildSupport) onUpdateChildSupport({ ...childSupport, status: 'Paid' });
         }
       }
     });

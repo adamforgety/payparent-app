@@ -21,6 +21,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from './ui/skeleton';
 import { ReportingPage } from './reporting-page';
+import { DashboardProvider } from './dashboard-provider';
 
 const defaultMonthData: Omit<MonthData, 'id' | 'year' | 'month'> = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
@@ -29,9 +30,8 @@ const defaultMonthData: Omit<MonthData, 'id' | 'year' | 'month'> = {
   parentNames: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
 };
 
-
-export function Dashboard() {
-  const { user } = useUser();
+function DashboardComponent() {
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -41,16 +41,16 @@ export function Dashboard() {
 
   // --- Data Fetching ---
   const userDocRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: appData, isLoading: isLoadingUser } = useDoc<AppData>(userDocRef);
+  const { data: appData, isLoading: isLoadingUserDoc } = useDoc<AppData>(userDocRef);
   
   // Effect to initialize data for new users or new months
   useEffect(() => {
     // This effect should only run AFTER the initial user loading is complete.
-    if (isLoadingUser || !user || !userDocRef) {
+    if (isLoadingUserDoc || !user || !userDocRef) {
       return;
     }
   
@@ -90,11 +90,11 @@ export function Dashboard() {
         expenses: [], // Always start a new month with no expenses
       };
       
-      // Persist only the new month's data to avoid race conditions. Use merge: true.
+      // Persist only the new month's data using merge to avoid overwriting.
       setDocumentNonBlocking(userDocRef, { months: { [monthId]: newMonthData } }, { merge: true });
     }
   
-  }, [appData, isLoadingUser, user, userDocRef, monthId, currentDate]);
+  }, [appData, isLoadingUserDoc, user, userDocRef, monthId, currentDate]);
   
 
 
@@ -109,12 +109,15 @@ export function Dashboard() {
     );
   };
   
-  // This function now directly prepares data for Firestore, without intermediate state.
   const updateFirestoreMonthData = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
       if (!userDocRef || !currentMonthData) return;
-      // Merge the updates with the existing data for the month before sending to Firestore
-      const updatedMonthData = { ...currentMonthData, ...dataToUpdate };
-      setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonthData } }, { merge: true });
+      
+      const updatedMonthPayload = {
+        ...currentMonthData,
+        ...dataToUpdate,
+      };
+      
+      setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonthPayload } }, { merge: true });
   }
 
   const handleTabChange = (value: string) => {
@@ -130,19 +133,18 @@ export function Dashboard() {
   };
 
   const addExpense = (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => {
-    if (!user || !userDocRef || !appData) return; // Guard against no user or appData
+    if (!user || !userDocRef || !appData) return;
   
     const expenseDate = new Date(newExpense.date);
     const targetMonthId = format(expenseDate, 'yyyy-MM');
   
     const newExpenseWithId: Expense = {
       ...newExpense,
-      id: `${Date.now()}-${Math.random()}`, // Simple unique ID
+      id: `${Date.now()}-${Math.random()}`,
       year: getYear(expenseDate),
       month: getMonth(expenseDate) + 1,
     };
   
-    // Determine the state of the target month from the most recent appData
     const targetMonthData = appData.months?.[targetMonthId] || {
         id: targetMonthId,
         year: getYear(expenseDate),
@@ -155,18 +157,17 @@ export function Dashboard() {
     
     const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
   
-    // Persist the change to Firestore for the correct month
     setDocumentNonBlocking(userDocRef, { months: { [targetMonthId]: { ...targetMonthData, expenses: updatedExpenses } } }, { merge: true });
   };
   
   const deleteExpense = (expenseId: string) => {
-    if (!userDocRef || !currentMonthData) return;
+    if (!currentMonthData) return;
     const updatedExpenses = currentMonthData.expenses.filter(exp => exp.id !== expenseId);
     updateFirestoreMonthData({ expenses: updatedExpenses });
   };
   
   const updateExpense = (updatedExpense: Expense) => {
-    if (!userDocRef || !currentMonthData) return;
+    if (!currentMonthData) return;
     const updatedExpenses = currentMonthData.expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp);
     updateFirestoreMonthData({ expenses: updatedExpenses });
   };
@@ -176,21 +177,24 @@ export function Dashboard() {
   };
 
   const handleMarkAllAsPaid = () => {
-    if (!userDocRef || !currentMonthData) return;
+    if (!currentMonthData) return;
 
-    let updatedMonthData: Partial<MonthData> = {};
+    let madeChanges = false;
+    let updatedExpenses = currentMonthData.expenses;
+    let updatedChildSupport = currentMonthData.childSupport;
 
-    const unpaidExpensesExist = currentMonthData.expenses.some(exp => exp.status === 'Unpaid');
-    if (unpaidExpensesExist) {
-        updatedMonthData.expenses = currentMonthData.expenses.map(exp => exp.status === 'Unpaid' ? { ...exp, status: 'Paid' } : exp);
+    if (currentMonthData.expenses.some(exp => exp.status === 'Unpaid')) {
+        updatedExpenses = currentMonthData.expenses.map(exp => exp.status === 'Unpaid' ? { ...exp, status: 'Paid' } : exp);
+        madeChanges = true;
     }
     
     if (currentMonthData.childSupport.status === 'Unpaid' && currentMonthData.childSupport.amount > 0) {
-      updatedMonthData.childSupport = { ...currentMonthData.childSupport, status: 'Paid' };
+      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Paid' };
+      madeChanges = true;
     }
     
-    if (Object.keys(updatedMonthData).length > 0) {
-      updateFirestoreMonthData(updatedMonthData);
+    if (madeChanges) {
+      updateFirestoreMonthData({ expenses: updatedExpenses, childSupport: updatedChildSupport });
       toast({
         title: 'All Items Marked as Paid',
         description: 'All unpaid expenses and child support for this month are now paid.',
@@ -198,9 +202,7 @@ export function Dashboard() {
     }
   };
   
-  // While loading user data OR if the month's data hasn't been created yet, show a skeleton UI.
-  // This is the critical gate that prevents rendering with incomplete/missing data.
-  if (isLoadingUser || !currentMonthData) {
+  if (isUserLoading || isLoadingUserDoc || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
@@ -215,7 +217,6 @@ export function Dashboard() {
     )
   }
 
-  // At this point, currentMonthData is guaranteed to be available.
   const expenses = currentMonthData.expenses || [];
   const totalExpenses = expenses.reduce(
     (sum, exp) => sum + exp.amount,
@@ -223,135 +224,141 @@ export function Dashboard() {
   );
 
   return (
-    <div className="flex flex-col">
-      <PageHeader
-        totalExpenses={totalExpenses}
-      />
-      <main className="container mx-auto p-4 md:p-8">
-        <div className="mb-8 hidden print-only">
-          <div className="print-header flex items-center justify-between">
-            <Logo />
-            <div>
-              <h1 className="text-3xl font-bold">Monthly Report</h1>
-              <p className="text-lg text-muted-foreground">
-                {format(currentDate, 'MMMM yyyy')}
-              </p>
+    <DashboardProvider
+      onUpdateExpense={updateExpense}
+      onUpdateChildSupport={updateChildSupport}
+    >
+      <div className="flex flex-col">
+        <PageHeader
+          totalExpenses={totalExpenses}
+        />
+        <main className="container mx-auto p-4 md:p-8">
+          <div className="mb-8 hidden print-only">
+            <div className="print-header flex items-center justify-between">
+              <Logo />
+              <div>
+                <h1 className="text-3xl font-bold">Monthly Report</h1>
+                <p className="text-lg text-muted-foreground">
+                  {format(currentDate, 'MMMM yyyy')}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex flex-col items-center justify-center gap-4 mb-8 no-print">
-          {activeTab !== 'reporting' && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleDateChange('prev')}
-                aria-label="Previous month"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <span className="w-40 text-center text-lg font-semibold">
-                {format(currentDate, 'MMMM yyyy')}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => handleDateChange('next')}
-                aria-label="Next month"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 no-print h-auto bg-transparent p-0">
-            <TabsTrigger value="dashboard" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Dashboard</TabsTrigger>
-            <TabsTrigger value="expenses" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Expenses</TabsTrigger>
-            <TabsTrigger value="reporting" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Reporting</TabsTrigger>
-            <TabsTrigger value="settings" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Settings</TabsTrigger>
-          </TabsList>
-          <TabsContent value="dashboard">
-            <div className="mt-8">
-              <Tabs defaultValue="parent-1" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
-                  <TabsTrigger value="parent-2">{currentMonthData.parentNames['Parent 2']}</TabsTrigger>
-                </TabsList>
-                <TabsContent value="parent-1">
-                  <div className="mt-6">
-                    <SummaryCard
-                      parent="Parent 1"
-                      totalExpenses={totalExpenses}
-                      expenses={expenses}
-                      expenseSplit={currentMonthData.expenseSplit}
-                      childSupport={currentMonthData.childSupport}
-                      onUpdateExpense={updateExpense}
-                      onUpdateChildSupport={updateChildSupport}
-                      parentNames={currentMonthData.parentNames}
-                    />
-                  </div>
-                </TabsContent>
-                <TabsContent value="parent-2">
-                  <div className="mt-6">
-                    <SummaryCard
-                      parent="Parent 2"
-                      totalExpenses={totalExpenses}
-                      expenses={expenses}
-                      expenseSplit={currentMonthData.expenseSplit}
-                      childSupport={currentMonthData.childSupport}
-                      onUpdateExpense={updateExpense}
-                      onUpdateChildSupport={updateChildSupport}
-                      parentNames={currentMonthData.parentNames}
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </TabsContent>
-          <TabsContent value="expenses">
-             <div className="mt-6">
-                <ExpensesCard
-                  expenses={expenses}
-                  childSupport={currentMonthData.childSupport}
-                  expenseSplit={currentMonthData.expenseSplit}
-                  onDelete={deleteExpense}
-                  onUpdateExpense={updateExpense}
-                  onMarkAllAsPaid={handleMarkAllAsPaid}
-                  currentDate={currentDate}
-                  parentNames={currentMonthData.parentNames}
+          <div className="flex flex-col items-center justify-center gap-4 mb-8 no-print">
+            {activeTab !== 'reporting' && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleDateChange('prev')}
+                  aria-label="Previous month"
                 >
-                  <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
-                </ExpensesCard>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <span className="w-40 text-center text-lg font-semibold">
+                  {format(currentDate, 'MMMM yyyy')}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleDateChange('next')}
+                  aria-label="Next month"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
-          </TabsContent>
-           <TabsContent value="reporting">
-             <div className="mt-6">
-                <ReportingPage appData={appData} />
+            )}
+          </div>
+
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 no-print h-auto bg-transparent p-0">
+              <TabsTrigger value="dashboard" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Dashboard</TabsTrigger>
+              <TabsTrigger value="expenses" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Expenses</TabsTrigger>
+              <TabsTrigger value="reporting" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Reporting</TabsTrigger>
+              <TabsTrigger value="settings" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Settings</TabsTrigger>
+            </TabsList>
+            <TabsContent value="dashboard">
+              <div className="mt-8">
+                <Tabs defaultValue="parent-1" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
+                    <TabsTrigger value="parent-2">{currentMonthData.parentNames['Parent 2']}</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="parent-1">
+                    <div className="mt-6">
+                      <SummaryCard
+                        parent="Parent 1"
+                        totalExpenses={totalExpenses}
+                        expenses={expenses}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        childSupport={currentMonthData.childSupport}
+                        parentNames={currentMonthData.parentNames}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="parent-2">
+                    <div className="mt-6">
+                      <SummaryCard
+                        parent="Parent 2"
+                        totalExpenses={totalExpenses}
+                        expenses={expenses}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        childSupport={currentMonthData.childSupport}
+                        parentNames={currentMonthData.parentNames}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
-          </TabsContent>
-          <TabsContent value="settings">
-            <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
-               <ParentNamesCard
+            </TabsContent>
+            <TabsContent value="expenses">
+              <div className="mt-6">
+                  <ExpensesCard
+                    expenses={expenses}
+                    childSupport={currentMonthData.childSupport}
+                    expenseSplit={currentMonthData.expenseSplit}
+                    onDelete={deleteExpense}
+                    onUpdateExpense={updateExpense}
+                    onUpdateChildSupport={updateChildSupport}
+                    onMarkAllAsPaid={handleMarkAllAsPaid}
+                    currentDate={currentDate}
+                    parentNames={currentMonthData.parentNames}
+                  >
+                    <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
+                  </ExpensesCard>
+                </div>
+            </TabsContent>
+            <TabsContent value="reporting">
+              <div className="mt-6">
+                  <ReportingPage appData={appData} />
+                </div>
+            </TabsContent>
+            <TabsContent value="settings">
+              <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                <ParentNamesCard
+                    parentNames={currentMonthData.parentNames}
+                    onUpdate={(parentNames) => updateFirestoreMonthData({ parentNames })}
+                />
+                <ChildSupportCard
+                  childSupport={currentMonthData.childSupport}
+                  onUpdate={updateChildSupport}
                   parentNames={currentMonthData.parentNames}
-                  onUpdate={(parentNames) => updateFirestoreMonthData({ parentNames })}
-               />
-               <ChildSupportCard
-                childSupport={currentMonthData.childSupport}
-                onUpdate={updateChildSupport}
-                parentNames={currentMonthData.parentNames}
-              />
-              <ParentSplitCard
-                expenseSplit={currentMonthData.expenseSplit}
-                onUpdate={(expenseSplit) => updateFirestoreMonthData({ expenseSplit })}
-                parentNames={currentMonthData.parentNames}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+                />
+                <ParentSplitCard
+                  expenseSplit={currentMonthData.expenseSplit}
+                  onUpdate={(expenseSplit) => updateFirestoreMonthData({ expenseSplit })}
+                  parentNames={currentMonthData.parentNames}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </main>
+      </div>
+    </DashboardProvider>
   );
+}
+
+export function Dashboard() {
+  return <DashboardComponent />;
 }

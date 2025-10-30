@@ -38,6 +38,7 @@ import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { useDashboard } from './dashboard-provider';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -45,13 +46,24 @@ interface ExpensesCardProps {
   expenseSplit: ExpenseSplit;
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense) => void;
+  onUpdateChildSupport: (childSupport: ChildSupport) => void;
   onMarkAllAsPaid: () => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
 }
 
-type StatusFilter = 'all' | 'paid' | 'unpaid';
+type DisplayItem = {
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+    paidBy: Parent | 'None';
+    status: PaymentStatus;
+    category: 'Child Support' | Expense['category'];
+    type: 'expense' | 'child_support';
+};
+
 
 export function ExpensesCard({
   expenses,
@@ -59,6 +71,7 @@ export function ExpensesCard({
   expenseSplit,
   onDelete,
   onUpdateExpense,
+  onUpdateChildSupport,
   onMarkAllAsPaid,
   children,
   currentDate,
@@ -66,20 +79,23 @@ export function ExpensesCard({
 }: ExpensesCardProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   
-  const childSupportAsExpenseItem = // This is not a real expense, just for display
-    childSupport.amount > 0 && childSupport.paidBy !== 'None'
-      ? {
-          id: 'child-support',
-          date: startOfMonth(currentDate).toISOString(),
-          description: 'Child Support',
-          amount: childSupport.amount,
-          paidBy: childSupport.paidBy,
-          status: childSupport.status,
-          category: 'Child Support' as const,
-        }
-      : null;
-
-  const allItems = [...(childSupportAsExpenseItem ? [childSupportAsExpenseItem] : []), ...expenses];
+  const allItems = useMemo<DisplayItem[]>(() => {
+    const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
+    if (childSupport.amount > 0 && childSupport.paidBy !== 'None') {
+        const childSupportItem: DisplayItem = {
+            id: 'child-support',
+            date: startOfMonth(currentDate).toISOString(),
+            description: 'Child Support',
+            amount: childSupport.amount,
+            paidBy: childSupport.paidBy,
+            status: childSupport.status,
+            category: 'Child Support',
+            type: 'child_support',
+        };
+        return [childSupportItem, ...expenseItems];
+    }
+    return expenseItems;
+  }, [expenses, childSupport, currentDate]);
 
   const filteredItems = useMemo(() => {
     if (statusFilter === 'all') {
@@ -99,8 +115,15 @@ export function ExpensesCard({
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
   const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 1' ? 0 : childSupport.amount);
 
-  const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
-    onUpdateExpense({ ...item, status: newStatus });
+  const handleStatusChange = (item: DisplayItem, newStatus: PaymentStatus) => {
+    if (item.type === 'expense') {
+        const originalExpense = expenses.find(e => e.id === item.id);
+        if (originalExpense) {
+            onUpdateExpense({ ...originalExpense, status: newStatus });
+        }
+    } else {
+        onUpdateChildSupport({ ...childSupport, status: newStatus });
+    }
   };
 
 
@@ -174,50 +197,47 @@ export function ExpensesCard({
                     {item.description}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={item.id === 'child-support' ? 'default' : 'outline'}>{item.category}</Badge>
+                    <Badge variant={item.type === 'child_support' ? 'default' : 'outline'}>{item.category}</Badge>
                   </TableCell>
                   <TableCell>
-                    {item.paidBy && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
+                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                   </TableCell>
                   <TableCell>
-                    {item.id !== 'child-support' ? (
-                       <TooltipProvider>
-                        <Tooltip>
-                           <TooltipTrigger asChild>
-                              <div className="flex items-center space-x-2">
-                                <Switch
-                                  id={`status-switch-${item.id}`}
-                                  checked={item.status === 'Paid'}
-                                  onCheckedChange={(isChecked) =>
-                                    handleStatusChange(item as Expense, isChecked ? 'Paid' : 'Unpaid')
-                                  }
-                                  aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
-                                />
-                                 <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Paid' ? 'text-green-600' : 'text-destructive', "font-medium w-12")}>
-                                  {item.status}
-                                </Label>
-                              </div>
-                           </TooltipTrigger>
-                           <TooltipContent>
-                              <p>Click to mark as {item.status === 'Paid' ? 'Unpaid' : 'Paid'}</p>
-                           </TooltipContent>
-                        </Tooltip>
-                       </TooltipProvider>
-                    ) : (
-                      <Badge
-                        variant={item.status === 'Paid' ? 'success' : 'destructive'}
-                        className='w-[55px] justify-center'
-                      >
-                        {item.status}
-                      </Badge>
-                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`status-switch-${item.id}`}
+                              checked={item.status === 'Paid'}
+                              onCheckedChange={(isChecked) =>
+                                handleStatusChange(item, isChecked ? 'Paid' : 'Unpaid')
+                              }
+                              aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
+                            />
+                            <Label
+                              htmlFor={`status-switch-${item.id}`}
+                              className={cn(
+                                item.status === 'Paid' ? 'text-green-600' : 'text-destructive',
+                                'font-medium w-12'
+                              )}
+                            >
+                              {item.status}
+                            </Label>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Click to mark as {item.status === 'Paid' ? 'Unpaid' : 'Paid'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell className="text-right">
                     ${item.amount.toFixed(2)}
                   </TableCell>
                   <TableCell className="no-print text-right">
                     <div className="flex justify-end gap-1 h-8 w-full">
-                      {item.id !== 'child-support' && (
+                      {item.type === 'expense' && (
                         <>
                             <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
                             <TooltipProvider>
@@ -283,3 +303,5 @@ export function ExpensesCard({
     </Card>
   );
 }
+
+type StatusFilter = 'all' | 'paid' | 'unpaid';

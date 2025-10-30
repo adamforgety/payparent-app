@@ -15,6 +15,7 @@ import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames } from '@
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
+import { useDashboard } from './dashboard-provider';
 
 interface SummaryCardProps {
   parent: Parent;
@@ -22,8 +23,6 @@ interface SummaryCardProps {
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
-  onUpdateExpense: (expense: Expense) => void;
-  onUpdateChildSupport: (childSupport: ChildSupport) => void;
   parentNames: ParentNames;
 }
 
@@ -33,10 +32,9 @@ export function SummaryCard({
   expenses,
   expenseSplit,
   childSupport,
-  onUpdateExpense,
-  onUpdateChildSupport,
   parentNames,
 }: SummaryCardProps) {
+  const { onUpdateExpense, onUpdateChildSupport } = useDashboard();
   const parentSplitPercentage = expenseSplit[parent];
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
