@@ -196,7 +196,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         cursor={false}
                         content={<ChartTooltipContent indicator="dot" />}
                       />
-                      <Bar dataKey="amount" fill="var(--color-primary)" radius={4} />
+                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={4} />
                     </RechartsBarChart>
                   </ChartContainer>
                 </div>
