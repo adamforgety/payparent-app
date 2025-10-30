@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import type { AppData, Expense, ExpenseCategory, Parent, ParentNames } from '@/lib/types';
+import type { AppData, Expense, ExpenseCategory, ParentNames } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -62,23 +62,20 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     String(getYear(new Date()))
   );
   const [searchTerm, setSearchTerm] = useState('');
-  const [parentFilter, setParentFilter] = useState<Parent | 'all'>('all');
 
-  const { availableYears, yearlyData, totalYearlyExpenses, allTransactions, parentNamesForYear } = useMemo(() => {
+  const { availableYears, yearlyData, totalYearlyExpenses, allTransactions } = useMemo(() => {
     if (!appData?.months) {
       return {
         availableYears: [String(getYear(new Date()))],
         yearlyData: [],
         totalYearlyExpenses: 0,
         allTransactions: [],
-        parentNamesForYear: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' }
       };
     }
 
     const years = new Set<string>();
     let allExpensesForYear: EnrichedExpense[] = [];
-    let latestParentNames: ParentNames | null = null;
-
+    
     Object.values(appData.months).forEach((monthData) => {
       years.add(String(monthData.year));
       if (String(monthData.year) === selectedYear) {
@@ -88,7 +85,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 parentNames: monthData.parentNames
             });
         });
-        latestParentNames = monthData.parentNames;
       }
     });
 
@@ -121,17 +117,24 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       yearlyData: chartData,
       totalYearlyExpenses: total,
       allTransactions: allExpensesForYear,
-      parentNamesForYear: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' }
     };
   }, [appData, selectedYear]);
   
   const filteredTransactions = useMemo(() => {
+    const lowercasedFilter = searchTerm.toLowerCase();
+    if (!lowercasedFilter) {
+      return allTransactions;
+    }
     return allTransactions.filter(transaction => {
-      const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesParent = parentFilter === 'all' || transaction.paidBy === parentFilter;
-      return matchesSearch && matchesParent;
+      const parentName = transaction.parentNames[transaction.paidBy].toLowerCase();
+      const description = transaction.description.toLowerCase();
+      const category = transaction.category.toLowerCase();
+
+      return parentName.includes(lowercasedFilter) ||
+             description.includes(lowercasedFilter) ||
+             category.includes(lowercasedFilter);
     });
-  }, [allTransactions, searchTerm, parentFilter]);
+  }, [allTransactions, searchTerm]);
 
   const chartConfig = useMemo(() => {
     const config: any = {
@@ -259,23 +262,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                     <Input 
                       type="search"
-                      placeholder="Search by description..."
+                      placeholder="Search by description, category, or parent..."
                       className="pl-8 w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                </div>
-                <div className='w-full sm:w-48'>
-                    <Select value={parentFilter} onValueChange={(value) => setParentFilter(value as Parent | 'all')}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filter by parent" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Parents</SelectItem>
-                            <SelectItem value="Parent 1">{parentNamesForYear['Parent 1']}</SelectItem>
-                            <SelectItem value="Parent 2">{parentNamesForYear['Parent 2']}</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
             </div>
              <div className="rounded-md border">
@@ -307,7 +298,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     )) : (
                        <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center">
-                            {searchTerm || parentFilter !== 'all' ? `No transactions found for the current filters.` : "No transactions this year."}
+                            {searchTerm ? `No transactions found for "${searchTerm}".` : "No transactions this year."}
                           </TableCell>
                         </TableRow>
                     )}
