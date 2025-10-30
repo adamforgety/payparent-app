@@ -150,8 +150,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       
     allExpensesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const title = selectedMonth === 'all' ? 'Yearly Report' : 'Monthly Report';
-    const description = `An overview of all expenses for ${selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`
+    const reportTitle = selectedMonth === 'all' ? 'Yearly Report' : 'Monthly Report';
+    const reportDescription = `An overview of all expenses for ${selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`
 
     return {
       availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
