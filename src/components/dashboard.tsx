@@ -20,6 +20,7 @@ import { Button } from './ui/button';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from './ui/skeleton';
+import { ReportingPage } from './reporting-page';
 
 const defaultMonthData: Omit<MonthData, 'id' | 'year' | 'month'> = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
@@ -267,6 +268,7 @@ export function Dashboard() {
         </div>
 
         <div className="flex flex-col items-center justify-center gap-4 mb-8 no-print">
+          {activeTab !== 'reporting' && (
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -288,12 +290,14 @@ export function Dashboard() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+          )}
+        </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 no-print h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-4 no-print h-auto bg-transparent p-0">
             <TabsTrigger value="dashboard" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Dashboard</TabsTrigger>
             <TabsTrigger value="expenses" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Expenses</TabsTrigger>
+            <TabsTrigger value="reporting" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Reporting</TabsTrigger>
             <TabsTrigger value="settings" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Settings</TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard">
@@ -348,6 +352,11 @@ export function Dashboard() {
                 >
                   <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
                 </ExpensesCard>
+              </div>
+          </TabsContent>
+           <TabsContent value="reporting">
+             <div className="mt-6">
+                <ReportingPage appData={appData} />
               </div>
           </TabsContent>
           <TabsContent value="settings">
