@@ -232,11 +232,12 @@ export function ExpensesCard({
                                 handleStatusChange(item, isChecked ? 'Paid' : 'Unpaid')
                               }
                               aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
+                              className='h-5 w-9'
                             />
                             <Label
                               htmlFor={`status-switch-${item.id}`}
                               className={cn(
-                                'font-medium w-12',
+                                'font-medium w-12 cursor-pointer',
                                 item.status === 'Paid' ? 'text-green-600' : 'text-destructive',
                               )}
                             >
