@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import type { AppData, Expense, ExpenseCategory, ParentNames } from '@/lib/types';
+import type { AppData, Expense, ExpenseCategory, ParentNames, Parent } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -126,7 +126,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       return allTransactions;
     }
     return allTransactions.filter(transaction => {
-      const parentName = transaction.parentNames[transaction.paidBy].toLowerCase();
+      // Safely access paidBy, which can be 'Parent 1' or 'Parent 2'
+      const paidByParent: Parent = transaction.paidBy;
+      const parentName = transaction.parentNames[paidByParent]?.toLowerCase() || '';
       const description = transaction.description.toLowerCase();
       const category = transaction.category.toLowerCase();
 
