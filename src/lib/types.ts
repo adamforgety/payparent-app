@@ -46,6 +46,7 @@ export interface MonthData {
   month: number; // 1-12
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
+  medicalExpenseSplit: ExpenseSplit;
   parentNames: ParentNames;
   expenses: Expense[];
 }

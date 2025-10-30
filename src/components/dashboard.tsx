@@ -22,10 +22,12 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from './ui/skeleton';
 import { ReportingPage } from './reporting-page';
 import { DashboardProvider } from './dashboard-provider';
+import { MedicalSplitCard } from './medical-split-card';
 
 const defaultMonthData: Omit<MonthData, 'id' | 'year' | 'month'> = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
   expenseSplit: { 'Parent 1': 50, 'Parent 2': 50 },
+  medicalExpenseSplit: { 'Parent 1': 48, 'Parent 2': 52 },
   expenses: [],
   parentNames: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
 };
@@ -86,6 +88,7 @@ function DashboardComponent() {
         // Carry over settings from previous month if they exist, otherwise use defaults
         childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
         expenseSplit: lastMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+        medicalExpenseSplit: lastMonthData?.medicalExpenseSplit || defaultMonthData.medicalExpenseSplit,
         parentNames: lastMonthData?.parentNames || defaultMonthData.parentNames,
         expenses: [], // Always start a new month with no expenses
       };
@@ -151,6 +154,7 @@ function DashboardComponent() {
         month: getMonth(expenseDate) + 1,
         childSupport: currentMonthData?.childSupport || defaultMonthData.childSupport,
         expenseSplit: currentMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+        medicalExpenseSplit: currentMonthData?.medicalExpenseSplit || defaultMonthData.medicalExpenseSplit,
         parentNames: currentMonthData?.parentNames || defaultMonthData.parentNames,
         expenses: [],
     };
@@ -289,9 +293,9 @@ function DashboardComponent() {
                     <div className="mt-6">
                       <SummaryCard
                         parent="Parent 1"
-                        totalExpenses={totalExpenses}
                         expenses={expenses}
                         expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
                       />
@@ -301,9 +305,9 @@ function DashboardComponent() {
                     <div className="mt-6">
                       <SummaryCard
                         parent="Parent 2"
-                        totalExpenses={totalExpenses}
                         expenses={expenses}
                         expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
                       />
@@ -348,6 +352,11 @@ function DashboardComponent() {
                 <ParentSplitCard
                   expenseSplit={currentMonthData.expenseSplit}
                   onUpdate={(expenseSplit) => updateFirestoreMonthData({ expenseSplit })}
+                  parentNames={currentMonthData.parentNames}
+                />
+                <MedicalSplitCard
+                  expenseSplit={currentMonthData.medicalExpenseSplit}
+                  onUpdate={(medicalExpenseSplit) => updateFirestoreMonthData({ medicalExpenseSplit })}
                   parentNames={currentMonthData.parentNames}
                 />
               </div>

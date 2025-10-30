@@ -42,6 +42,9 @@
         "expenseSplit": {
           "$ref": "#/entities/ExpenseSplit"
         },
+        "medicalExpenseSplit": {
+          "$ref": "#/entities/ExpenseSplit"
+        },
         "parentNames": {
           "$ref": "#/entities/ParentNames"
         },
@@ -53,7 +56,7 @@
           }
         }
       },
-      "required": ["id", "year", "month", "childSupport", "expenseSplit", "parentNames", "expenses"]
+      "required": ["id", "year", "month", "childSupport", "expenseSplit", "parentNames", "expenses", "medicalExpenseSplit"]
     },
     "ChildSupport": {
       "title": "ChildSupport",

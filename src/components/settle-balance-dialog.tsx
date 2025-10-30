@@ -126,9 +126,9 @@ export function SettleBalanceDialog({
   const handleMarkAsPaid = (item: ItemToSettle) => {
     if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
-      if(originalExpense && onUpdateExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
     } else {
-      if(onUpdateChildSupport) onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+      onUpdateChildSupport({ ...childSupport, status: 'Paid' });
     }
     toast({
       title: 'Payment Marked as Paid',
@@ -141,9 +141,9 @@ export function SettleBalanceDialog({
       if (item.status === 'Unpaid') {
         if (item.type === 'expense') {
           const originalExpense = expenses.find(exp => exp.id === item.id);
-          if(originalExpense && onUpdateExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+          if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
         } else {
-          if(onUpdateChildSupport) onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+          onUpdateChildSupport({ ...childSupport, status: 'Paid' });
         }
       }
     });

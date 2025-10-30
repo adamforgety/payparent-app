@@ -19,18 +19,18 @@ import { useDashboard } from './dashboard-provider';
 
 interface SummaryCardProps {
   parent: Parent;
-  totalExpenses: number;
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
+  medicalExpenseSplit: ExpenseSplit;
   childSupport: ChildSupport;
   parentNames: ParentNames;
 }
 
 export function SummaryCard({
   parent,
-  totalExpenses,
   expenses,
   expenseSplit,
+  medicalExpenseSplit,
   childSupport,
   parentNames,
 }: SummaryCardProps) {
@@ -39,15 +39,33 @@ export function SummaryCard({
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 
-  // Balance calculation is based on UNPAID items
   const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
-  const totalUnpaidExpenses = unpaidExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   
   const unpaidPaidByParent = unpaidExpenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const calculateShare = (
+    expenses: Expense[],
+    split: ExpenseSplit,
+    medicalSplit: ExpenseSplit,
+    parent: Parent
+  ): number => {
+    let totalShare = 0;
+    const parentSplitPercent = split[parent] / 100;
+    const medicalParentSplitPercent = medicalSplit[parent] / 100;
+
+    for (const expense of expenses) {
+      if (expense.category === 'Medical') {
+        totalShare += expense.amount * medicalParentSplitPercent;
+      } else {
+        totalShare += expense.amount * parentSplitPercent;
+      }
+    }
+    return totalShare;
+  };
     
-  const parentExpenseShare = totalUnpaidExpenses * (parentSplitPercentage / 100);
+  const parentExpenseShare = calculateShare(unpaidExpenses, expenseSplit, medicalExpenseSplit, parent);
   
   // This is the balance from shared expenses only.
   // Positive means you are owed money, negative means you owe money for expenses.
@@ -101,7 +119,7 @@ export function SummaryCard({
             <h4 className="font-medium text-sm">Shared Expense Balance</h4>
             <div className="flex items-center justify-between text-sm">
                 <p className="text-muted-foreground">
-                    Your Share ({parentSplitPercentage}%)
+                    Your Share
                 </p>
                 <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
             </div>
@@ -158,8 +176,6 @@ export function SummaryCard({
           expenses={expenses}
           expenseSplit={expenseSplit}
           childSupport={childSupport}
-          onUpdateExpense={onUpdateExpense}
-          onUpdateChildSupport={onUpdateChildSupport}
           netBalance={netBalance}
           parentNames={parentNames}
         >
