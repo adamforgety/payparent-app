@@ -193,7 +193,7 @@ export function ExpensesCard({
                                   }
                                   aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
                                 />
-                                 <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Paid' ? 'text-green-600' : 'text-destructive', "font-medium")}>
+                                 <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Paid' ? 'text-green-600' : 'text-destructive', "font-medium w-12")}>
                                   {item.status}
                                 </Label>
                               </div>
