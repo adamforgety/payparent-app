@@ -1,7 +1,7 @@
 'use client';
 
 import { Users } from 'lucide-react';
-import type { ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 
 import {
   Card,
@@ -23,16 +23,28 @@ export function ParentNamesCard({
   parentNames,
   onUpdate,
 }: ParentNamesCardProps) {
+  const [localParentNames, setLocalParentNames] = useState(parentNames);
+
+  useEffect(() => {
+    setLocalParentNames(parentNames);
+  }, [parentNames]);
+
+
   const handleNameChange = (
     parent: Parent,
     e: ChangeEvent<HTMLInputElement>
   ) => {
     const newName = e.target.value;
-    onUpdate({
-      ...parentNames,
-      [parent]: newName,
-    });
+    setLocalParentNames(prev => ({
+        ...prev,
+        [parent]: newName
+    }));
   };
+
+  const handleBlur = () => {
+    // Only call the expensive update function when the user is done editing.
+    onUpdate(localParentNames);
+  }
 
   return (
     <Card>
@@ -52,8 +64,9 @@ export function ParentNamesCard({
           <Label htmlFor="parent1-name">Parent 1 Name</Label>
           <Input
             id="parent1-name"
-            value={parentNames['Parent 1']}
+            value={localParentNames['Parent 1']}
             onChange={(e) => handleNameChange('Parent 1', e)}
+            onBlur={handleBlur}
             placeholder="e.g., Mother, Jane"
           />
         </div>
@@ -61,8 +74,9 @@ export function ParentNamesCard({
           <Label htmlFor="parent2-name">Parent 2 Name</Label>
           <Input
             id="parent2-name"
-            value={parentNames['Parent 2']}
+            value={localParentNames['Parent 2']}
             onChange={(e) => handleNameChange('Parent 2', e)}
+            onBlur={handleBlur}
             placeholder="e.g., Father, Joe"
           />
         </div>
