@@ -38,12 +38,12 @@ import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
-import { useDashboard } from './dashboard-provider';
 
 interface ExpensesCardProps {
   expenses: Expense[];
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
+  medicalExpenseSplit: ExpenseSplit;
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
@@ -69,6 +69,7 @@ export function ExpensesCard({
   expenses,
   childSupport,
   expenseSplit,
+  medicalExpenseSplit,
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
@@ -109,11 +110,28 @@ export function ExpensesCard({
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-  const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 2' ? 0 : childSupport.amount);
+  const calculateShare = (parent: Parent) => {
+    let totalShare = 0;
+    const parentSplitPercent = expenseSplit[parent] / 100;
+    const medicalParentSplitPercent = medicalExpenseSplit[parent] / 100;
+    
+    for (const expense of expenses) {
+        if (expense.category === 'Medical') {
+            totalShare += expense.amount * medicalParentSplitPercent;
+        } else {
+            totalShare += expense.amount * parentSplitPercent;
+        }
+    }
+    
+    if (childSupport.paidBy === parent) {
+      totalShare += childSupport.amount;
+    }
+    
+    return totalShare;
+  };
   
-  const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
-  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 1' ? 0 : childSupport.amount);
+  const parent1TotalShare = calculateShare('Parent 1');
+  const parent2TotalShare = calculateShare('Parent 2');
 
   const handleStatusChange = (item: DisplayItem, newStatus: PaymentStatus) => {
     if (item.type === 'expense') {
@@ -218,8 +236,8 @@ export function ExpensesCard({
                             <Label
                               htmlFor={`status-switch-${item.id}`}
                               className={cn(
+                                'font-medium w-12',
                                 item.status === 'Paid' ? 'text-green-600' : 'text-destructive',
-                                'font-medium w-12'
                               )}
                             >
                               {item.status}

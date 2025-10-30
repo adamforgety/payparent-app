@@ -51,13 +51,14 @@ function DashboardComponent() {
   
   // Effect to initialize data for new users or new months
   useEffect(() => {
-    // This effect should only run AFTER the initial user loading is complete.
     if (isLoadingUserDoc || !user || !userDocRef) {
       return;
     }
   
-    // SCENARIO 1: The user document does not exist at all. This is a new user.
-    if (!appData) {
+    const userDataExists = !!appData;
+  
+    if (!userDataExists) {
+      // SCENARIO 1: New user, document doesn't exist.
       const initialMonthData: MonthData = {
         ...defaultMonthData,
         id: monthId,
@@ -68,35 +69,30 @@ function DashboardComponent() {
         id: user.uid,
         months: { [monthId]: initialMonthData },
       };
-      // Create the user document for the first time.
       setDocumentNonBlocking(userDocRef, initialUserData);
-      return; // Stop here for this render cycle.
+    } else {
+      // SCENARIO 2: Existing user, check if current month's data exists.
+      const monthDataExists = appData.months && appData.months[monthId];
+      if (!monthDataExists) {
+        const lastMonth = subMonths(currentDate, 1);
+        const lastMonthId = format(lastMonth, 'yyyy-MM');
+        const lastMonthData = appData.months?.[lastMonthId];
+  
+        const newMonthData: MonthData = {
+          id: monthId,
+          year: getYear(currentDate),
+          month: getMonth(currentDate) + 1,
+          childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
+          expenseSplit: lastMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+          medicalExpenseSplit: lastMonthData?.medicalExpenseSplit || defaultMonthData.medicalExpenseSplit,
+          parentNames: lastMonthData?.parentNames || defaultMonthData.parentNames,
+          expenses: [], // New month starts with no expenses
+        };
+        
+        // Use merge: true to add the new month without overwriting the whole document
+        setDocumentNonBlocking(userDocRef, { months: { [monthId]: newMonthData } }, { merge: true });
+      }
     }
-  
-    // SCENARIO 2: The user document EXISTS, but the data for the CURRENTLY VIEWED month is missing.
-    const monthDataExists = appData.months && appData.months[monthId];
-    if (appData && !monthDataExists) {
-      const lastMonth = subMonths(currentDate, 1);
-      const lastMonthId = format(lastMonth, 'yyyy-MM');
-      // Try to get settings from the previous month to carry them over.
-      const lastMonthData = appData.months?.[lastMonthId];
-  
-      const newMonthData: MonthData = {
-        id: monthId,
-        year: getYear(currentDate),
-        month: getMonth(currentDate) + 1,
-        // Carry over settings from previous month if they exist, otherwise use defaults
-        childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
-        expenseSplit: lastMonthData?.expenseSplit || defaultMonthData.expenseSplit,
-        medicalExpenseSplit: lastMonthData?.medicalExpenseSplit || defaultMonthData.medicalExpenseSplit,
-        parentNames: lastMonthData?.parentNames || defaultMonthData.parentNames,
-        expenses: [], // Always start a new month with no expenses
-      };
-      
-      // Persist only the new month's data using merge to avoid overwriting.
-      setDocumentNonBlocking(userDocRef, { months: { [monthId]: newMonthData } }, { merge: true });
-    }
-  
   }, [appData, isLoadingUserDoc, user, userDocRef, monthId, currentDate]);
   
 
@@ -322,6 +318,7 @@ function DashboardComponent() {
                     expenses={expenses}
                     childSupport={currentMonthData.childSupport}
                     expenseSplit={currentMonthData.expenseSplit}
+                    medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                     onDelete={deleteExpense}
                     onUpdateExpense={updateExpense}
                     onUpdateChildSupport={updateChildSupport}
