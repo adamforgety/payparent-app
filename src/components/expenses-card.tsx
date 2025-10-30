@@ -59,7 +59,7 @@ export function ExpensesCard({
   parentNames,
 }: ExpensesCardProps) {
   
-  const childSupportAsExpense: Expense | null =
+  const childSupportAsExpenseItem = // This is not a real expense, just for display
     childSupport.amount > 0 && childSupport.paidBy !== 'None'
       ? {
           id: 'child-support',
@@ -68,20 +68,21 @@ export function ExpensesCard({
           amount: childSupport.amount,
           paidBy: childSupport.paidBy,
           status: childSupport.status,
-          category: 'Child Support',
+          category: 'Child Support' as const,
         }
       : null;
 
-  const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
+  const allItems = [...(childSupportAsExpenseItem ? [childSupportAsExpenseItem] : []), ...expenses];
   
   const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   const parent1ExpenseShare = totalExpenses * (expenseSplit['Parent 1'] / 100);
-  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 1' ? childSupport.amount : 0);
+  const parent1TotalShare = parent1ExpenseShare + (childSupport.paidBy === 'Parent 2' ? 0 : childSupport.amount);
+  
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
-  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 2' || childSupport.paidBy === 'None' ? 0 : childSupport.amount);
+  const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 1' ? 0 : childSupport.amount);
 
 
   return (
@@ -166,7 +167,7 @@ export function ExpensesCard({
                     <div className="flex justify-end gap-1 h-8 w-full">
                       {item.id !== 'child-support' && (
                         <>
-                            <EditExpenseDialog expense={item} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
+                            <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
                             <TooltipProvider>
                                 <Tooltip>
                                 <TooltipTrigger asChild>

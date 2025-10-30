@@ -18,6 +18,9 @@ export interface Expense {
   paidBy: Parent;
   category: ExpenseCategory;
   status: PaymentStatus;
+  // New fields for monthly filtering
+  year: number;
+  month: number;
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';
@@ -39,9 +42,11 @@ export interface ExpenseSplit {
 }
 
 export interface MonthData {
+  id: string; // Document ID from Firestore
+  year: number;
+  month: number; // 1-12
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
-  expenses: Expense[];
   parentNames: ParentNames;
 }
 
