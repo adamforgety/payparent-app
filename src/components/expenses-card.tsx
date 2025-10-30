@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2, CheckCheck, MoreVertical } from 'lucide-react';
+import { ReceiptText, Trash2, CheckCheck, MoreVertical, ToggleLeft, ToggleRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 
@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -96,6 +98,10 @@ export function ExpensesCard({
   
   const parent2ExpenseShare = totalExpenses * (expenseSplit['Parent 2'] / 100);
   const parent2TotalShare = parent2ExpenseShare + (childSupport.paidBy === 'Parent 1' ? 0 : childSupport.amount);
+
+  const handleStatusChange = (item: Expense, newStatus: PaymentStatus) => {
+    onUpdateExpense({ ...item, status: newStatus });
+  };
 
 
   return (
@@ -174,12 +180,37 @@ export function ExpensesCard({
                     {item.paidBy && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                   </TableCell>
                   <TableCell>
-                     <Badge
+                    {item.id !== 'child-support' ? (
+                       <TooltipProvider>
+                        <Tooltip>
+                           <TooltipTrigger asChild>
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id={`status-switch-${item.id}`}
+                                  checked={item.status === 'Paid'}
+                                  onCheckedChange={(isChecked) =>
+                                    handleStatusChange(item as Expense, isChecked ? 'Paid' : 'Unpaid')
+                                  }
+                                  aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
+                                />
+                                 <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Paid' ? 'text-green-600' : 'text-destructive', "font-medium")}>
+                                  {item.status}
+                                </Label>
+                              </div>
+                           </TooltipTrigger>
+                           <TooltipContent>
+                              <p>Click to mark as {item.status === 'Paid' ? 'Unpaid' : 'Paid'}</p>
+                           </TooltipContent>
+                        </Tooltip>
+                       </TooltipProvider>
+                    ) : (
+                      <Badge
                         variant={item.status === 'Paid' ? 'success' : 'destructive'}
                         className='w-[55px] justify-center'
                       >
                         {item.status}
                       </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     ${item.amount.toFixed(2)}
