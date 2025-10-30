@@ -93,21 +93,9 @@ export function Dashboard() {
   }, [appData, isLoadingUser, user, userDocRef, monthId, currentDate]);
 
 
-  const currentMonthData = useMemo((): MonthData => {
-    const dataForMonth = appData?.months?.[monthId];
-    if (dataForMonth) {
-      return dataForMonth;
-    }
-    
-    // Return a default, empty structure while data is being created/loaded for the new month.
-    // The useEffect above will handle persisting the real data.
-    return {
-      id: monthId,
-      year: getYear(currentDate),
-      month: getMonth(currentDate) + 1,
-      ...defaultMonthData,
-    };
-  }, [appData, monthId, currentDate]);
+  const currentMonthData = useMemo((): MonthData | null => {
+    return appData?.months?.[monthId] ?? null;
+  }, [appData, monthId]);
 
 
   const handleDateChange = (direction: 'next' | 'prev') => {
@@ -118,12 +106,13 @@ export function Dashboard() {
   
   // This function now directly prepares data for Firestore, without intermediate state.
   const updateFirestoreMonthData = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
-      if (!userDocRef) return;
-      setDocumentNonBlocking(userDocRef, { months: { [monthId]: dataToUpdate } }, { merge: true });
+      if (!userDocRef || !currentMonthData) return;
+      const updatedMonthData = { ...currentMonthData, ...dataToUpdate };
+      setDocumentNonBlocking(userDocRef, { months: { [monthId]: updatedMonthData } }, { merge: true });
   }
 
   const handleTabChange = (value: string) => {
-    if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
+    if (activeTab === 'settings' && currentMonthData?.childSupport.amount > 0 && currentMonthData?.childSupport.paidBy === 'None') {
       toast({
         variant: 'destructive',
         title: 'Incomplete Information',
@@ -152,9 +141,9 @@ export function Dashboard() {
         id: targetMonthId,
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
-        childSupport: currentMonthData.childSupport,
-        expenseSplit: currentMonthData.expenseSplit,
-        parentNames: currentMonthData.parentNames,
+        childSupport: currentMonthData?.childSupport || defaultMonthData.childSupport,
+        expenseSplit: currentMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+        parentNames: currentMonthData?.parentNames || defaultMonthData.parentNames,
         expenses: [],
     };
     
@@ -165,13 +154,13 @@ export function Dashboard() {
   };
   
   const deleteExpense = (expenseId: string) => {
-    if (!userDocRef) return;
+    if (!userDocRef || !currentMonthData) return;
     const updatedExpenses = currentMonthData.expenses.filter(exp => exp.id !== expenseId);
     updateFirestoreMonthData({ expenses: updatedExpenses });
   };
   
   const updateExpense = (updatedExpense: Expense) => {
-    if (!userDocRef) return;
+    if (!userDocRef || !currentMonthData) return;
     const updatedExpenses = currentMonthData.expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp);
     updateFirestoreMonthData({ expenses: updatedExpenses });
   };
@@ -181,7 +170,7 @@ export function Dashboard() {
   };
 
   const handleMarkAllAsPaid = () => {
-    if (!userDocRef) return;
+    if (!userDocRef || !currentMonthData) return;
 
     let updatedMonthData: Partial<MonthData> = {};
 
@@ -202,14 +191,9 @@ export function Dashboard() {
       });
     }
   };
-
-  const expenses = currentMonthData.expenses || [];
-  const totalExpenses = expenses.reduce(
-    (sum, exp) => sum + exp.amount,
-    0
-  );
   
-  if (isLoadingUser) {
+  // While loading user data or if the month's data hasn't been created yet, show a skeleton UI.
+  if (isLoadingUser || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
@@ -223,6 +207,13 @@ export function Dashboard() {
        </div>
     )
   }
+
+  // At this point, currentMonthData is guaranteed to be available.
+  const expenses = currentMonthData.expenses || [];
+  const totalExpenses = expenses.reduce(
+    (sum, exp) => sum + exp.amount,
+    0
+  );
 
   return (
     <div className="flex flex-col">
@@ -357,5 +348,3 @@ export function Dashboard() {
     </div>
   );
 }
-
-    
