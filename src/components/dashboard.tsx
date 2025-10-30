@@ -200,7 +200,7 @@ export function Dashboard() {
 
   const updateChildSupport = (updatedChildSupport: ChildSupport) => {
     updateMonthData({ childSupport: updatedChildSupport });
-  }
+  };
 
   const handleMarkAllAsPaid = async () => {
     if (!user || !appData || !userDocRef) return;
