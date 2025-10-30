@@ -132,28 +132,38 @@ function DashboardComponent() {
   };
 
   const addExpense = (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => {
-    if (!user || !userDocRef || !appData) return;
-  
+    if (!user || !userDocRef || !appData?.months) return;
+
     const expenseDate = new Date(newExpense.date);
     const targetMonthId = format(expenseDate, 'yyyy-MM');
-  
+
     const newExpenseWithId: Expense = {
       ...newExpense,
       id: `${Date.now()}-${Math.random()}`,
       year: getYear(expenseDate),
       month: getMonth(expenseDate) + 1,
     };
-  
-    const targetMonthData = appData.months?.[targetMonthId] || {
-        id: targetMonthId,
-        year: getYear(expenseDate),
-        month: getMonth(expenseDate) + 1,
-        childSupport: currentMonthData?.childSupport || defaultMonthData.childSupport,
-        expenseSplit: currentMonthData?.expenseSplit || defaultMonthData.expenseSplit,
-        medicalExpenseSplit: currentMonthData?.medicalExpenseSplit || defaultMonthData.medicalExpenseSplit,
-        parentNames: currentMonthData?.parentNames || defaultMonthData.parentNames,
-        expenses: [],
-    };
+
+    let targetMonthData = appData.months[targetMonthId];
+
+    // If the target month doesn't exist, create it by copying from the most recent month
+    if (!targetMonthData) {
+        const monthKeys = Object.keys(appData.months).sort();
+        const mostRecentMonthId = monthKeys[monthKeys.length - 1];
+        const mostRecentMonthData = appData.months[mostRecentMonthId];
+
+        targetMonthData = {
+            id: targetMonthId,
+            year: getYear(expenseDate),
+            month: getMonth(expenseDate) + 1,
+            // Copy settings from the most recent month, but reset what should be new
+            childSupport: mostRecentMonthData?.childSupport ? { ...mostRecentMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
+            expenseSplit: mostRecentMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+            medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || defaultMonthData.medicalExpenseSplit,
+            parentNames: mostRecentMonthData?.parentNames || defaultMonthData.parentNames,
+            expenses: [], // Start with a fresh list of expenses
+        };
+    }
     
     const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
   
@@ -368,3 +378,5 @@ function DashboardComponent() {
 export function Dashboard() {
   return <DashboardComponent />;
 }
+
+    
