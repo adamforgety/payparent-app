@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import type { AppData, Expense, ExpenseCategory } from '@/lib/types';
+import type { AppData, Expense, ExpenseCategory, Parent, ParentNames } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -45,6 +45,8 @@ interface ReportingPageProps {
   appData: AppData | null;
 }
 
+type EnrichedExpense = Expense & { parentNames: ParentNames };
+
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
   'Education',
@@ -60,24 +62,33 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     String(getYear(new Date()))
   );
   const [searchTerm, setSearchTerm] = useState('');
+  const [parentFilter, setParentFilter] = useState<Parent | 'all'>('all');
 
-  const { availableYears, yearlyData, totalYearlyExpenses, allTransactions } = useMemo(() => {
+  const { availableYears, yearlyData, totalYearlyExpenses, allTransactions, parentNamesForYear } = useMemo(() => {
     if (!appData?.months) {
       return {
         availableYears: [String(getYear(new Date()))],
         yearlyData: [],
         totalYearlyExpenses: 0,
         allTransactions: [],
+        parentNamesForYear: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' }
       };
     }
 
     const years = new Set<string>();
-    let allExpensesForYear: Expense[] = [];
+    let allExpensesForYear: EnrichedExpense[] = [];
+    let latestParentNames: ParentNames | null = null;
 
     Object.values(appData.months).forEach((monthData) => {
       years.add(String(monthData.year));
       if (String(monthData.year) === selectedYear) {
-        allExpensesForYear.push(...monthData.expenses);
+        monthData.expenses.forEach(expense => {
+            allExpensesForYear.push({
+                ...expense,
+                parentNames: monthData.parentNames
+            });
+        });
+        latestParentNames = monthData.parentNames;
       }
     });
 
@@ -110,15 +121,17 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       yearlyData: chartData,
       totalYearlyExpenses: total,
       allTransactions: allExpensesForYear,
+      parentNamesForYear: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' }
     };
   }, [appData, selectedYear]);
   
   const filteredTransactions = useMemo(() => {
-    if (!searchTerm) return allTransactions;
-    return allTransactions.filter(transaction =>
-      transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [allTransactions, searchTerm]);
+    return allTransactions.filter(transaction => {
+      const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesParent = parentFilter === 'all' || transaction.paidBy === parentFilter;
+      return matchesSearch && matchesParent;
+    });
+  }, [allTransactions, searchTerm, parentFilter]);
 
   const chartConfig = useMemo(() => {
     const config: any = {
@@ -241,15 +254,29 @@ export function ReportingPage({ appData }: ReportingPageProps) {
             )}
           </TabsContent>
           <TabsContent value="transactions" className="mt-6">
-            <div className='relative mb-4'>
-                <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-                <Input 
-                  type="search"
-                  placeholder="Search by description..."
-                  className="pl-8 w-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className='flex flex-col sm:flex-row gap-4 mb-4'>
+                <div className='relative flex-1'>
+                    <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+                    <Input 
+                      type="search"
+                      placeholder="Search by description..."
+                      className="pl-8 w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className='w-full sm:w-48'>
+                    <Select value={parentFilter} onValueChange={(value) => setParentFilter(value as Parent | 'all')}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filter by parent" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Parents</SelectItem>
+                            <SelectItem value="Parent 1">{parentNamesForYear['Parent 1']}</SelectItem>
+                            <SelectItem value="Parent 2">{parentNamesForYear['Parent 2']}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
              <div className="rounded-md border">
                 <Table>
@@ -258,6 +285,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       <TableHead>Date</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Paid By</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -269,12 +297,17 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         <TableCell>
                           <Badge variant="outline">{expense.category}</Badge>
                         </TableCell>
+                        <TableCell>
+                            <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>
+                                {expense.parentNames[expense.paidBy]}
+                            </Badge>
+                        </TableCell>
                         <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>
                       </TableRow>
                     )) : (
                        <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center">
-                            {searchTerm ? `No transactions found for "${searchTerm}"` : "No transactions this year."}
+                          <TableCell colSpan={5} className="h-24 text-center">
+                            {searchTerm || parentFilter !== 'all' ? `No transactions found for the current filters.` : "No transactions this year."}
                           </TableCell>
                         </TableRow>
                     )}
