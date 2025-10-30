@@ -147,9 +147,9 @@ export function Dashboard() {
         id: targetMonthId,
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
-        childSupport: defaultMonthData.childSupport,
-        expenseSplit: defaultMonthData.expenseSplit,
-        parentNames: defaultMonthData.parentNames,
+        childSupport: currentMonthData?.childSupport || defaultMonthData.childSupport,
+        expenseSplit: currentMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+        parentNames: currentMonthData?.parentNames || defaultMonthData.parentNames,
         expenses: [],
     };
     
@@ -355,5 +355,3 @@ export function Dashboard() {
     </div>
   );
 }
-
-    
