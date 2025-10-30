@@ -156,7 +156,10 @@ export function ExpensesCard({
                     {item.paidBy && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                   </TableCell>
                   <TableCell>
-                     <Badge variant={item.status === 'Paid' ? 'secondary' : 'destructive'} className='w-[55px] justify-center'>
+                     <Badge
+                        variant={item.status === 'Paid' ? 'success' : 'destructive'}
+                        className='w-[55px] justify-center'
+                      >
                         {item.status}
                       </Badge>
                   </TableCell>
