@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { getYear, format } from 'date-fns';
+import { useState, useMemo, useEffect } from 'react';
+import { getYear, format, parse } from 'date-fns';
 import { BarChart, ReceiptText, Search } from 'lucide-react';
 import {
   Bar,
@@ -65,48 +65,75 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [selectedYear, setSelectedYear] = useState<string>(
     String(getYear(new Date()))
   );
+  const [selectedMonth, setSelectedMonth] = useState<string>('all'); // 'all' or 'yyyy-MM'
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { availableYears, yearlyData, totalYearlyExpenses, allTransactions, parentNamesForYear } = useMemo(() => {
+  const {
+    availableYears,
+    availableMonths,
+    periodData,
+    totalPeriodExpenses,
+    allTransactions,
+    parentNamesForPeriod,
+    reportTitle,
+    reportDescription,
+  } = useMemo(() => {
     if (!appData?.months) {
+      const year = String(getYear(new Date()));
       return {
-        availableYears: [String(getYear(new Date()))],
-        yearlyData: [],
-        totalYearlyExpenses: 0,
+        availableYears: [year],
+        availableMonths: [],
+        periodData: [],
+        totalPeriodExpenses: 0,
         allTransactions: [],
-        parentNamesForYear: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
+        parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
+        reportTitle: 'Yearly Report',
+        reportDescription: 'No expenses logged yet.',
       };
     }
 
+    const allMonthKeys = Object.keys(appData.months).sort().reverse();
     const years = new Set<string>();
-    let allExpensesForYear: EnrichedExpense[] = [];
+    allMonthKeys.forEach(monthId => years.add(monthId.substring(0, 4)));
+    const sortedYears = Array.from(years);
+
+    const monthsForSelectedYear = allMonthKeys
+      .filter(monthId => monthId.startsWith(selectedYear))
+      .map(monthId => ({
+        value: monthId,
+        label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM'),
+      }));
+
+    let filteredMonthKeys = allMonthKeys.filter(monthId => monthId.startsWith(selectedYear));
+    if (selectedMonth !== 'all') {
+        filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
+    }
+    
+    let allExpensesForPeriod: EnrichedExpense[] = [];
     let latestParentNames: ParentNames | null = null;
     
-    const sortedMonthKeys = Object.keys(appData.months).sort();
-
-    for (const monthId of sortedMonthKeys) {
-      const monthData = appData.months[monthId];
-      years.add(String(monthData.year));
-      if (String(monthData.year) === selectedYear) {
-        if (monthData.parentNames) {
-          latestParentNames = monthData.parentNames;
-        }
-        monthData.expenses.forEach(expense => {
-            allExpensesForYear.push({
-                ...expense,
-                parentNames: monthData.parentNames,
-                expenseSplit: monthData.expenseSplit,
-                medicalExpenseSplit: monthData.medicalExpenseSplit,
+    filteredMonthKeys.forEach(monthId => {
+        const monthData = appData.months[monthId];
+        if (monthData) {
+            if (monthData.parentNames && !latestParentNames) {
+              latestParentNames = monthData.parentNames;
+            }
+            monthData.expenses.forEach(expense => {
+                allExpensesForPeriod.push({
+                    ...expense,
+                    parentNames: monthData.parentNames,
+                    expenseSplit: monthData.expenseSplit,
+                    medicalExpenseSplit: monthData.medicalExpenseSplit,
+                });
             });
-        });
-      }
-    }
+        }
+    });
 
     const aggregated: { [key in ExpenseCategory]?: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
 
     let total = 0;
-    allExpensesForYear.forEach((expense) => {
+    allExpensesForPeriod.forEach((expense) => {
       if (aggregated[expense.category] !== undefined) {
         aggregated[expense.category]! += expense.amount;
       }
@@ -121,19 +148,28 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       .filter((item) => item.amount > 0)
       .sort((a, b) => b.amount - a.amount);
       
-    const sortedYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
-    
-    allExpensesForYear.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    allExpensesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const title = selectedMonth === 'all' ? 'Yearly Report' : 'Monthly Report';
+    const description = `An overview of all expenses for ${selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`
 
     return {
       availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
-      yearlyData: chartData,
-      totalYearlyExpenses: total,
-      allTransactions: allExpensesForYear,
-      parentNamesForYear: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
+      availableMonths: monthsForSelectedYear,
+      periodData: chartData,
+      totalPeriodExpenses: total,
+      allTransactions: allExpensesForPeriod,
+      parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
+      reportTitle,
+      reportDescription,
     };
-  }, [appData, selectedYear]);
+  }, [appData, selectedYear, selectedMonth]);
   
+  // Reset month selection when year changes
+  useEffect(() => {
+    setSelectedMonth('all');
+  }, [selectedYear]);
+
   const filteredTransactions = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
     if (!lowercasedFilter) {
@@ -163,14 +199,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         color: "hsl(var(--primary))",
       },
     };
-    yearlyData.forEach((item, index) => {
+    periodData.forEach((item, index) => {
       config[item.name] = {
         label: item.name,
         color: `hsl(var(--chart-${(index % 5) + 1}))`,
       };
     });
     return config;
-  }, [yearlyData]);
+  }, [periodData]);
 
   return (
     <Card>
@@ -181,21 +217,34 @@ export function ReportingPage({ appData }: ReportingPageProps) {
               <BarChart className="h-5 w-5 text-secondary-foreground" />
             </span>
             <div>
-              <CardTitle>Yearly Report</CardTitle>
+              <CardTitle>{reportTitle}</CardTitle>
               <CardDescription>
-                An overview of all expenses for the selected year.
+                {reportDescription}
               </CardDescription>
             </div>
           </div>
-          <div className="w-full sm:w-48">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full sm:w-32">
                 <SelectValue placeholder="Select year" />
               </SelectTrigger>
               <SelectContent>
                 {availableYears.map((year) => (
                   <SelectItem key={year} value={year}>
                     {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={availableMonths.length === 0}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Months</SelectItem>
+                {availableMonths.map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -210,14 +259,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
             <TabsTrigger value="transactions">All Transactions</TabsTrigger>
           </TabsList>
           <TabsContent value="summary" className="mt-6">
-            {yearlyData.length > 0 ? (
+            {periodData.length > 0 ? (
               <div className="space-y-8">
                 <div>
                   <ChartContainer
                     config={chartConfig}
                     className="min-h-[250px] w-full"
                   >
-                    <RechartsBarChart data={yearlyData} accessibilityLayer>
+                    <RechartsBarChart data={periodData} accessibilityLayer>
                       <CartesianGrid vertical={false} />
                       <XAxis
                         dataKey="name"
@@ -247,7 +296,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {yearlyData.map((item) => (
+                        {periodData.map((item) => (
                           <TableRow key={item.name}>
                             <TableCell className="font-medium">
                               <Badge variant="outline">{item.name}</Badge>
@@ -259,7 +308,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         ))}
                         <TableRow className="bg-secondary/50 font-bold">
                            <TableCell>Total</TableCell>
-                           <TableCell className="text-right">${totalYearlyExpenses.toFixed(2)}</TableCell>
+                           <TableCell className="text-right">${totalPeriodExpenses.toFixed(2)}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -271,7 +320,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
                     <ReceiptText className="h-8 w-8" />
                 </div>
-                <p className="font-medium">No expenses logged for {selectedYear}.</p>
+                <p className="font-medium">No expenses logged for this period.</p>
                 <p className="text-sm">Once you add expenses, a summary will appear here.</p>
               </div>
             )}
@@ -297,8 +346,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       <TableHead>Description</TableHead>
                       <TableHead>Paid By</TableHead>
                       <TableHead className="text-right">Total Amount</TableHead>
-                      <TableHead className="text-right">{parentNamesForYear['Parent 1']}'s Share</TableHead>
-                      <TableHead className="text-right">{parentNamesForYear['Parent 2']}'s Share</TableHead>
+                      <TableHead className="text-right">{parentNamesForPeriod['Parent 1']}'s Share</TableHead>
+                      <TableHead className="text-right">{parentNamesForPeriod['Parent 2']}'s Share</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -327,7 +376,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     )}) : (
                        <TableRow>
                           <TableCell colSpan={6} className="h-24 text-center">
-                            {searchTerm ? `No transactions found for "${searchTerm}".` : "No transactions this year."}
+                            {searchTerm ? `No transactions found for "${searchTerm}".` : "No transactions in this period."}
                           </TableCell>
                         </TableRow>
                     )}
