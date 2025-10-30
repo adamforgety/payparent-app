@@ -51,7 +51,7 @@ export function Dashboard() {
   useEffect(() => {
     if (userData) {
       setAppData(userData);
-    } else if (!isLoadingUser && user) {
+    } else if (!isLoadingUser && user && userDocRef) {
       // If no data exists for the user, initialize with default for the current month.
       const initialMonthData = {
         ...defaultMonthData,
@@ -65,9 +65,7 @@ export function Dashboard() {
       };
       setAppData(initialUserData);
       // Persist this initial data to Firestore
-      if (userDocRef) {
-        setDocumentNonBlocking(userDocRef, initialUserData, { merge: true });
-      }
+      setDocumentNonBlocking(userDocRef, initialUserData);
     }
   }, [userData, isLoadingUser, user, monthId, currentDate, userDocRef]);
 
