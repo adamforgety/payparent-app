@@ -43,11 +43,12 @@ export function ChildSupportCard({
   }, [childSupport.amount]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
-    
-    const amount = Number(value);
-    const finalAmount = isNaN(amount) || value === '' ? 0 : amount;
+    setInputValue(e.target.value);
+  };
+  
+  const handleAmountBlur = () => {
+    const amount = Number(inputValue);
+    const finalAmount = isNaN(amount) || inputValue === '' ? 0 : amount;
     
     if (childSupport.amount !== finalAmount) {
       onUpdate({ ...childSupport, amount: finalAmount });
@@ -83,6 +84,7 @@ export function ChildSupportCard({
             placeholder="e.g., 500"
             value={inputValue}
             onChange={handleAmountChange}
+            onBlur={handleAmountBlur}
           />
         </div>
         <div className="space-y-2">
