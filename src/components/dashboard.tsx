@@ -12,7 +12,7 @@ import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
 import { SummaryCard } from '@/components/summary-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppData, ChildSupport, Expense, MonthData, ParentNames } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, MonthData } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
