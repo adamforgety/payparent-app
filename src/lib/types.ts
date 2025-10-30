@@ -18,7 +18,6 @@ export interface Expense {
   paidBy: Parent;
   category: ExpenseCategory;
   status: PaymentStatus;
-  // New fields for monthly filtering
   year: number;
   month: number;
 }
@@ -42,14 +41,19 @@ export interface ExpenseSplit {
 }
 
 export interface MonthData {
-  id: string; // Document ID from Firestore
+  id: string; // yyyy-MM
   year: number;
   month: number; // 1-12
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
   parentNames: ParentNames;
+  expenses: Expense[];
 }
 
+// This represents the structure of the entire user document in Firestore
 export interface AppData {
-  [monthYear: string]: MonthData;
+  id: string; // user UID
+  months: {
+    [monthId: string]: MonthData; // key is yyyy-MM
+  };
 }

@@ -1,169 +1,103 @@
 {
   "entities": {
-    "Parent": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Parent",
+    "User": {
+      "title": "User",
       "type": "object",
-      "description": "Represents a parent involved in the co-parenting arrangement.",
+      "description": "Represents a user of the application.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Parent entity."
+          "description": "The unique identifier for the user, corresponding to their Firebase Auth UID."
         },
-        "name": {
-          "type": "string",
-          "description": "The name of the parent."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the parent.",
-          "format": "email"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "email"
-      ]
-    },
-    "ChildSupportPayment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ChildSupportPayment",
-      "type": "object",
-      "description": "Represents a monthly child support payment.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Child Support Payment entity."
-        },
-        "payerId": {
-          "type": "string",
-          "description": "Reference to the Parent who is paying the child support. (Relationship: Parent 1:N ChildSupportPayment)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of the child support payment."
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date the child support payment was made.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "payerId",
-        "amount",
-        "paymentDate"
-      ]
-    },
-    "Expense": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Expense",
-      "type": "object",
-      "description": "Represents a child-related expense.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Expense entity."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the expense."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of the expense."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date the expense was incurred.",
-          "format": "date-time"
-        },
-        "parentPayerId": {
-          "type": "string",
-          "description": "Reference to the Parent who paid for the expense. (Relationship: Parent 1:N Expense)"
-        }
-      },
-      "required": [
-        "id",
-        "description",
-        "amount",
-        "date",
-        "parentPayerId"
-      ]
-    },
-    "ExpenseCoverage": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ExpenseCoverage",
-      "type": "object",
-      "description": "Represents the expense coverage percentage for each parent.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Expense Coverage entity."
-        },
-        "parentId": {
-          "type": "string",
-          "description": "Reference to the Parent to whom this percentage applies. (Relationship: Parent 1:N ExpenseCoverage)"
-        },
-        "coveragePercentage": {
-          "type": "number",
-          "description": "The percentage of expense coverage for this parent (e.g., 0.5 for 50%)."
-        },
-        "month": {
-          "type": "number",
-          "description": "The month this coverage percentage applies to. Represented as a number (1-12)"
-        },
-        "year": {
-          "type": "number",
-          "description": "The year this coverage percentage applies to."
-        }
-      },
-      "required": [
-        "id",
-        "parentId",
-        "coveragePercentage",
-        "month",
-        "year"
-      ]
-    },
-    "MonthlyReport": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MonthlyReport",
-      "type": "object",
-      "description": "Represents a monthly report containing child support and expense information.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Monthly Report entity."
-        },
-        "month": {
-          "type": "number",
-          "description": "The month the report covers (1-12)."
-        },
-        "year": {
-          "type": "number",
-          "description": "The year the report covers."
-        },
-        "childSupportPaymentId": {
-          "type": "string",
-          "description": "Reference to ChildSupportPayment. (Relationship: ChildSupportPayment 1:1 MonthlyReport)"
-        },
-        "expenseIds": {
-          "type": "array",
-          "description": "Reference to expenses. (Relationship: Expense 1:N MonthlyReport)",
-          "items": {
-            "type": "string"
+        "months": {
+          "type": "object",
+          "description": "An object where each key is a month identifier (e.g., '2024-10') and the value is the data for that month.",
+          "additionalProperties": {
+            "$ref": "#/entities/MonthData"
           }
         }
       },
-      "required": [
-        "id",
-        "month",
-        "year",
-        "childSupportPaymentId"
-      ]
+      "required": ["id", "months"]
+    },
+    "MonthData": {
+      "title": "MonthData",
+      "type": "object",
+      "description": "Contains all financial data for a specific month.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier for the month, in 'yyyy-MM' format."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year of the month."
+        },
+        "month": {
+          "type": "number",
+          "description": "The month number (1-12)."
+        },
+        "childSupport": {
+          "$ref": "#/entities/ChildSupport"
+        },
+        "expenseSplit": {
+          "$ref": "#/entities/ExpenseSplit"
+        },
+        "parentNames": {
+          "$ref": "#/entities/ParentNames"
+        },
+        "expenses": {
+          "type": "array",
+          "description": "A list of expenses for the month.",
+          "items": {
+            "$ref": "#/entities/Expense"
+          }
+        }
+      },
+      "required": ["id", "year", "month", "childSupport", "expenseSplit", "parentNames", "expenses"]
+    },
+    "ChildSupport": {
+      "title": "ChildSupport",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "paidBy": { "type": "string", "enum": ["Parent 1", "Parent 2", "None"] },
+        "status": { "type": "string", "enum": ["Paid", "Unpaid"] }
+      },
+      "required": ["amount", "paidBy", "status"]
+    },
+    "ExpenseSplit": {
+      "title": "ExpenseSplit",
+      "type": "object",
+      "properties": {
+        "Parent 1": { "type": "number" },
+        "Parent 2": { "type": "number" }
+      },
+      "required": ["Parent 1", "Parent 2"]
+    },
+    "ParentNames": {
+      "title": "ParentNames",
+      "type": "object",
+      "properties": {
+        "Parent 1": { "type": "string" },
+        "Parent 2": { "type": "string" }
+      },
+      "required": ["Parent 1", "Parent 2"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "paidBy": { "type": "string", "enum": ["Parent 1", "Parent 2"] },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["Paid", "Unpaid"] },
+        "year": { "type": "number" },
+        "month": { "type": "number" }
+      },
+      "required": ["id", "date", "description", "amount", "paidBy", "category", "status", "year", "month"]
     }
   },
   "auth": {
@@ -175,102 +109,21 @@
   "firestore": {
     "structure": [
       {
-        "path": "/parents/{parentId}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "Parent",
+          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/Parent"
+            "$ref": "#/entities/User"
           },
-          "description": "Stores parent profiles. The `parentId` parameter corresponds to the user's UID. All data related to a specific parent will reside under this document.",
+          "description": "Stores all data for a single user, keyed by their auth UID. All monthly data is nested within this document.",
           "params": [
             {
-              "name": "parentId",
-              "description": "The unique ID of the parent, matching the Firebase Auth UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/parents/{parentId}/childSupportPayments/{childSupportPaymentId}",
-        "definition": {
-          "entityName": "ChildSupportPayment",
-          "schema": {
-            "$ref": "#/backend/entities/ChildSupportPayment"
-          },
-          "description": "Stores child support payments made by a parent. Includes `payerId` which is equal to the parentId and ensures that the parent can only access payments they made.",
-          "params": [
-            {
-              "name": "parentId",
-              "description": "The unique ID of the parent making the payment."
-            },
-            {
-              "name": "childSupportPaymentId",
-              "description": "The unique ID of the child support payment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/parents/{parentId}/expenses/{expenseId}",
-        "definition": {
-          "entityName": "Expense",
-          "schema": {
-            "$ref": "#/backend/entities/Expense"
-          },
-          "description": "Stores expenses logged by a parent. Includes `parentPayerId` which is equal to the parentId and ensures that the parent can only access expenses they created.",
-          "params": [
-            {
-              "name": "parentId",
-              "description": "The unique ID of the parent who paid for the expense."
-            },
-            {
-              "name": "expenseId",
-              "description": "The unique ID of the expense."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/parents/{parentId}/expenseCoverage/{expenseCoverageId}",
-        "definition": {
-          "entityName": "ExpenseCoverage",
-          "schema": {
-            "$ref": "#/backend/entities/ExpenseCoverage"
-          },
-          "description": "Stores expense coverage percentages for a parent for a specific month and year. Includes `parentId` to define the parent to whom the coverage applies.",
-          "params": [
-            {
-              "name": "parentId",
-              "description": "The unique ID of the parent to whom the coverage applies."
-            },
-            {
-              "name": "expenseCoverageId",
-              "description": "The unique ID of the expense coverage setting."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/parents/{parentId}/monthlyReports/{monthlyReportId}",
-        "definition": {
-          "entityName": "MonthlyReport",
-          "schema": {
-            "$ref": "#/backend/entities/MonthlyReport"
-          },
-          "description": "Stores monthly reports generated for a parent. Reports reference child support payments and expenses for the month.  The report is tied to a specific parent by the parentId parameter.",
-          "params": [
-            {
-              "name": "parentId",
-              "description": "The unique ID of the parent for whom the report is generated."
-            },
-            {
-              "name": "monthlyReportId",
-              "description": "The unique ID of the monthly report."
+              "name": "userId",
+              "description": "The unique ID of the user, matching their Firebase Auth UID."
             }
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore data structure is designed to support a co-parenting finance application, focusing on child support payments, expense tracking, coverage percentages, and monthly reports. The structure prioritizes authorization independence and efficient data retrieval.\n\n**Authorization Independence:**\n\n*   **Parents Collection:** Each parent has their own document in the `/parents` collection.\n*   **Parent Owned Data:** All child support payments, expenses, expense coverages, and monthly reports are stored as subcollections under the parent's document (`/parents/{parentId}`). This ensures that access control is based on the current user's ID (`request.auth.uid`) matching the `parentId` or relevant ownership fields in the subcollections, eliminating the need for `get()` calls to parent documents.\n\n**Structural Segregation:**\n\n*   Expenses, ChildSupportPayments, ExpenseCoverage settings, and MonthlyReports are segregated into their own collections. This allows for consistent security rules at each level.\n\n**Access Modeling:**\n\n*   **Path-Based Ownership:** The structure heavily relies on path-based ownership. For example, expenses are stored under `/parents/{parentId}/expenses/{expenseId}`, ensuring that only the parent who created the expense has access to it.\n\n**QAPs (Rules are not Filters):**\n\n*   The segregation of data into separate collections, combined with path-based ownership, enables secure list operations. Rules can efficiently check if `request.auth.uid` matches the `parentId` without needing to filter based on document content. The denormalization of the `parentId` into the subcollection documents also allows for secure and efficient querying.\n\n**Invariants:**\n\n*   Path-based ownership enforces the invariant that only a parent can create, modify, or delete data under their own node. The `parentId` field in subcollections is immutable, further reinforcing ownership integrity.\n\nThis structure ensures that security rules are simple, robust, and easily debuggable, adhering to the core design principles."
+    ]
   }
 }

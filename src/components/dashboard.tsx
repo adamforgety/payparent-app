@@ -1,9 +1,9 @@
 'use client';
 
-import { addMonths, format, subMonths, getYear, getMonth, startOfMonth } from 'date-fns';
-import { useMemo, useState } from 'react';
+import { addMonths, format, subMonths, getYear, getMonth } from 'date-fns';
+import { useMemo, useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -17,15 +17,17 @@ import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
 import { Button } from './ui/button';
-import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from './ui/skeleton';
 
 const defaultMonthData: Omit<MonthData, 'id' | 'year' | 'month'> = {
   childSupport: { amount: 0, paidBy: 'None', status: 'Unpaid' },
   expenseSplit: { 'Parent 1': 50, 'Parent 2': 50 },
+  expenses: [],
   parentNames: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
 };
+
 
 export function Dashboard() {
   const { user } = useUser();
@@ -34,34 +36,62 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { toast } = useToast();
 
-  const currentYear = getYear(currentDate);
-  const currentMonth = getMonth(currentDate) + 1; // date-fns months are 0-indexed
+  const monthId = format(currentDate, 'yyyy-MM');
 
   // --- Data Fetching ---
-  const settingsQuery = useMemoFirebase(() => {
+  const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'settings'),
-      where('year', '==', currentYear),
-      where('month', '==', currentMonth)
-    );
-  }, [firestore, user, currentYear, currentMonth]);
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
 
-  const { data: settingsData, isLoading: isLoadingSettings } = useCollection<Omit<MonthData, 'id'>>(settingsQuery);
-  const monthSettings = settingsData?.[0]; // Expecting one settings doc per month
+  const { data: userData, isLoading: isLoadingUser } = useDoc<AppData>(userDocRef);
 
-  const expensesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'expenses'),
-      where('year', '==', currentYear),
-      where('month', '==', currentMonth)
-    );
-  }, [firestore, user, currentYear, currentMonth]);
+  const [appData, setAppData] = useState<AppData | null>(null);
 
-  const { data: expenses, isLoading: isLoadingExpenses } = useCollection<Omit<Expense, 'id'>>(expensesQuery);
+  useEffect(() => {
+    if (userData) {
+      setAppData(userData);
+    } else if (!isLoadingUser && user) {
+      // If no data exists for the user, initialize with default for the current month.
+      const initialMonthData = {
+        ...defaultMonthData,
+        id: monthId,
+        year: getYear(currentDate),
+        month: getMonth(currentDate) + 1,
+      };
+      const initialUserData: AppData = {
+        months: { [monthId]: initialMonthData },
+        id: user.uid
+      };
+      setAppData(initialUserData);
+      // Persist this initial data to Firestore
+      setDocumentNonBlocking(userDocRef!, initialUserData, { merge: true });
+    }
+  }, [userData, isLoadingUser, user, monthId, currentDate, userDocRef]);
 
-  const isLoading = isLoadingSettings || isLoadingExpenses;
+
+  const currentMonthData = useMemo((): MonthData => {
+    const dataForMonth = appData?.months?.[monthId];
+    if (dataForMonth) {
+      return dataForMonth;
+    }
+
+    // If no data for the current month, create it by copying from the previous month or using defaults.
+    const lastMonth = subMonths(currentDate, 1);
+    const lastMonthId = format(lastMonth, 'yyyy-MM');
+    const lastMonthData = appData?.months?.[lastMonthId];
+
+    return {
+      id: monthId,
+      year: getYear(currentDate),
+      month: getMonth(currentDate) + 1,
+      childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
+      expenseSplit: lastMonthData?.expenseSplit || defaultMonthData.expenseSplit,
+      parentNames: lastMonthData?.parentNames || defaultMonthData.parentNames,
+      expenses: [], // Always start a new month with no expenses
+    };
+  }, [appData, monthId, currentDate]);
+
 
   const handleDateChange = (direction: 'next' | 'prev') => {
     setCurrentDate((prevDate) =>
@@ -69,57 +99,21 @@ export function Dashboard() {
     );
   };
   
-  const currentMonthData: MonthData = useMemo(() => {
-    if (!monthSettings) {
-      return {
-        id: '',
-        year: currentYear,
-        month: currentMonth,
-        ...defaultMonthData,
-      };
+  const updateMonthData = (updatedData: Partial<Omit<MonthData, 'id' | 'year' | 'month' | 'expenses'>>) => {
+    if (!user || !appData) return;
+  
+    const newAppData = { ...appData };
+    const updatedMonth = { ...currentMonthData, ...updatedData };
+  
+    if (!newAppData.months) {
+      newAppData.months = {};
     }
-    return { ...monthSettings, id: monthSettings.id, year: monthSettings.year, month: monthSettings.month };
-  }, [monthSettings, currentYear, currentMonth]);
-
-  const getOrCreateSettingsDoc = async () => {
-    if (monthSettings?.id) {
-      return doc(firestore, 'users', user!.uid, 'settings', monthSettings.id);
-    }
-    
-    // If settings don't exist for this month, create them from the previous month or default
-    const lastMonth = subMonths(currentDate, 1);
-    const lastYear = getYear(lastMonth);
-    const lastMonthNum = getMonth(lastMonth) + 1;
-
-    const prevSettingsQuery = query(
-      collection(firestore, 'users', user!.uid, 'settings'),
-      where('year', '==', lastYear),
-      where('month', '==', lastMonthNum)
-    );
-    
-    const prevSettingsSnap = await getDocs(prevSettingsQuery);
-    const prevSettings = prevSettingsSnap.docs[0]?.data();
-    
-    const newSettingsData: Omit<MonthData, 'id'> = {
-      year: currentYear,
-      month: currentMonth,
-      childSupport: prevSettings?.childSupport ? { ...prevSettings.childSupport, status: 'Unpaid' } : defaultMonthData.childSupport,
-      expenseSplit: prevSettings?.expenseSplit || defaultMonthData.expenseSplit,
-      parentNames: prevSettings?.parentNames || defaultMonthData.parentNames,
-    };
-    
-    const newDocRef = await addDocumentNonBlocking(collection(firestore, 'users', user!.uid, 'settings'), newSettingsData);
-    return newDocRef;
+    newAppData.months[monthId] = updatedMonth;
+  
+    setAppData(newAppData);
+    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
   
-  const updateMonthData = async (updatedData: Partial<Omit<MonthData, 'id' | 'year' | 'month'>>) => {
-    if (!user) return;
-    const settingsDocRef = await getOrCreateSettingsDoc();
-    if(settingsDocRef) {
-        updateDocumentNonBlocking(settingsDocRef, updatedData);
-    }
-  };
-
   const handleTabChange = (value: string) => {
     if (activeTab === 'settings' && currentMonthData.childSupport.amount > 0 && currentMonthData.childSupport.paidBy === 'None') {
       toast({
@@ -132,28 +126,53 @@ export function Dashboard() {
     setActiveTab(value);
   };
 
-
   const addExpense = async (newExpense: Omit<Expense, 'id'>) => {
-    if (!user) return;
-    
-    const expenseWithMonth = {
-        ...newExpense,
-        year: currentYear,
-        month: currentMonth,
-    };
+    if (!user || !appData) return;
 
-    addDocumentNonBlocking(collection(firestore, 'users', user.uid, 'expenses'), expenseWithMonth);
+    const newExpenseWithId: Expense = {
+      ...newExpense,
+      id: `${Date.now()}-${Math.random()}`, // Simple unique ID
+      year: getYear(currentDate),
+      month: getMonth(currentDate) + 1,
+    };
+    
+    const newAppData = { ...appData };
+    const updatedMonth = { ...currentMonthData };
+    updatedMonth.expenses = [...updatedMonth.expenses, newExpenseWithId];
+    
+    if (!newAppData.months) newAppData.months = {};
+    newAppData.months[monthId] = updatedMonth;
+
+    setAppData(newAppData);
+    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
 
   const deleteExpense = (expenseId: string) => {
-    if (!user) return;
-    deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'expenses', expenseId));
+    if (!user || !appData) return;
+    
+    const newAppData = { ...appData };
+    const updatedMonth = { ...currentMonthData };
+    updatedMonth.expenses = updatedMonth.expenses.filter(exp => exp.id !== expenseId);
+    
+    if (!newAppData.months) newAppData.months = {};
+    newAppData.months[monthId] = updatedMonth;
+
+    setAppData(newAppData);
+    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
   
   const updateExpense = (updatedExpense: Expense) => {
-     if (!user) return;
-    const { id, ...dataToUpdate } = updatedExpense;
-    updateDocumentNonBlocking(doc(firestore, 'users', user.uid, 'expenses', id), dataToUpdate);
+    if (!user || !appData) return;
+
+    const newAppData = { ...appData };
+    const updatedMonth = { ...currentMonthData };
+    updatedMonth.expenses = updatedMonth.expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp);
+    
+    if (!newAppData.months) newAppData.months = {};
+    newAppData.months[monthId] = updatedMonth;
+
+    setAppData(newAppData);
+    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
   };
 
   const updateChildSupport = (updatedChildSupport: ChildSupport) => {
@@ -161,24 +180,24 @@ export function Dashboard() {
   }
 
   const handleMarkAllAsPaid = async () => {
-    if (!user || !expenses) return;
+    if (!user || !appData) return;
 
-    const batch = writeBatch(firestore);
+    const newAppData = { ...appData };
+    const updatedMonth = { ...currentMonthData };
 
     // Mark expenses as paid
-    const unpaidExpenses = expenses.filter(exp => exp.status === 'Unpaid');
-    unpaidExpenses.forEach(exp => {
-      const expRef = doc(firestore, 'users', user.uid, 'expenses', exp.id);
-      batch.update(expRef, { status: 'Paid' });
-    });
-
+    updatedMonth.expenses = updatedMonth.expenses.map(exp => exp.status === 'Unpaid' ? { ...exp, status: 'Paid' } : exp);
+    
     // Mark child support as paid
-    if (currentMonthData.childSupport.status === 'Unpaid' && monthSettings?.id) {
-        const settingsRef = doc(firestore, 'users', user.uid, 'settings', monthSettings.id);
-        batch.update(settingsRef, { 'childSupport.status': 'Paid' });
+    if (updatedMonth.childSupport.status === 'Unpaid') {
+      updatedMonth.childSupport = { ...updatedMonth.childSupport, status: 'Paid' };
     }
     
-    await batch.commit();
+    if (!newAppData.months) newAppData.months = {};
+    newAppData.months[monthId] = updatedMonth;
+
+    setAppData(newAppData);
+    setDocumentNonBlocking(userDocRef!, { months: { [monthId]: updatedMonth } }, { merge: true });
 
     toast({
       title: 'All Items Marked as Paid',
@@ -186,12 +205,13 @@ export function Dashboard() {
     });
   };
 
-  const totalExpenses = expenses?.reduce(
+  const expenses = currentMonthData.expenses || [];
+  const totalExpenses = expenses.reduce(
     (sum, exp) => sum + exp.amount,
     0
-  ) || 0;
+  );
   
-  if (isLoading) {
+  if (isLoadingUser || !appData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
@@ -266,7 +286,7 @@ export function Dashboard() {
                     <SummaryCard
                       parent="Parent 1"
                       totalExpenses={totalExpenses}
-                      expenses={expenses || []}
+                      expenses={expenses}
                       expenseSplit={currentMonthData.expenseSplit}
                       childSupport={currentMonthData.childSupport}
                       onUpdateExpense={updateExpense}
@@ -280,7 +300,7 @@ export function Dashboard() {
                     <SummaryCard
                       parent="Parent 2"
                       totalExpenses={totalExpenses}
-                      expenses={expenses || []}
+                      expenses={expenses}
                       expenseSplit={currentMonthData.expenseSplit}
                       childSupport={currentMonthData.childSupport}
                       onUpdateExpense={updateExpense}
@@ -295,7 +315,7 @@ export function Dashboard() {
           <TabsContent value="expenses">
              <div className="mt-6">
                 <ExpensesCard
-                  expenses={expenses || []}
+                  expenses={expenses}
                   childSupport={currentMonthData.childSupport}
                   expenseSplit={currentMonthData.expenseSplit}
                   onDelete={deleteExpense}
