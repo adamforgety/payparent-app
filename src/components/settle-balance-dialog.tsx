@@ -172,7 +172,7 @@ export function SettleBalanceDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-3xl w-full grid-rows-[auto,minmax(0,1fr),auto] max-h-[90vh]">
+      <DialogContent className="max-w-2xl w-full grid-rows-[auto,minmax(0,1fr),auto] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
@@ -180,7 +180,7 @@ export function SettleBalanceDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className='overflow-y-auto -mx-6 px-6'>
+        <div className='overflow-y-auto -mx-6 px-6 flex-1'>
             <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
               <div className="text-sm text-muted-foreground">
                 {netBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
@@ -196,14 +196,14 @@ export function SettleBalanceDialog({
               </div>
             </div>
           <Tabs defaultValue="owed-by-me" className="mt-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="owed-to-me">
-                Owed to You ({itemsOwedToMe.length})
-                <span className="ml-2 text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
+            <TabsList className="grid w-full grid-cols-2 h-auto flex-wrap">
+              <TabsTrigger value="owed-to-me" className="flex-wrap h-auto py-1.5">
+                <span className="mr-2">Owed to You ({itemsOwedToMe.length})</span>
+                <span className="text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
                 </TabsTrigger>
-              <TabsTrigger value="owed-by-me">
-                Owed by You ({itemsOwedByMe.length})
-                <span className="ml-2 text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
+              <TabsTrigger value="owed-by-me" className="flex-wrap h-auto py-1.5">
+                <span className="mr-2">Owed by You ({itemsOwedByMe.length})</span>
+                <span className="text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
                 </TabsTrigger>
             </TabsList>
             <TabsContent value="owed-to-me">
@@ -228,7 +228,7 @@ export function SettleBalanceDialog({
           </Tabs>
         </div>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 shrink-0">
           <DialogClose asChild>
             <Button variant="outline" className="w-full sm:w-auto">Close</Button>
           </DialogClose>
@@ -261,7 +261,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
             </Button>
           </div>
         )}
-      <ScrollArea className="h-[40vh] rounded-md border">
+      <ScrollArea className="h-auto max-h-[40vh] rounded-md border">
         <Table>
           <TableHeader className="sticky top-0 bg-secondary">
             <TableRow>
