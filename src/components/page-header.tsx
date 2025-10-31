@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, LogOut, Sparkles } from 'lucide-react';
+import { Download, Sparkles } from 'lucide-react';
 
 import { AiAdviceSheet } from '@/components/ai-advice-sheet';
 import { Logo } from '@/components/logo';
@@ -11,8 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAuth } from '@/firebase';
-import { useRouter } from 'next/navigation';
 
 interface PageHeaderProps {
   totalExpenses: number;
@@ -21,16 +19,9 @@ interface PageHeaderProps {
 export function PageHeader({
   totalExpenses,
 }: PageHeaderProps) {
-  const auth = useAuth();
-  const router = useRouter();
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleLogout = async () => {
-    await auth.signOut();
-    router.push('/login');
   };
 
   return (
@@ -69,21 +60,6 @@ export function PageHeader({
                   <p>Export Monthly Report</p>
                 </TooltipContent>
               </Tooltip>
-              <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleLogout}
-                      aria-label="Logout"
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Logout</p>
-                  </TooltipContent>
-                </Tooltip>
             </TooltipProvider>
           </div>
         </div>

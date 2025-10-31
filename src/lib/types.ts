@@ -39,6 +39,11 @@ export interface ExpenseSplit {
   'Parent 1': number;
   'Parent 2': number;
 }
+export interface MedicalExpenseSplit {
+  'Parent 1': number;
+  'Parent 2': number;
+}
+
 
 export interface MonthData {
   id: string; // yyyy-MM
@@ -46,15 +51,14 @@ export interface MonthData {
   month: number; // 1-12
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: ExpenseSplit;
+  medicalExpenseSplit: MedicalExpenseSplit;
   parentNames: ParentNames;
   expenses: Expense[];
 }
 
-// This represents the structure of the entire user document in Firestore
 export interface AppData {
-  id: string; // user UID
-  months?: {
-    [monthId: string]: MonthData; // key is yyyy-MM
+  id: string;
+  months: {
+    [monthId: string]: MonthData;
   };
 }

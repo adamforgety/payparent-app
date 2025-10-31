@@ -42,7 +42,6 @@ export function ParentNamesCard({
   };
 
   const handleBlur = () => {
-    // Only call the expensive update function when the user is done editing.
     onUpdate(localParentNames);
   }
 
