@@ -80,6 +80,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   } = useMemo(() => {
     if (!appData?.months) {
       const year = String(getYear(new Date()));
+      const title = 'Yearly Report';
+      const description = 'No expenses logged yet.';
       return {
         availableYears: [year],
         availableMonths: [],
@@ -87,8 +89,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         totalPeriodExpenses: 0,
         allTransactions: [],
         parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
-        reportTitle: 'Yearly Report',
-        reportDescription: 'No expenses logged yet.',
+        reportTitle: title,
+        reportDescription: description,
       };
     }
 
