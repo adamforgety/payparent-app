@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import type { AppData } from '@/lib/types';
+import type { AppData, ParentNames } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
@@ -38,49 +38,52 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } else if (!user) {
         // If there's no user, we are not loading data.
         setIsLoading(false);
+        setAppData(null);
     }
   }, [user, firestore]);
   
 
   const updateAppData = useCallback(async (newData: Partial<AppData>) => {
-    if (!appData || !user || !firestore) return;
+    if (!user || !firestore) return;
     
-    let updatedData: AppData;
+    // Use a function for state updates to get the most recent state
+    setAppData(prevAppData => {
+      if (!prevAppData) return null;
 
-    // Special handling for parentNames to update all months
-    if (newData.parentNames) {
-      const newParentNames = newData.parentNames;
-      const updatedMonths = { ...appData.months };
-      for (const monthId in updatedMonths) {
-        updatedMonths[monthId] = {
-          ...updatedMonths[monthId],
-          parentNames: newParentNames
+      let updatedData: AppData;
+
+      // Special handling for parentNames to update all months
+      if (newData.parentNames) {
+        const newParentNames = newData.parentNames;
+        const updatedMonths = { ...prevAppData.months };
+        for (const monthId in updatedMonths) {
+          updatedMonths[monthId] = {
+            ...updatedMonths[monthId],
+            parentNames: newParentNames,
+          };
+        }
+        updatedData = { ...prevAppData, ...newData, months: updatedMonths };
+      } else {
+        // Standard merge for other properties
+        updatedData = { 
+            ...prevAppData, 
+            ...newData,
+            months: {
+                ...prevAppData.months,
+                ...newData.months,
+            }
         };
       }
-      updatedData = { ...appData, ...newData, months: updatedMonths };
-    } else {
-      // Standard merge for other properties
-      updatedData = { 
-          ...appData, 
-          ...newData,
-          months: {
-              ...appData.months,
-              ...newData.months,
-          }
-      };
-    }
-    
-    // Set local state immediately for snappy UI
-    setAppData(updatedData);
 
-    // Asynchronously save to Firestore and wait for it to complete
-    try {
-      await saveUserData(firestore, user.uid, updatedData);
-    } catch (error) {
-      console.error("Failed to save data:", error);
-      // Optionally, you could revert the state or show an error to the user here
-    }
-  }, [appData, user, firestore]);
+      // Asynchronously save to Firestore
+      saveUserData(firestore, user.uid, updatedData).catch(error => {
+        console.error("Failed to save data:", error);
+        // Optionally revert state or show an error
+      });
+
+      return updatedData;
+    });
+  }, [user, firestore]);
   
   const contextValue = useMemo(() => ({
     appData,
@@ -111,3 +114,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    

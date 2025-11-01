@@ -33,21 +33,20 @@ function DashboardComponent() {
   
   useEffect(() => {
     if (appData && !appData.months[monthId] && !isLoading) {
-      const lastMonth = subMonths(currentDate, 1);
-      const lastMonthId = format(lastMonth, 'yyyy-MM');
-      
       const monthKeys = Object.keys(appData.months).sort();
-      const mostRecentMonthId = monthKeys[monthKeys.length - 1] || lastMonthId;
-      const lastMonthData = appData.months[mostRecentMonthId];
+      const lastMonthId = monthKeys[monthKeys.length - 1];
+      const lastMonthData = appData.months[lastMonthId] || appData.months[Object.keys(appData.months)[0]];
+
+      if (!lastMonthData) return;
 
       const newMonthData: MonthData = {
         id: monthId,
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
-        childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unsettled' } : { amount: 0, paidBy: 'None', status: 'Unsettled' },
-        expenseSplit: lastMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
-        medicalExpenseSplit: lastMonthData?.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
-        parentNames: lastMonthData?.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
+        childSupport: { ...(lastMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' },
+        expenseSplit: lastMonthData.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
+        medicalExpenseSplit: lastMonthData.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
+        parentNames: lastMonthData.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
         expenses: [],
       };
       
@@ -438,3 +437,5 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
+
+    
