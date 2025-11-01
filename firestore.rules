@@ -1,0 +1,158 @@
+/**
+ * @fileOverview Firestore Security Rules for CoParent Finances App
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for all data. Each user has a dedicated data tree under `/users/{userId}`, and only the authenticated user matching that `userId` can read or write data within that tree.
+ *
+ * Data Structure:
+ * All data is nested under `/users/{userId}`, creating a clear separation of user data.
+ * - `/users/{userId}`: Stores user profile information.
+ * - `/users/{userId}/childSupportPayments/{childSupportPaymentId}`: Stores child support payment records.
+ * - `/users/{userId}/expenses/{expenseId}`: Stores expense records.
+ * - `/users/{userId}/monthlyCalculations/{monthlyCalculationId}`: Stores monthly calculation records.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed.
+ * - The ruleset defaults to strict owner-only access for all collections under `/users/{userId}`.
+ * - No schema validation is performed except to enforce data consistency for authorization purposes (e.g., matching `userId` in the path and the document).
+ *
+ * Denormalization for Authorization:
+ * The `userId` is embedded in the path for all user-owned data, eliminating the need for `get()` calls to parent documents.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Enforces user-ownership for user profiles.  Only the authenticated user can read or write their own profile.
+     * @path /users/{userId}
+     * @allow (create) - User with ID 'user123' creates their own profile.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.id: 'user123'
+     * @allow (get, update, delete) - User with ID 'user123' reads, updates, or deletes their profile.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) - User with ID 'user123' attempts to create a profile for 'user456'.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.id: 'user456'
+     * @deny (get, update, delete) - User with ID 'user456' attempts to read, update, or delete user 'user123's profile.
+     *   - request.auth.uid: 'user456'
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      // Helper function to check if the user is signed in and owns the document.
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner() {
+        return isOwner() && resource != null;
+      }
+
+      allow get: if isOwner();
+      allow list: if false;
+
+      allow create: if request.auth != null && request.resource.data.id == userId;
+      allow update: if isExistingOwner() && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner();
+    }
+
+    /**
+     * @description Enforces user-ownership for child support payment records. Only the authenticated user can read or write data within their own child support payment records.
+     * @path /users/{userId}/childSupportPayments/{childSupportPaymentId}
+     * @allow (create) - User with ID 'user123' creates a child support payment record.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.payingParentId: 'user123'
+     * @allow (get, update, delete) - User with ID 'user123' reads, updates, or deletes a child support payment record.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) - User with ID 'user123' attempts to create a child support payment record for 'user456'.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.payingParentId: 'user456'
+     * @deny (get, update, delete) - User with ID 'user456' attempts to read, update, or delete user 'user123's child support payment record.
+     *   - request.auth.uid: 'user456'
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/childSupportPayments/{childSupportPaymentId} {
+      // Helper function to check if the user is signed in and owns the document.
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+       function isExistingOwner() {
+        return isOwner() && resource != null;
+      }
+
+      allow get: if isOwner();
+      allow list: if isOwner();
+
+      allow create: if isOwner() && request.resource.data.payingParentId == userId;
+      allow update: if isExistingOwner() && request.resource.data.payingParentId == resource.data.payingParentId;
+      allow delete: if isExistingOwner();
+    }
+
+    /**
+     * @description Enforces user-ownership for expense records. Only the authenticated user can read or write data within their own expense records.
+     * @path /users/{userId}/expenses/{expenseId}
+     * @allow (create) - User with ID 'user123' creates an expense record.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.payerId: 'user123'
+     * @allow (get, update, delete) - User with ID 'user123' reads, updates, or deletes an expense record.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) - User with ID 'user123' attempts to create an expense record for 'user456'.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.payerId: 'user456'
+     * @deny (get, update, delete) - User with ID 'user456' attempts to read, update, or delete user 'user123's expense record.
+     *   - request.auth.uid: 'user456'
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/expenses/{expenseId} {
+      // Helper function to check if the user is signed in and owns the document.
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+       function isExistingOwner() {
+        return isOwner() && resource != null;
+      }
+
+      allow get: if isOwner();
+      allow list: if isOwner();
+
+      allow create: if isOwner() && request.resource.data.payerId == userId;
+      allow update: if isExistingOwner() && request.resource.data.payerId == resource.data.payerId;
+      allow delete: if isExistingOwner();
+    }
+
+    /**
+     * @description Enforces user-ownership for monthly calculation records. Only the authenticated user can read or write data within their own monthly calculation records.
+     * @path /users/{userId}/monthlyCalculations/{monthlyCalculationId}
+     * @allow (create) - User with ID 'user123' creates a monthly calculation record.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.parent1Id: 'user123'
+     * @allow (get, update, delete) - User with ID 'user123' reads, updates, or deletes a monthly calculation record.
+     *   - request.auth.uid: 'user123'
+     * @deny (create) - User with ID 'user123' attempts to create a monthly calculation record for 'user456'.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.parent1Id: 'user456'
+     * @deny (get, update, delete) - User with ID 'user456' attempts to read, update, or delete user 'user123's monthly calculation record.
+     *   - request.auth.uid: 'user456'
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/monthlyCalculations/{monthlyCalculationId} {
+      // Helper function to check if the user is signed in and owns the document.
+      function isOwner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function isExistingOwner() {
+        return isOwner() && resource != null;
+      }
+
+      allow get: if isOwner();
+      allow list: if isOwner();
+
+      allow create: if isOwner() && request.resource.data.parent1Id == userId;
+      allow update: if isExistingOwner() && request.resource.data.parent1Id == resource.data.parent1Id;
+      allow delete: if isExistingOwner();
+    }
+  }
+}

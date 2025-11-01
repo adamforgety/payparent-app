@@ -1,0 +1,264 @@
+{
+  "entities": {
+    "ChildSupportPayment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChildSupportPayment",
+      "type": "object",
+      "description": "Represents a single child support payment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the child support payment."
+        },
+        "payingParentId": {
+          "type": "string",
+          "description": "Reference to the User responsible for making the payment. (Relationship: User 1:N ChildSupportPayment)"
+        },
+        "receivingParentId": {
+          "type": "string",
+          "description": "Reference to the User receiving the child support payment. (Relationship: User 1:N ChildSupportPayment)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the child support payment."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "The date the child support payment was made.",
+          "format": "date-time"
+        },
+        "month": {
+          "type": "number",
+          "description": "The month for which the child support payment applies (1-12)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year for which the child support payment applies."
+        }
+      },
+      "required": [
+        "id",
+        "payingParentId",
+        "receivingParentId",
+        "amount",
+        "paymentDate",
+        "month",
+        "year"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents a child-related expense.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the expense."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the expense."
+        },
+        "expenseDate": {
+          "type": "string",
+          "description": "The date the expense was incurred.",
+          "format": "date-time"
+        },
+        "payerId": {
+          "type": "string",
+          "description": "Reference to the User who paid for the expense. (Relationship: User 1:N Expense)"
+        },
+        "month": {
+          "type": "number",
+          "description": "The month in which the expense was incurred (1-12)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year in which the expense was incurred."
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "amount",
+        "expenseDate",
+        "payerId",
+        "month",
+        "year"
+      ]
+    },
+    "MonthlyCalculation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MonthlyCalculation",
+      "type": "object",
+      "description": "Represents the calculated financial contributions for each parent for a given month.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the monthly calculation."
+        },
+        "month": {
+          "type": "number",
+          "description": "The month for which the calculation applies (1-12)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year for which the calculation applies."
+        },
+        "parent1Id": {
+          "type": "string",
+          "description": "Reference to the first parent. (Relationship: User 1:N MonthlyCalculation)"
+        },
+        "parent1Share": {
+          "type": "number",
+          "description": "The percentage share of expenses for parent 1 (e.g., 0.5 for 50%)."
+        },
+        "parent1Contribution": {
+          "type": "number",
+          "description": "The total calculated contribution amount for parent 1 for the month."
+        },
+        "parent2Id": {
+          "type": "string",
+          "description": "Reference to the second parent. (Relationship: User 1:N MonthlyCalculation)"
+        },
+        "parent2Share": {
+          "type": "number",
+          "description": "The percentage share of expenses for parent 2 (e.g., 0.5 for 50%)."
+        },
+        "parent2Contribution": {
+          "type": "number",
+          "description": "The total calculated contribution amount for parent 2 for the month."
+        }
+      },
+      "required": [
+        "id",
+        "month",
+        "year",
+        "parent1Id",
+        "parent1Share",
+        "parent1Contribution",
+        "parent2Id",
+        "parent2Share",
+        "parent2Contribution"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information.  Root path for all user-owned data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/childSupportPayments/{childSupportPaymentId}",
+        "definition": {
+          "entityName": "ChildSupportPayment",
+          "schema": {
+            "$ref": "#/backend/entities/ChildSupportPayment"
+          },
+          "description": "Stores child support payment records for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (parent)."
+            },
+            {
+              "name": "childSupportPaymentId",
+              "description": "The unique identifier for the child support payment record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Stores expense records for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (parent)."
+            },
+            {
+              "name": "expenseId",
+              "description": "The unique identifier for the expense record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/monthlyCalculations/{monthlyCalculationId}",
+        "definition": {
+          "entityName": "MonthlyCalculation",
+          "schema": {
+            "$ref": "#/backend/entities/MonthlyCalculation"
+          },
+          "description": "Stores monthly calculation records for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (parent)."
+            },
+            {
+              "name": "monthlyCalculationId",
+              "description": "The unique identifier for the monthly calculation record."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the core features of the CoParent Finances app, focusing on secure and efficient data management for child support, expenses, and monthly calculations. The design adheres to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and predictable schemas.\n\n**Authorization Independence:** To avoid hierarchical authorization dependencies, authorization context is denormalized. For example, access to `childSupportPayments`, `expenses`, and `monthlyCalculations` is based on the `userId` embedded directly in the path (`/users/{userId}`). This eliminates the need for `get()` calls to parent documents to validate access, enabling atomic operations.\n\n**Structural Segregation:** Data is segregated based on ownership.  Each user has their own subcollections for `childSupportPayments`, `expenses`, and `monthlyCalculations`. This ensures that each collection has homogeneous security requirements, simplifying rules and enhancing security.\n\n**Access Modeling:**  Path-based ownership (`/users/{userId}/...`) is used for private data, ensuring only the user has access to their records. This structure is highly secure and efficient.\n\n**Data Clarity and Predictability:** All documents follow predictable schemas defined in the entities section. This maintains consistency and simplifies data management and querying.\n\n**QAPs (Rules are not Filters):** The path-based ownership model ensures secure `list` operations. A user can only list the data within their own `/users/{userId}` path, preventing unauthorized access to other users' data.\n"
+  }
+}
