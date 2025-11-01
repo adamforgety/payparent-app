@@ -447,5 +447,3 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </Card>
   );
 }
-
-    

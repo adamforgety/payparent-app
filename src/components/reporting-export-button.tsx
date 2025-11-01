@@ -6,7 +6,6 @@ import * as XLSX from 'xlsx';
 
 import type { Expense, ParentNames, ChildSupport, ExpenseSplit, MedicalExpenseSplit, Parent } from '@/lib/types';
 import { Button } from './ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type EnrichedExpense = Expense & { 
   parentNames: ParentNames;
@@ -77,27 +76,14 @@ export function ReportingExportButton({
   const isDisabled = transactions.length === 0;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-            <span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleExport}
-                disabled={isDisabled}
-                aria-label="Export to Excel"
-              >
-                <Sheet className="h-4 w-4" />
-              </Button>
-            </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Export to Excel</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <Button
+        variant="outline"
+        onClick={handleExport}
+        disabled={isDisabled}
+        aria-label="Export to Excel"
+      >
+        <Sheet className="h-4 w-4 mr-2" />
+        Export to Excel
+      </Button>
   );
 }
-
-    
