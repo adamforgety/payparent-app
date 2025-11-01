@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2, CheckCheck, MoreVertical, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ReceiptText, Trash2, CheckCheck, MoreVertical } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 
@@ -32,12 +32,9 @@ import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, P
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
-import { cn } from '@/lib/utils';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -197,7 +194,7 @@ export function ExpensesCard({
             <TableRow>
               <TableHead>Description</TableHead>
               <TableHead>Paid By</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Reimbursement</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead className="text-right">{parentNames['Parent 1']}'s Share</TableHead>
               <TableHead className="text-right">{parentNames['Parent 2']}'s Share</TableHead>
@@ -209,13 +206,20 @@ export function ExpensesCard({
               filteredItems.map((item) => {
                 let parent1Share = 0;
                 let parent2Share = 0;
+                let reimbursementRequired = true;
 
                 if (item.type === 'expense') {
                   const split = item.category === 'Medical' ? medicalExpenseSplit : expenseSplit;
                   parent1Share = item.amount * (split['Parent 1'] / 100);
                   parent2Share = item.amount * (split['Parent 2'] / 100);
+
+                  const payer = item.paidBy as Parent;
+                  const payerShare = payer === 'Parent 1' ? parent1Share : parent2Share;
+                  if (payerShare === item.amount) {
+                    reimbursementRequired = false;
+                  }
+
                 } else if (item.type === 'child_support') {
-                  // For child support, the full amount is one parent's responsibility
                   if (item.paidBy === 'Parent 1') {
                     parent1Share = item.amount;
                   } else if (item.paidBy === 'Parent 2') {
@@ -234,35 +238,25 @@ export function ExpensesCard({
                       {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                     </TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id={`status-switch-${item.id}`}
-                                checked={item.status === 'Paid'}
-                                onCheckedChange={(isChecked) =>
-                                  handleStatusChange(item, isChecked ? 'Paid' : 'Unpaid')
-                                }
-                                aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
-                                className='h-5 w-9'
-                              />
-                              <Label
-                                htmlFor={`status-switch-${item.id}`}
-                                className={cn(
-                                  'font-medium w-12 cursor-pointer',
-                                  item.status === 'Paid' ? 'text-green-600' : 'text-destructive',
-                                )}
-                              >
-                                {item.status}
-                              </Label>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Click to mark as {item.status === 'Paid' ? 'Unpaid' : 'Paid'}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      {!reimbursementRequired ? (
+                         <Badge variant="outline">Not Required</Badge>
+                      ) : item.status === 'Paid' ? (
+                        <Badge variant="success">Settled</Badge>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                           <Badge variant="destructive">Awaiting</Badge>
+                           <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-auto px-2 py-1" onClick={() => handleStatusChange(item, 'Paid')}>
+                                  Settle
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Mark as Settled</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       ${item.amount.toFixed(2)}
