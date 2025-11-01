@@ -195,91 +195,111 @@ export function ExpensesCard({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead>Category</TableHead>
               <TableHead>Paid By</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead className="text-right">{parentNames['Parent 1']}'s Share</TableHead>
+              <TableHead className="text-right">{parentNames['Parent 2']}'s Share</TableHead>
               <TableHead className="w-[120px] no-print text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredItems.length > 0 ? (
-              filteredItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    {format(new Date(item.date), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {item.description}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.type === 'child_support' ? 'default' : 'outline'}>{item.category}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
-                  </TableCell>
-                  <TableCell>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`status-switch-${item.id}`}
-                              checked={item.status === 'Paid'}
-                              onCheckedChange={(isChecked) =>
-                                handleStatusChange(item, isChecked ? 'Paid' : 'Unpaid')
-                              }
-                              aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
-                              className='h-5 w-9'
-                            />
-                            <Label
-                              htmlFor={`status-switch-${item.id}`}
-                              className={cn(
-                                'font-medium w-12 cursor-pointer',
-                                item.status === 'Paid' ? 'text-green-600' : 'text-destructive',
-                              )}
-                            >
-                              {item.status}
-                            </Label>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Click to mark as {item.status === 'Paid' ? 'Unpaid' : 'Paid'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    ${item.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="no-print text-right">
-                    <div className="flex justify-end gap-1 h-8 w-full">
-                      {item.type === 'expense' && (
-                        <>
-                            <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
-                            <TooltipProvider>
-                                <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => onDelete(item.id)}
-                                    >
-                                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Delete</TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              filteredItems.map((item) => {
+                let parent1Share = 0;
+                let parent2Share = 0;
+
+                if (item.type === 'expense') {
+                  const split = item.category === 'Medical' ? medicalExpenseSplit : expenseSplit;
+                  parent1Share = item.amount * (split['Parent 1'] / 100);
+                  parent2Share = item.amount * (split['Parent 2'] / 100);
+                } else if (item.type === 'child_support') {
+                  // For child support, the full amount is one parent's responsibility
+                  if (item.paidBy === 'Parent 1') {
+                    parent1Share = item.amount;
+                  } else if (item.paidBy === 'Parent 2') {
+                    parent2Share = item.amount;
+                  }
+                }
+
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">
+                      {item.description}
+                      <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
+                      <Badge variant={item.type === 'child_support' ? 'default' : 'outline'} className="mt-1">{item.category}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
+                    </TableCell>
+                    <TableCell>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id={`status-switch-${item.id}`}
+                                checked={item.status === 'Paid'}
+                                onCheckedChange={(isChecked) =>
+                                  handleStatusChange(item, isChecked ? 'Paid' : 'Unpaid')
+                                }
+                                aria-label={`Mark as ${item.status === 'Paid' ? 'unpaid' : 'paid'}`}
+                                className='h-5 w-9'
+                              />
+                              <Label
+                                htmlFor={`status-switch-${item.id}`}
+                                className={cn(
+                                  'font-medium w-12 cursor-pointer',
+                                  item.status === 'Paid' ? 'text-green-600' : 'text-destructive',
+                                )}
+                              >
+                                {item.status}
+                              </Label>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Click to mark as {item.status === 'Paid' ? 'Unpaid' : 'Paid'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      ${item.amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      ${parent1Share.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      ${parent2Share.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="no-print text-right">
+                      <div className="flex justify-end gap-1 h-8 w-full">
+                        {item.type === 'expense' && (
+                          <>
+                              <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
+                              <TooltipProvider>
+                                  <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => onDelete(item.id)}
+                                      >
+                                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete</TooltipContent>
+                                  </Tooltip>
+                              </TooltipProvider>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center">
