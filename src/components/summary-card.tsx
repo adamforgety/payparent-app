@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames, MedicalExpenseSplit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
@@ -21,7 +21,7 @@ interface SummaryCardProps {
   parent: Parent;
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: ExpenseSplit;
+  medicalExpenseSplit: MedicalExpenseSplit;
   childSupport: ChildSupport;
   parentNames: ParentNames;
 }
@@ -47,17 +47,22 @@ export function SummaryCard({
   const calculateShare = (
     expenses: Expense[],
     split: ExpenseSplit,
-    medicalSplit: ExpenseSplit,
-    parent: Parent
+    medicalSplit: MedicalExpenseSplit,
+    p: Parent
   ): number => {
     let totalShare = 0;
-    const parentSplitPercent = split[parent] / 100;
-    const medicalParentSplitPercent = medicalSplit[parent] / 100;
-
+    
     for (const expense of expenses) {
-      if (expense.category === 'Medical' || expense.category === 'Child Care') {
+      if (expense.category === 'Reimbursement') {
+        // If the other parent paid, this parent owes the full amount.
+        if (expense.paidBy !== p) {
+          totalShare += expense.amount;
+        }
+      } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+        const medicalParentSplitPercent = medicalSplit[p] / 100;
         totalShare += expense.amount * medicalParentSplitPercent;
       } else {
+        const parentSplitPercent = split[p] / 100;
         totalShare += expense.amount * parentSplitPercent;
       }
     }
@@ -83,7 +88,7 @@ export function SummaryCard({
 
   const netBalance = expenseBalance + childSupportBalance;
   
-  const isSettled = netBalance === 0;
+  const isSettled = netBalance === 0 && unsettledExpenses.length === 0 && (childSupport.status === 'Settled' || childSupport.amount === 0);
   
   let transferDescription = 'All settled up';
   if (!isSettled) {

@@ -6,6 +6,7 @@ export type ExpenseCategory =
   | 'Clothing'
   | 'Food'
   | 'Child Support'
+  | 'Reimbursement'
   | 'Other';
 
 export type PaymentStatus = 'Unsettled' | 'Settled';
@@ -70,5 +71,3 @@ export interface UserDoc {
   id: string;
   appData: AppData;
 }
-
-    

@@ -48,9 +48,17 @@ export function ReportingExportButton({
         }
       } else {
         const expense = item as EnrichedExpense;
-        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-        parent1Share = expense.amount * (split['Parent 1'] / 100);
-        parent2Share = expense.amount * (split['Parent 2'] / 100);
+        if (expense.category === 'Reimbursement') {
+          if (expense.paidBy === 'Parent 1') {
+            parent2Share = expense.amount;
+          } else {
+            parent1Share = expense.amount;
+          }
+        } else {
+          const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
+          parent1Share = expense.amount * (split['Parent 1'] / 100);
+          parent2Share = expense.amount * (split['Parent 2'] / 100);
+        }
       }
 
       return {

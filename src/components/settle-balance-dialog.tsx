@@ -65,16 +65,18 @@ export function SettleBalanceDialog({
   const { toast } = useToast();
   const { onUpdateExpense, onUpdateChildSupport } = useDashboard();
   
-  const parentSplit = expenseSplit[parent] / 100;
-  const otherParentSplit = expenseSplit[otherParent] / 100;
-  const medicalParentSplit = medicalExpenseSplit[parent] / 100;
-  const medicalOtherParentSplit = medicalExpenseSplit[otherParent] / 100;
-
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
     const expensesPaidByMe = expenses
       .filter((exp) => exp.paidBy === parent && exp.status === 'Unsettled')
       .map((exp): ItemToSettle => {
-        const split = exp.category === 'Medical' || exp.category === 'Child Care' ? medicalOtherParentSplit : otherParentSplit;
+        let split = 0;
+        if (exp.category === 'Reimbursement') {
+          split = 1; // Owed 100%
+        } else if (exp.category === 'Medical' || exp.category === 'Child Care') {
+          split = medicalExpenseSplit[otherParent] / 100;
+        } else {
+          split = expenseSplit[otherParent] / 100;
+        }
         return {
           id: exp.id,
           description: exp.description,
@@ -100,13 +102,20 @@ export function SettleBalanceDialog({
     }
 
     return [...expensesPaidByMe, ...childSupportToMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParent, otherParentSplit, medicalOtherParentSplit]);
+  }, [expenses, childSupport, parent, otherParent, expenseSplit, medicalExpenseSplit]);
 
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
     const expensesPaidByOther = expenses
       .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unsettled')
       .map((exp): ItemToSettle => {
-        const split = exp.category === 'Medical' || exp.category === 'Child Care' ? medicalParentSplit : parentSplit;
+        let split = 0;
+        if (exp.category === 'Reimbursement') {
+          split = 1; // Owe 100%
+        } else if (exp.category === 'Medical' || exp.category === 'Child Care') {
+          split = medicalExpenseSplit[parent] / 100;
+        } else {
+          split = expenseSplit[parent] / 100;
+        }
         return {
           id: exp.id,
           description: exp.description,
@@ -132,7 +141,7 @@ export function SettleBalanceDialog({
     }
 
     return [...expensesPaidByOther, ...childSupportFromMe].filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, parent, otherParent, parentSplit, medicalParentSplit]);
+  }, [expenses, childSupport, parent, otherParent, expenseSplit, medicalExpenseSplit]);
 
   const handleMarkAsSettled = (item: ItemToSettle) => {
     if (item.type === 'expense') {

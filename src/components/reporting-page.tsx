@@ -72,6 +72,7 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Activities',
   'Clothing',
   'Food',
+  'Reimbursement',
   'Other',
 ];
 
@@ -215,7 +216,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
       let parent1Share = 0;
       let parent2Share = 0;
-      if(transaction.category !== 'Child Support') {
+      if(transaction.category === 'Reimbursement') {
+          const expense = transaction as EnrichedExpense;
+          if (expense.paidBy === 'Parent 1') {
+            parent2Share = expense.amount;
+          } else {
+            parent1Share = expense.amount;
+          }
+      } else if(transaction.category !== 'Child Support') {
         const expense = transaction as EnrichedExpense;
         parent1Share = expense.amount * (expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] / 100 : expense.expenseSplit['Parent 1'] / 100);
         parent2Share = expense.amount * (expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] / 100 : expense.expenseSplit['Parent 2'] / 100);
@@ -402,7 +410,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       
                       let parent1Share = 0;
                       let parent2Share = 0;
-                      if(transaction.category !== 'Child Support') {
+
+                      if (transaction.category === 'Reimbursement') {
+                          const expense = transaction as EnrichedExpense;
+                          if (expense.paidBy === 'Parent 1') {
+                            parent2Share = expense.amount;
+                          } else {
+                            parent1Share = expense.amount;
+                          }
+                      } else if(transaction.category !== 'Child Support') {
                         const expense = transaction as EnrichedExpense;
                         const parent1Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
                         const parent2Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];

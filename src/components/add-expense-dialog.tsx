@@ -42,6 +42,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Separator } from './ui/separator';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
@@ -54,7 +55,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
+    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z
@@ -95,6 +96,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
 
   const onSubmit = async (values: FormValues) => {
     let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>> = {};
+    const { receipt, ...expenseValues } = values;
 
     if (values.receipt && values.receipt.length > 0) {
       const file = values.receipt[0];
@@ -113,8 +115,6 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
       });
     }
     
-    const { receipt, ...expenseValues } = values;
-
     onAddExpense({
       ...expenseValues,
       date: values.date.toISOString(),
@@ -194,6 +194,8 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
                         <SelectItem value="Clothing">Clothing</SelectItem>
                         <SelectItem value="Food">Food</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
+                        <Separator />
+                        <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -269,7 +271,9 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
                         mode="single"
                         selected={field.value}
                         onSelect={(date) => {
-                          field.onChange(date);
+                          if (date) {
+                            field.onChange(date);
+                          }
                           setIsDatePickerOpen(false);
                         }}
                         initialFocus

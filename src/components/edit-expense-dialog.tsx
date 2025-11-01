@@ -43,6 +43,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Separator } from './ui/separator';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
@@ -55,7 +56,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
+    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z.any().optional(),
@@ -83,19 +84,23 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
   const receiptRef = form.register('receipt');
 
   useEffect(() => {
-    form.reset({
-      description: expense.description,
-      amount: expense.amount,
-      date: new Date(expense.date),
-      paidBy: expense.paidBy,
-      category: expense.category,
-    });
-    setHasExistingReceipt(!!expense.receiptUrl);
-    setRemoveReceipt(false);
+    if (isOpen) {
+      form.reset({
+        description: expense.description,
+        amount: expense.amount,
+        date: new Date(expense.date),
+        paidBy: expense.paidBy,
+        category: expense.category,
+      });
+      setHasExistingReceipt(!!expense.receiptUrl);
+      setRemoveReceipt(false);
+    }
   }, [expense, form, isOpen]);
 
   async function onSubmit(values: FormValues) {
     let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>>;
+
+    const { receipt, ...expenseValues } = values;
 
     if (removeReceipt) {
       receiptData = { receiptUrl: null, receiptFilename: null };
@@ -121,8 +126,6 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
         receiptFilename: expense.receiptFilename 
       };
     }
-
-    const { receipt, ...expenseValues } = values;
 
     onUpdateExpense({
       ...expense,
@@ -192,6 +195,8 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                       <SelectItem value="Clothing">Clothing</SelectItem>
                       <SelectItem value="Food">Food</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
+                      <Separator />
+                      <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -264,7 +269,9 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                         mode="single"
                         selected={field.value}
                         onSelect={(date) => {
-                          field.onChange(date);
+                           if (date) {
+                            field.onChange(date);
+                          }
                           setIsDatePickerOpen(false);
                         }}
                         initialFocus

@@ -59,6 +59,12 @@ export function ExportButton({
         } else if (item.paidBy === 'Parent 2') {
           parent2Share = item.amount;
         }
+      } else if (item.category === 'Reimbursement') {
+        if (item.paidBy === 'Parent 1') {
+          parent2Share = item.amount;
+        } else {
+          parent1Share = item.amount;
+        }
       } else {
         const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
         parent1Share = item.amount * (split['Parent 1'] / 100);
