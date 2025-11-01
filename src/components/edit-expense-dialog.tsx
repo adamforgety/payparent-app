@@ -71,6 +71,7 @@ interface EditExpenseDialogProps {
 
 export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: EditExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [hasExistingReceipt, setHasExistingReceipt] = useState(!!expense.receiptUrl);
   const [removeReceipt, setRemoveReceipt] = useState(false);
   const { toast } = useToast();
@@ -94,11 +95,8 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
   }, [expense, form, isOpen]);
 
   async function onSubmit(values: FormValues) {
-    let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>> = {
-      receiptUrl: expense.receiptUrl,
-      receiptFilename: expense.receiptFilename
-    };
-    
+    let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>>;
+
     if (removeReceipt) {
       receiptData = { receiptUrl: null, receiptFilename: null };
     } else if (values.receipt && values.receipt.length > 0) {
@@ -116,6 +114,12 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
+    } else {
+      // If no new receipt, and not removing, keep the old one
+      receiptData = { 
+        receiptUrl: expense.receiptUrl, 
+        receiptFilename: expense.receiptFilename 
+      };
     }
 
     const { receipt, ...expenseValues } = values;
@@ -236,7 +240,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Date of Expense</FormLabel>
-                  <Popover>
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -259,7 +263,10 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setIsDatePickerOpen(false);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>

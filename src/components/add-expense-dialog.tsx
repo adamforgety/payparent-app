@@ -59,15 +59,14 @@ const expenseSchema = z.object({
   ),
   receipt: z
     .any()
-    .optional()
     .refine(
-      (files) => !files || files.length === 0 || files[0].size <= MAX_FILE_SIZE,
+      (files) => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE,
       'Max file size is 4MB.'
     )
     .refine(
-      (files) => !files || files.length === 0 || ACCEPTED_FILE_TYPES.includes(files[0].type),
+      (files) => !files || files.length === 0 || ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
       'Only .jpg, .jpeg, .png, .webp and .pdf files are accepted.'
-    ),
+    ).optional(),
 });
 
 type FormValues = z.infer<typeof expenseSchema>;
@@ -79,6 +78,7 @@ interface AddExpenseDialogProps {
 
 export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -136,8 +136,8 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
       date: new Date(),
       paidBy: undefined,
       category: 'Other',
-      receipt: undefined,
     });
+    form.setValue('receipt', undefined);
     setIsOpen(false);
   }
 
@@ -245,7 +245,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Date of Expense</FormLabel>
-                  <Popover>
+                  <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -268,7 +268,10 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setIsDatePickerOpen(false);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -299,5 +302,3 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
     </Dialog>
   );
 }
-
-    
