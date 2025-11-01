@@ -100,7 +100,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
     };
     
     if (removeReceipt) {
-      receiptData = { receiptUrl: undefined, receiptFilename: undefined };
+      receiptData = { receiptUrl: null, receiptFilename: null };
     } else if (values.receipt && values.receipt.length > 0) {
       const file = values.receipt[0];
       const reader = new FileReader();
@@ -122,8 +122,8 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
       ...expense,
       ...values,
       date: values.date.toISOString(),
-      receiptUrl: receiptData.receiptUrl,
-      receiptFilename: receiptData.receiptFilename,
+      receiptUrl: receiptData.receiptUrl ?? null,
+      receiptFilename: receiptData.receiptFilename ?? null,
     });
     toast({
       title: 'Expense Updated',
@@ -273,7 +273,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                 <div className="flex items-center justify-between rounded-md border p-2">
                   <div className='flex items-center gap-2'>
                     <Paperclip className="h-4 w-4" />
-                    <a href={expense.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                    <a href={expense.receiptUrl!} target="_blank" rel="noopener noreferrer" className="text-sm underline">
                       {expense.receiptFilename || 'View Receipt'}
                     </a>
                   </div>

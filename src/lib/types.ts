@@ -20,8 +20,8 @@ export interface Expense {
   status: PaymentStatus;
   year: number;
   month: number;
-  receiptUrl?: string;
-  receiptFilename?: string;
+  receiptUrl?: string | null;
+  receiptFilename?: string | null;
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';

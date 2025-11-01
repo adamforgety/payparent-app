@@ -120,7 +120,8 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
       paidBy: values.paidBy as Parent,
       category: values.category as ExpenseCategory,
       status: 'Unpaid',
-      ...receiptData,
+      receiptUrl: receiptData.receiptUrl ?? null,
+      receiptFilename: receiptData.receiptFilename ?? null,
     });
     
     toast({
