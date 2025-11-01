@@ -148,14 +148,15 @@ function DashboardComponent() {
     if (!currentMonthData) return;
 
     let madeChanges = false;
-    let updatedExpenses = currentMonthData.expenses;
-    let updatedChildSupport = currentMonthData.childSupport;
-
-    if (currentMonthData.expenses.some(exp => exp.status === 'Unpaid')) {
-        updatedExpenses = currentMonthData.expenses.map(exp => exp.status === 'Unpaid' ? { ...exp, status: 'Paid' } : exp);
+    const updatedExpenses = currentMonthData.expenses.map(exp => {
+      if (exp.status === 'Unpaid') {
         madeChanges = true;
-    }
+        return { ...exp, status: 'Paid' };
+      }
+      return exp;
+    });
     
+    let updatedChildSupport = currentMonthData.childSupport;
     if (currentMonthData.childSupport.status === 'Unpaid' && currentMonthData.childSupport.amount > 0) {
       updatedChildSupport = { ...currentMonthData.childSupport, status: 'Paid' };
       madeChanges = true;
@@ -166,6 +167,33 @@ function DashboardComponent() {
       toast({
         title: 'All Items Marked as Paid',
         description: 'All unpaid expenses and child support for this month are now paid.',
+      });
+    }
+  };
+
+  const handleMarkAllAsUnpaid = () => {
+    if (!currentMonthData) return;
+
+    let madeChanges = false;
+    const updatedExpenses = currentMonthData.expenses.map(exp => {
+      if (exp.status === 'Paid') {
+        madeChanges = true;
+        return { ...exp, status: 'Unpaid' };
+      }
+      return exp;
+    });
+
+    let updatedChildSupport = currentMonthData.childSupport;
+    if (currentMonthData.childSupport.status === 'Paid' && currentMonthData.childSupport.amount > 0) {
+      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Unpaid' };
+      madeChanges = true;
+    }
+
+    if (madeChanges) {
+      updateCurrentMonthData({ expenses: updatedExpenses, childSupport: updatedChildSupport });
+      toast({
+        title: 'All Items Marked as Unpaid',
+        description: 'All paid expenses and child support for this month have been reverted to unpaid.',
       });
     }
   };
@@ -291,6 +319,7 @@ function DashboardComponent() {
                     onUpdateExpense={updateExpense}
                     onUpdateChildSupport={updateChildSupport}
                     onMarkAllAsPaid={handleMarkAllAsPaid}
+                    onMarkAllAsUnpaid={handleMarkAllAsUnpaid}
                     currentDate={currentDate}
                     parentNames={currentMonthData.parentNames}
                   >

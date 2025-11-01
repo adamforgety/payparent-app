@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2, CheckCheck, MoreVertical } from 'lucide-react';
+import { ReceiptText, Trash2, CheckCheck, MoreVertical, XCircle } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 
@@ -34,7 +34,7 @@ import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Separator } from './ui/separator';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -45,6 +45,7 @@ interface ExpensesCardProps {
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
   onMarkAllAsPaid: () => void;
+  onMarkAllAsUnpaid: () => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -71,6 +72,7 @@ export function ExpensesCard({
   onUpdateExpense,
   onUpdateChildSupport,
   onMarkAllAsPaid,
+  onMarkAllAsUnpaid,
   children,
   currentDate,
   parentNames,
@@ -104,6 +106,7 @@ export function ExpensesCard({
   }, [allItems, statusFilter]);
   
   const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
+  const hasPaidItems = allItems.some(item => item.status === 'Paid');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
@@ -171,6 +174,11 @@ export function ExpensesCard({
                   <CheckCheck className="mr-2 h-4 w-4" />
                   Mark All Paid
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={onMarkAllAsUnpaid} disabled={!hasPaidItems}>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Mark All Unpaid
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                  <ExportButton
                   expenses={expenses}
                   childSupport={childSupport}
