@@ -1,6 +1,7 @@
 'use client';
 
-import { Download, Sparkles } from 'lucide-react';
+import { Download, LogOut, Sparkles, User as UserIcon } from 'lucide-react';
+import { signOut } from 'firebase/auth';
 
 import { AiAdviceSheet } from '@/components/ai-advice-sheet';
 import { Logo } from '@/components/logo';
@@ -11,17 +12,39 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useAuth, useFirebase } from '@/firebase';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { useRouter } from 'next/navigation';
 
 interface PageHeaderProps {
   totalExpenses: number;
 }
 
-export function PageHeader({
-  totalExpenses,
-}: PageHeaderProps) {
+export function PageHeader({ totalExpenses }: PageHeaderProps) {
+  const auth = useAuth();
+  const { user } = useFirebase();
+  const router = useRouter();
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
+  const getInitials = (email: string | null | undefined) => {
+    if (!email) return '?';
+    return email[0].toUpperCase();
   };
 
   return (
@@ -62,6 +85,30 @@ export function PageHeader({
               </Tooltip>
             </TooltipProvider>
           </div>
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-full">
+                  <Avatar>
+                    <AvatarFallback>
+                      {getInitials(user.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <p>My Account</p>
+                  <p className='text-xs text-muted-foreground font-normal'>{user.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>

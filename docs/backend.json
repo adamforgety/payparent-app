@@ -169,15 +169,13 @@
       },
       "required": [
         "id",
-        "email",
-        "name"
+        "email"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
