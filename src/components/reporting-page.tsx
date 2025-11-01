@@ -81,7 +81,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     if (!appData?.months) {
       const year = String(getYear(new Date()));
       const title = 'Yearly Report';
-      const description = 'No expenses logged yet.';
+      const description = `An overview of all expenses for ${selectedYear}.`;
       return {
         availableYears: [year],
         availableMonths: [],
