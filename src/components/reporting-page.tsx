@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, ExpenseSplit } from '@/lib/types';
+import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, ExpenseSplit, ChildSupport, MedicalExpenseSplit } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -40,6 +40,7 @@ import {
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
+import { ReportingExportButton } from './reporting-export-button';
 
 interface ReportingPageProps {
   appData: AppData | null;
@@ -48,8 +49,21 @@ interface ReportingPageProps {
 type EnrichedExpense = Expense & { 
   parentNames: ParentNames;
   expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: ExpenseSplit;
+  medicalExpenseSplit: MedicalExpenseSplit;
 };
+
+type EnrichedChildSupport = ChildSupport & {
+  id: string;
+  date: string;
+  description: string;
+  category: 'Child Support';
+  parentNames: ParentNames;
+  year: number;
+  month: number;
+}
+
+type Transaction = EnrichedExpense | EnrichedChildSupport;
+
 
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
@@ -113,7 +127,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
     }
     
-    let allExpensesForPeriod: EnrichedExpense[] = [];
+    let allTransactionsForPeriod: Transaction[] = [];
     let latestParentNames: ParentNames | null = null;
     
     filteredMonthKeys.forEach(monthId => {
@@ -123,15 +137,29 @@ export function ReportingPage({ appData }: ReportingPageProps) {
               latestParentNames = monthData.parentNames;
             }
             monthData.expenses.forEach(expense => {
-                allExpensesForPeriod.push({
+                allTransactionsForPeriod.push({
                     ...expense,
                     parentNames: monthData.parentNames,
                     expenseSplit: monthData.expenseSplit,
                     medicalExpenseSplit: monthData.medicalExpenseSplit,
                 });
             });
+            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None') {
+                allTransactionsForPeriod.push({
+                    ...monthData.childSupport,
+                    id: `cs-${monthId}`,
+                    date: parse(monthId, 'yyyy-MM', new Date()).toISOString(),
+                    description: 'Child Support',
+                    category: 'Child Support',
+                    parentNames: monthData.parentNames,
+                    year: monthData.year,
+                    month: monthData.month
+                });
+            }
         }
     });
+    
+    const allExpensesForPeriod = allTransactionsForPeriod.filter(t => t.category !== 'Child Support') as EnrichedExpense[];
 
     const aggregated: { [key in ExpenseCategory]?: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
@@ -152,14 +180,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       .filter((item) => item.amount > 0)
       .sort((a, b) => b.amount - a.amount);
       
-    allExpensesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    allTransactionsForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
       availableMonths: monthsForSelectedYear,
       periodData: chartData,
       totalPeriodExpenses: total,
-      allTransactions: allExpensesForPeriod,
+      allTransactions: allTransactionsForPeriod,
       parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
       reportTitle: reportTitleForMonth(selectedMonth),
       reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
@@ -177,15 +205,28 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       return allTransactions;
     }
     return allTransactions.filter(transaction => {
-      const paidByParent: Parent = transaction.paidBy;
-      const parentName = transaction.parentNames[paidByParent]?.toLowerCase() || '';
+      let paidByName = '';
+      if (transaction.paidBy && transaction.paidBy !== 'None') {
+        paidByName = transaction.parentNames[transaction.paidBy]?.toLowerCase() || '';
+      }
+      
       const description = transaction.description.toLowerCase();
       const category = transaction.category.toLowerCase();
 
-      const parent1Share = transaction.amount * (transaction.category === 'Medical' ? transaction.medicalExpenseSplit['Parent 1'] / 100 : transaction.expenseSplit['Parent 1'] / 100);
-      const parent2Share = transaction.amount * (transaction.category === 'Medical' ? transaction.medicalExpenseSplit['Parent 2'] / 100 : transaction.expenseSplit['Parent 2'] / 100);
+      let parent1Share = 0;
+      let parent2Share = 0;
+      if(transaction.category !== 'Child Support') {
+        const expense = transaction as EnrichedExpense;
+        parent1Share = expense.amount * (expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 1'] / 100 : expense.expenseSplit['Parent 1'] / 100);
+        parent2Share = expense.amount * (expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 2'] / 100 : expense.expenseSplit['Parent 2'] / 100);
+      } else {
+        const cs = transaction as EnrichedChildSupport;
+        if (cs.paidBy === 'Parent 1') parent1Share = cs.amount;
+        if (cs.paidBy === 'Parent 2') parent2Share = cs.amount;
+      }
 
-      return parentName.includes(lowercasedFilter) ||
+
+      return paidByName.includes(lowercasedFilter) ||
              description.includes(lowercasedFilter) ||
              category.includes(lowercasedFilter) ||
              parent1Share.toFixed(2).includes(lowercasedFilter) ||
@@ -250,6 +291,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 ))}
               </SelectContent>
             </Select>
+            <ReportingExportButton 
+              transactions={allTransactions}
+              periodLabel={selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM-yyyy')}
+              parentNames={parentNamesForPeriod}
+            />
           </div>
         </div>
       </CardHeader>
@@ -352,25 +398,36 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTransactions.length > 0 ? filteredTransactions.map((expense) => {
-                      const parent1Split = expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
-                      const parent2Split = expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
-                      const parent1Share = expense.amount * (parent1Split / 100);
-                      const parent2Share = expense.amount * (parent2Split / 100);
+                    {filteredTransactions.length > 0 ? filteredTransactions.map((transaction) => {
                       
+                      let parent1Share = 0;
+                      let parent2Share = 0;
+                      if(transaction.category !== 'Child Support') {
+                        const expense = transaction as EnrichedExpense;
+                        const parent1Split = expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
+                        const parent2Split = expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
+                        parent1Share = expense.amount * (parent1Split / 100);
+                        parent2Share = expense.amount * (parent2Split / 100);
+                      } else {
+                        if (transaction.paidBy === 'Parent 1') parent1Share = transaction.amount;
+                        if (transaction.paidBy === 'Parent 2') parent2Share = transaction.amount;
+                      }
+
                       return (
-                      <TableRow key={expense.id}>
-                        <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                      <TableRow key={transaction.id}>
+                        <TableCell>{format(new Date(transaction.date), 'MMM d, yyyy')}</TableCell>
                         <TableCell className="font-medium">
-                          {expense.description}
-                          <div className='text-xs text-muted-foreground'>{expense.category}</div>
+                          {transaction.description}
+                          <div className='text-xs text-muted-foreground'>{transaction.category}</div>
                         </TableCell>
                         <TableCell>
-                            <Badge variant={expense.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>
-                                {expense.parentNames[expense.paidBy]}
-                            </Badge>
+                            {transaction.paidBy && transaction.paidBy !== 'None' &&
+                              <Badge variant={transaction.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>
+                                  {transaction.parentNames[transaction.paidBy]}
+                              </Badge>
+                            }
                         </TableCell>
-                        <TableCell className="text-right font-semibold">${expense.amount.toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-semibold">${transaction.amount.toFixed(2)}</TableCell>
                         <TableCell className="text-right">${parent1Share.toFixed(2)}</TableCell>
                         <TableCell className="text-right">${parent2Share.toFixed(2)}</TableCell>
                       </TableRow>
@@ -390,3 +447,5 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </Card>
   );
 }
+
+    
