@@ -60,7 +60,8 @@ type DisplayItem = {
     status: PaymentStatus;
     category: 'Child Support' | Expense['category'];
     type: 'expense' | 'child_support';
-    receiptUrl?: string;
+    receiptUrl?: string | null;
+    receiptFilename?: string | null;
 };
 
 
@@ -251,23 +252,25 @@ export function ExpensesCard({
                     </TableCell>
                     <TableCell>
                       {!reimbursementRequired ? (
-                         <Badge variant="outline">Not Required</Badge>
+                        <Badge variant="outline">Not Required</Badge>
                       ) : item.status === 'Paid' ? (
                         <Badge variant="success">Settled</Badge>
                       ) : (
-                        <div className="flex items-center gap-2">
-                           <Badge variant="destructive">Awaiting</Badge>
-                           <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button size="sm" variant="ghost" className="h-auto px-2 py-1" onClick={() => handleStatusChange(item, 'Paid')}>
-                                  Settle
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Mark as Settled</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-auto px-2 py-1 text-destructive border-destructive hover:bg-destructive/5 hover:text-destructive"
+                                onClick={() => handleStatusChange(item, 'Paid')}
+                              >
+                                Settle
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Mark as Settled</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
@@ -371,3 +374,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'paid' | 'unpaid';
+
+    
