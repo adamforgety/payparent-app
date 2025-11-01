@@ -86,8 +86,8 @@ export function MedicalSplitCard({
             <HeartPulse className="h-5 w-5 text-secondary-foreground" />
           </span>
           <div>
-            <CardTitle>Medical Expense Split</CardTitle>
-            <CardDescription>Split percentage for medical costs.</CardDescription>
+            <CardTitle>Medical & Child Care Split</CardTitle>
+            <CardDescription>Split percentage for medical and child care costs.</CardDescription>
           </div>
         </div>
       </CardHeader>

@@ -74,7 +74,7 @@ export function SettleBalanceDialog({
     const expensesPaidByMe = expenses
       .filter((exp) => exp.paidBy === parent && exp.status === 'Unsettled')
       .map((exp): ItemToSettle => {
-        const split = exp.category === 'Medical' ? medicalOtherParentSplit : otherParentSplit;
+        const split = exp.category === 'Medical' || exp.category === 'Child Care' ? medicalOtherParentSplit : otherParentSplit;
         return {
           id: exp.id,
           description: exp.description,
@@ -106,7 +106,7 @@ export function SettleBalanceDialog({
     const expensesPaidByOther = expenses
       .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unsettled')
       .map((exp): ItemToSettle => {
-        const split = exp.category === 'Medical' ? medicalParentSplit : parentSplit;
+        const split = exp.category === 'Medical' || exp.category === 'Child Care' ? medicalParentSplit : parentSplit;
         return {
           id: exp.id,
           description: exp.description,
@@ -313,5 +313,3 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
       </>
   )
 }
-
-    

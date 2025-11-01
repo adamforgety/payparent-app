@@ -120,7 +120,7 @@ export function ExpensesCard({
     const medicalParentSplitPercent = medicalExpenseSplit[parent] / 100;
     
     for (const expense of expenses) {
-        if (expense.category === 'Medical') {
+        if (expense.category === 'Medical' || expense.category === 'Child Care') {
             totalShare += expense.amount * medicalParentSplitPercent;
         } else {
             totalShare += expense.amount * parentSplitPercent;
@@ -224,7 +224,7 @@ export function ExpensesCard({
                 let reimbursementRequired = true;
 
                 if (item.type === 'expense') {
-                  const split = item.category === 'Medical' ? medicalExpenseSplit : expenseSplit;
+                  const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
                   parent1Share = item.amount * (split['Parent 1'] / 100);
                   parent2Share = item.amount * (split['Parent 2'] / 100);
 

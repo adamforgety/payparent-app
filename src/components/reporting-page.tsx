@@ -217,8 +217,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       let parent2Share = 0;
       if(transaction.category !== 'Child Support') {
         const expense = transaction as EnrichedExpense;
-        parent1Share = expense.amount * (expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 1'] / 100 : expense.expenseSplit['Parent 1'] / 100);
-        parent2Share = expense.amount * (expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 2'] / 100 : expense.expenseSplit['Parent 2'] / 100);
+        parent1Share = expense.amount * (expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] / 100 : expense.expenseSplit['Parent 1'] / 100);
+        parent2Share = expense.amount * (expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] / 100 : expense.expenseSplit['Parent 2'] / 100);
       } else {
         const cs = transaction as EnrichedChildSupport;
         if (cs.paidBy === 'Parent 1') parent1Share = cs.amount;
@@ -404,8 +404,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       let parent2Share = 0;
                       if(transaction.category !== 'Child Support') {
                         const expense = transaction as EnrichedExpense;
-                        const parent1Split = expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
-                        const parent2Split = expense.category === 'Medical' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
+                        const parent1Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
+                        const parent2Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
                         parent1Share = expense.amount * (parent1Split / 100);
                         parent2Share = expense.amount * (parent2Split / 100);
                       } else {

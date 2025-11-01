@@ -55,7 +55,7 @@ export function SummaryCard({
     const medicalParentSplitPercent = medicalSplit[parent] / 100;
 
     for (const expense of expenses) {
-      if (expense.category === 'Medical') {
+      if (expense.category === 'Medical' || expense.category === 'Child Care') {
         totalShare += expense.amount * medicalParentSplitPercent;
       } else {
         totalShare += expense.amount * parentSplitPercent;
@@ -188,5 +188,3 @@ export function SummaryCard({
     </Card>
   );
 }
-
-    

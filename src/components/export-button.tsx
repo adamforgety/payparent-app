@@ -60,7 +60,7 @@ export function ExportButton({
           parent2Share = item.amount;
         }
       } else {
-        const split = item.category === 'Medical' ? medicalExpenseSplit : expenseSplit;
+        const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
         parent1Share = item.amount * (split['Parent 1'] / 100);
         parent2Share = item.amount * (split['Parent 2'] / 100);
       }

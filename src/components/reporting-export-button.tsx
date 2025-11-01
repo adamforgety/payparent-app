@@ -48,7 +48,7 @@ export function ReportingExportButton({
         }
       } else {
         const expense = item as EnrichedExpense;
-        const split = expense.category === 'Medical' ? expense.medicalExpenseSplit : expense.expenseSplit;
+        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
         parent1Share = expense.amount * (split['Parent 1'] / 100);
         parent2Share = expense.amount * (split['Parent 2'] / 100);
       }
