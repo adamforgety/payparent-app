@@ -78,10 +78,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     reportTitle,
     reportDescription,
   } = useMemo(() => {
-    if (!appData?.months) {
+    const reportTitleForMonth = (month: string) => month === 'all' ? 'Yearly Report' : 'Monthly Report';
+    const reportDescriptionForPeriod = (year: string, month: string) => 
+      `An overview of all expenses for ${month === 'all' ? year : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
+
+    if (!appData?.months || Object.keys(appData.months).length === 0) {
       const year = String(getYear(new Date()));
-      const title = 'Yearly Report';
-      const description = `An overview of all expenses for ${selectedYear}.`;
       return {
         availableYears: [year],
         availableMonths: [],
@@ -89,8 +91,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         totalPeriodExpenses: 0,
         allTransactions: [],
         parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
-        reportTitle: title,
-        reportDescription: description,
+        reportTitle: reportTitleForMonth(selectedMonth),
+        reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
       };
     }
 
@@ -152,9 +154,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       
     allExpensesForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const reportTitle = selectedMonth === 'all' ? 'Yearly Report' : 'Monthly Report';
-    const reportDescription = `An overview of all expenses for ${selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`
-
     return {
       availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
       availableMonths: monthsForSelectedYear,
@@ -162,8 +161,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       totalPeriodExpenses: total,
       allTransactions: allExpensesForPeriod,
       parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
-      reportTitle,
-      reportDescription,
+      reportTitle: reportTitleForMonth(selectedMonth),
+      reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
     };
   }, [appData, selectedYear, selectedMonth]);
   
