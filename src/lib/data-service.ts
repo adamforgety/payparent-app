@@ -1,10 +1,11 @@
 'use client';
 
-import { doc, getDoc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initialData } from '@/lib/data';
-import type { AppData, UserDoc, MonthData } from '@/lib/types';
+import type { AppData, UserDoc } from '@/lib/types';
 import type { Firestore } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Fetches the user's application data from Firestore.
@@ -38,7 +39,7 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       // If we corrected any names, save the changes back to Firestore.
       if (needsUpdate) {
         console.log("Correcting old parent names in the database.");
-        saveUserData(firestore, userId, appData);
+        await saveUserData(firestore, userId, appData);
       }
 
       return appData;
@@ -46,10 +47,7 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       // Document doesn't exist, create it with initial data.
       console.log('No user document found. Creating one with initial data.');
       const initial = { ...initialData, id: userId };
-      const userDocPayload: UserDoc = { id: userId, appData: initial };
-      
-      // Save the new document to Firestore (non-blocking).
-      setDocumentNonBlocking(userDocRef, userDocPayload, { merge: false });
+      await saveUserData(firestore, userId, initial);
       
       // Return the initial data for immediate use in the app.
       return initial;
@@ -67,12 +65,26 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
  * @param userId - The ID of the user.
  * @param appData - The application data to save.
  */
-export function saveUserData(firestore: Firestore, userId: string, appData: AppData): void {
+export async function saveUserData(firestore: Firestore, userId: string, appData: AppData): Promise<void> {
   if (!firestore || !userId) {
     console.error("Firestore or User ID is not available. Cannot save.");
     return;
   }
   const userDocRef = doc(firestore, 'users', userId);
   const userDocPayload: UserDoc = { id: userId, appData };
-  setDocumentNonBlocking(userDocRef, userDocPayload, { merge: true });
+  
+  try {
+    await setDoc(userDocRef, userDocPayload, { merge: true });
+  } catch (error) {
+     errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: userDocRef.path,
+        operation: 'write',
+        requestResourceData: userDocPayload,
+      })
+    );
+    // Re-throw the error if you want the caller to be able to handle it too
+    throw error;
+  }
 }
