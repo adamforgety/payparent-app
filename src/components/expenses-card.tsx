@@ -260,9 +260,9 @@ export function ExpensesCard({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant="outline"
+                                variant="destructive"
                                 size="sm"
-                                className="h-auto px-2 py-1 text-destructive border-destructive hover:bg-destructive/5 hover:text-destructive"
+                                className="h-auto px-2 py-1"
                                 onClick={() => handleStatusChange(item, 'Paid')}
                               >
                                 Settle
