@@ -253,35 +253,31 @@ export function ExpensesCard({
                     <TableCell>
                       {!reimbursementRequired ? (
                         <Badge variant="outline">Not Required</Badge>
-                      ) : item.status === 'Settled' ? (
-                         <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge 
-                                variant="success" 
-                                className="cursor-pointer" 
-                                onClick={() => handleStatusChange(item, 'Unsettled')}
-                              >
-                                Settled
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>Mark as Unsettled</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       ) : (
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="h-auto px-2 py-1"
-                                onClick={() => handleStatusChange(item, 'Settled')}
-                              >
-                                Settle
-                              </Button>
+                            <TooltipTrigger>
+                              {item.status === 'Settled' ? (
+                                <Badge 
+                                  variant="success" 
+                                  className="cursor-pointer" 
+                                  onClick={() => handleStatusChange(item, 'Unsettled')}
+                                >
+                                  Settled
+                                </Badge>
+                              ) : (
+                                <Badge 
+                                  variant="destructive" 
+                                  className="cursor-pointer"
+                                  onClick={() => handleStatusChange(item, 'Settled')}
+                                >
+                                  Settle
+                                </Badge>
+                              )}
                             </TooltipTrigger>
-                            <TooltipContent>Mark as Settled</TooltipContent>
+                            <TooltipContent>
+                              {item.status === 'Settled' ? 'Click to mark as Unsettled' : 'Click to mark as Settled'}
+                            </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}
@@ -387,5 +383,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
