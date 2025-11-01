@@ -23,7 +23,7 @@ import { MedicalSplitCard } from './medical-split-card';
 import { useAppContext } from '@/context/app-context';
 
 function DashboardComponent() {
-  const { appData, updateAppData } = useAppContext();
+  const { appData, updateAppData, isLoading } = useAppContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const { toast } = useToast();
@@ -31,10 +31,13 @@ function DashboardComponent() {
   const monthId = format(currentDate, 'yyyy-MM');
   
   useEffect(() => {
-    if (appData && !appData.months[monthId]) {
+    if (appData && !appData.months[monthId] && !isLoading) {
       const lastMonth = subMonths(currentDate, 1);
       const lastMonthId = format(lastMonth, 'yyyy-MM');
-      const lastMonthData = appData.months[lastMonthId];
+      
+      const monthKeys = Object.keys(appData.months).sort();
+      const mostRecentMonthId = monthKeys[monthKeys.length - 1] || lastMonthId;
+      const lastMonthData = appData.months[mostRecentMonthId];
 
       const newMonthData: MonthData = {
         id: monthId,
@@ -49,7 +52,7 @@ function DashboardComponent() {
       
       updateAppData({ months: { ...appData.months, [monthId]: newMonthData } });
     }
-  }, [appData, monthId, currentDate, updateAppData]);
+  }, [appData, monthId, currentDate, updateAppData, isLoading]);
 
 
   const currentMonthData = useMemo((): MonthData | null => {
@@ -167,7 +170,7 @@ function DashboardComponent() {
     }
   };
   
-  if (!appData || !currentMonthData) {
+  if (isLoading || !appData || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
@@ -331,5 +334,22 @@ function DashboardComponent() {
 }
 
 export function Dashboard() {
+  const { isLoading } = useAppContext();
+
+  if (isLoading) {
+     return (
+       <div className="container mx-auto p-4 md:p-8">
+            <div className="flex flex-col items-center justify-center gap-4 mb-8">
+              <Skeleton className="h-10 w-52" />
+            </div>
+             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8 mt-6">
+                <Skeleton className="h-96" />
+                <Skeleton className="h-96" />
+                <Skeleton className="h-96" />
+             </div>
+       </div>
+    )
+  }
+
   return <DashboardComponent />;
 }

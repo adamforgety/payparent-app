@@ -62,3 +62,9 @@ export interface AppData {
     [monthId: string]: MonthData;
   };
 }
+
+// Add this to your types
+export interface UserDoc {
+  id: string;
+  appData: AppData;
+}

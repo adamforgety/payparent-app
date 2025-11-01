@@ -5,7 +5,7 @@ const today = new Date();
 const monthId = format(today, 'yyyy-MM');
 
 export const initialData: AppData = {
-  id: 'local-user',
+  id: 'new-user', // This will be replaced by the user's UID
   months: {
     [monthId]: {
       id: monthId,
