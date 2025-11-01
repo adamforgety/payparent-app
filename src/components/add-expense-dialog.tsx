@@ -112,10 +112,11 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
         reader.readAsDataURL(file);
       });
     }
+    
+    const { receipt, ...expenseValues } = values;
 
     onAddExpense({
-      description: values.description,
-      amount: values.amount,
+      ...expenseValues,
       date: values.date.toISOString(),
       paidBy: values.paidBy as Parent,
       category: values.category as ExpenseCategory,

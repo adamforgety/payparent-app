@@ -118,12 +118,14 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
       });
     }
 
+    const { receipt, ...expenseValues } = values;
+
     onUpdateExpense({
       ...expense,
-      ...values,
+      ...expenseValues,
       date: values.date.toISOString(),
-      receiptUrl: receiptData.receiptUrl ?? null,
-      receiptFilename: receiptData.receiptFilename ?? null,
+      receiptUrl: receiptData.receiptUrl,
+      receiptFilename: receiptData.receiptFilename,
     });
     toast({
       title: 'Expense Updated',
