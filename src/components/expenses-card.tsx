@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2, CheckCheck, MoreVertical, XCircle } from 'lucide-react';
+import { ReceiptText, Trash2, CheckCheck, MoreVertical, XCircle, Paperclip } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 
@@ -60,6 +60,7 @@ type DisplayItem = {
     status: PaymentStatus;
     category: 'Child Support' | Expense['category'];
     type: 'expense' | 'child_support';
+    receiptUrl?: string;
 };
 
 
@@ -281,6 +282,25 @@ export function ExpensesCard({
                       <div className="flex justify-end gap-1 h-8 w-full">
                         {item.type === 'expense' && (
                           <>
+                            {item.receiptUrl && (
+                               <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        asChild
+                                      >
+                                        <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                            <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                        </a>
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View Receipt</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                               <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
                               <TooltipProvider>
                                   <Tooltip>

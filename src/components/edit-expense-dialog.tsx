@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-import { CalendarIcon, Edit } from 'lucide-react';
+import { CalendarIcon, Edit, Paperclip, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -44,6 +44,9 @@ import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types'
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.coerce.number().positive('Amount must be a positive number'),
@@ -55,7 +58,10 @@ const expenseSchema = z.object({
     ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
     { required_error: 'Please select a category.' }
   ),
+  receipt: z.any().optional(),
 });
+
+type FormValues = z.infer<typeof expenseSchema>;
 
 interface EditExpenseDialogProps {
   expense: Expense;
@@ -65,18 +71,15 @@ interface EditExpenseDialogProps {
 
 export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: EditExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasExistingReceipt, setHasExistingReceipt] = useState(!!expense.receiptUrl);
+  const [removeReceipt, setRemoveReceipt] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof expenseSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      description: expense.description,
-      amount: expense.amount,
-      date: new Date(expense.date),
-      paidBy: expense.paidBy,
-      category: expense.category,
-    },
   });
+
+  const receiptRef = form.register('receipt');
 
   useEffect(() => {
     form.reset({
@@ -86,14 +89,41 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
       paidBy: expense.paidBy,
       category: expense.category,
     });
-  }, [expense, form]);
+    setHasExistingReceipt(!!expense.receiptUrl);
+    setRemoveReceipt(false);
+  }, [expense, form, isOpen]);
 
+  async function onSubmit(values: FormValues) {
+    let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>> = {
+      receiptUrl: expense.receiptUrl,
+      receiptFilename: expense.receiptFilename
+    };
+    
+    if (removeReceipt) {
+      receiptData = { receiptUrl: undefined, receiptFilename: undefined };
+    } else if (values.receipt && values.receipt.length > 0) {
+      const file = values.receipt[0];
+      const reader = new FileReader();
 
-  function onSubmit(values: z.infer<typeof expenseSchema>) {
+      receiptData = await new Promise((resolve, reject) => {
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve({ receiptUrl: e.target.result as string, receiptFilename: file.name });
+          } else {
+            reject(new Error("Could not read file"));
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     onUpdateExpense({
       ...expense,
       ...values,
       date: values.date.toISOString(),
+      receiptUrl: receiptData.receiptUrl,
+      receiptFilename: receiptData.receiptFilename,
     });
     toast({
       title: 'Expense Updated',
@@ -104,17 +134,13 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-       <TooltipProvider>
+      <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                >
-                  <Edit className="h-4 w-4 text-muted-foreground" />
-                </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Edit className="h-4 w-4 text-muted-foreground" />
+              </Button>
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>Edit</TooltipContent>
@@ -123,9 +149,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Expense</DialogTitle>
-          <DialogDescription>
-            Update the details of this expense.
-          </DialogDescription>
+          <DialogDescription>Update the details of this expense.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -142,35 +166,32 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                 </FormItem>
               )}
             />
-             <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Medical">Medical</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Child Care">Child Care</SelectItem>
-                        <SelectItem value="Activities">Activities</SelectItem>
-                        <SelectItem value="Clothing">Clothing</SelectItem>
-                        <SelectItem value="Food">Food</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Medical">Medical</SelectItem>
+                      <SelectItem value="Education">Education</SelectItem>
+                      <SelectItem value="Child Care">Child Care</SelectItem>
+                      <SelectItem value="Activities">Activities</SelectItem>
+                      <SelectItem value="Clothing">Clothing</SelectItem>
+                      <SelectItem value="Food">Food</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -191,10 +212,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Paid By</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select parent" />
@@ -248,6 +266,29 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
                 </FormItem>
               )}
             />
+
+            <FormItem>
+              <FormLabel>Receipt</FormLabel>
+              {hasExistingReceipt && !removeReceipt ? (
+                <div className="flex items-center justify-between rounded-md border p-2">
+                  <div className='flex items-center gap-2'>
+                    <Paperclip className="h-4 w-4" />
+                    <a href={expense.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">
+                      {expense.receiptFilename || 'View Receipt'}
+                    </a>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setRemoveReceipt(true)}>
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ) : (
+                <FormControl>
+                  <Input type="file" accept={ACCEPTED_FILE_TYPES.join(',')} {...receiptRef} />
+                </FormControl>
+              )}
+              <FormMessage>{form.formState.errors.receipt?.message as React.ReactNode}</FormMessage>
+            </FormItem>
+
             <DialogFooter>
               <Button type="submit">Save Changes</Button>
             </DialogFooter>

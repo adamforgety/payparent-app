@@ -43,6 +43,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+
 const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.coerce.number().positive('Amount must be a positive number'),
@@ -54,7 +57,20 @@ const expenseSchema = z.object({
     ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
     { required_error: 'Please select a category.' }
   ),
+  receipt: z
+    .any()
+    .optional()
+    .refine(
+      (files) => !files || files.length === 0 || files[0].size <= MAX_FILE_SIZE,
+      'Max file size is 4MB.'
+    )
+    .refine(
+      (files) => !files || files.length === 0 || ACCEPTED_FILE_TYPES.includes(files[0].type),
+      'Only .jpg, .jpeg, .png, .webp and .pdf files are accepted.'
+    ),
 });
+
+type FormValues = z.infer<typeof expenseSchema>;
 
 interface AddExpenseDialogProps {
   onAddExpense: (expense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
@@ -65,7 +81,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof expenseSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       description: '',
@@ -75,24 +91,50 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
     },
   });
 
-  function onSubmit(values: z.infer<typeof expenseSchema>) {
+  const receiptRef = form.register('receipt');
+
+  const onSubmit = async (values: FormValues) => {
+    let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>> = {};
+
+    if (values.receipt && values.receipt.length > 0) {
+      const file = values.receipt[0];
+      const reader = new FileReader();
+      
+      receiptData = await new Promise((resolve, reject) => {
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve({ receiptUrl: e.target.result as string, receiptFilename: file.name });
+          } else {
+            reject(new Error("Could not read file"));
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     onAddExpense({
-      ...values,
+      description: values.description,
+      amount: values.amount,
       date: values.date.toISOString(),
       paidBy: values.paidBy as Parent,
       category: values.category as ExpenseCategory,
       status: 'Unpaid',
+      ...receiptData,
     });
+    
     toast({
       title: 'Expense Added',
       description: `"${values.description}" has been logged.`,
     });
+    
     form.reset({
       description: '',
       amount: '' as any,
       date: new Date(),
       paidBy: undefined,
       category: 'Other',
+      receipt: undefined,
     });
     setIsOpen(false);
   }
@@ -229,6 +271,19 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="receipt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Receipt (Optional)</FormLabel>
+                  <FormControl>
+                    <Input type="file" accept={ACCEPTED_FILE_TYPES.join(',')} {...receiptRef} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
