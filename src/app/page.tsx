@@ -2,10 +2,11 @@
 
 import { AppContextProvider } from '@/context/app-context';
 import { Dashboard } from '@/components/dashboard';
-import { useAuth, initiateAnonymousSignIn, useFirebase } from '@/firebase';
+import { useAuth, useFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { signInAnonymously } from 'firebase/auth';
 
 function App() {
   const { user, isUserLoading } = useFirebase();
@@ -13,7 +14,7 @@ function App() {
 
   useEffect(() => {
     if (!user && !isUserLoading) {
-      initiateAnonymousSignIn(auth);
+      signInAnonymously(auth);
     }
   }, [user, isUserLoading, auth]);
 
