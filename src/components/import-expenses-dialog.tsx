@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload } from 'lucide-react';
+import { Upload, Download } from 'lucide-react';
 
 import {
   Dialog,
@@ -28,6 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
+import { format } from 'date-fns';
 
 const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -69,6 +70,23 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
   const form = useForm<FormValues>({
     resolver: zodResolver(importSchema),
   });
+  
+  const handleDownloadTemplate = () => {
+    const sampleData = [
+      {
+        Date: format(new Date(), 'yyyy-MM-dd'),
+        Description: 'Sample: School Books',
+        Category: 'Education',
+        'Paid By': parentNames['Parent 1'],
+        Amount: 75.50,
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenses');
+    XLSX.writeFile(workbook, 'Expense_Import_Template.xlsx');
+  };
 
   const onSubmit = async (values: FormValues) => {
     const file = values.file[0];
@@ -176,19 +194,23 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         <DialogHeader>
           <DialogTitle>Import Expenses from Excel</DialogTitle>
           <DialogDescription>
-            Upload an Excel file (.xlsx or .xls) with your expenses. The file must have the following columns: 
+            Upload an Excel file (.xlsx or .xls). The file must have columns for:
             <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Date</span>,
             <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Description</span>,
             <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Category</span>,
-            <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span>,
+            <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span>, and
             <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Amount</span>.
           </DialogDescription>
-          <p className="text-sm text-muted-foreground pt-2">
-            The <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span> column must match one of the current parent names: "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Invalid rows will be skipped.
-          </p>
+          <div className="text-sm text-muted-foreground pt-2">
+            <p className='mb-2'>The <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span> column must match one of the current parent names: "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Invalid rows will be skipped.</p>
+             <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
+              <Download className="mr-2 h-4 w-4" />
+              Download Template
+            </Button>
+          </div>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <FormField
               control={form.control}
               name="file"
