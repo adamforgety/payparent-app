@@ -209,7 +209,8 @@ export function ExpensesCard({
               <TableHead className="text-right">Total</TableHead>
               <TableHead className="text-right">{parentNames['Parent 1']}'s Share</TableHead>
               <TableHead className="text-right">{parentNames['Parent 2']}'s Share</TableHead>
-              <TableHead className="w-[120px] no-print text-right">Actions</TableHead>
+              <TableHead className="w-[50px] no-print text-right">Receipt</TableHead>
+              <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -278,29 +279,31 @@ export function ExpensesCard({
                     <TableCell className="text-right">
                       ${parent2Share.toFixed(2)}
                     </TableCell>
+                    <TableCell className="no-print text-center">
+                        {item.type === 'expense' && item.receiptUrl && (
+                           <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    asChild
+                                  >
+                                    <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                        <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                    </a>
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View Receipt</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                    </TableCell>
                     <TableCell className="no-print text-right">
                       <div className="flex justify-end gap-1 h-8 w-full">
                         {item.type === 'expense' && (
                           <>
-                            {item.receiptUrl && (
-                               <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        asChild
-                                      >
-                                        <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                            <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                        </a>
-                                      </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>View Receipt</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
                               <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
                               <TooltipProvider>
                                   <Tooltip>
@@ -326,7 +329,7 @@ export function ExpensesCard({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No {statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.
                 </TableCell>
               </TableRow>
