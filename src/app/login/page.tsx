@@ -43,7 +43,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [showPassword, setShowPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/';
 
@@ -130,7 +131,7 @@ export default function LoginPage() {
                         <FormControl>
                           <div className="relative">
                             <Input
-                              type={showPassword ? 'text' : 'password'}
+                              type={showLoginPassword ? 'text' : 'password'}
                               placeholder="••••••••"
                               {...field}
                             />
@@ -139,9 +140,9 @@ export default function LoginPage() {
                               variant="ghost"
                               size="icon"
                               className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                              onClick={() => setShowPassword(!showPassword)}
+                              onClick={() => setShowLoginPassword(!showLoginPassword)}
                             >
-                              {showPassword ? (
+                              {showLoginPassword ? (
                                 <EyeOff className="h-4 w-4" />
                               ) : (
                                 <Eye className="h-4 w-4" />
@@ -183,7 +184,26 @@ export default function LoginPage() {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                          <div className="relative">
+                            <Input
+                              type={showSignupPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                              onClick={() => setShowSignupPassword(!showSignupPassword)}
+                            >
+                              {showSignupPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -196,7 +216,26 @@ export default function LoginPage() {
                       <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                           <div className="relative">
+                            <Input
+                              type={showSignupPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                              onClick={() => setShowSignupPassword(!showSignupPassword)}
+                            >
+                              {showSignupPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
