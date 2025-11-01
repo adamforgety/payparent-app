@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
 import { initializeFirebase } from '@/firebase';
 
-const { auth } = initializeFirebase();
-
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
@@ -41,6 +39,7 @@ function getErrorMessage(error: any): string {
 
 export async function login(values: z.infer<typeof loginSchema>) {
   try {
+    const { auth } = initializeFirebase();
     const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
     return { success: true, userId: userCredential.user.uid };
   } catch (error) {
@@ -50,6 +49,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
 
 export async function signup(values: z.infer<typeof signupSchema>) {
   try {
+    const { auth } = initializeFirebase();
     const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
     return { success: true, userId: userCredential.user.uid };
   } catch (error) {
