@@ -35,6 +35,8 @@ import { ExportButton } from './export-button';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -254,32 +256,19 @@ export function ExpensesCard({
                       {!reimbursementRequired ? (
                         <Badge variant="outline">Not Required</Badge>
                       ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              {item.status === 'Settled' ? (
-                                <Badge 
-                                  variant="success" 
-                                  className="cursor-pointer" 
-                                  onClick={() => handleStatusChange(item, 'Unsettled')}
-                                >
-                                  Settled
-                                </Badge>
-                              ) : (
-                                <Badge 
-                                  variant="destructive" 
-                                  className="cursor-pointer"
-                                  onClick={() => handleStatusChange(item, 'Settled')}
-                                >
-                                  Settle
-                                </Badge>
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {item.status === 'Settled' ? 'Click to mark as Unsettled' : 'Click to mark as Settled'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id={`settle-switch-${item.id}`}
+                            checked={item.status === 'Settled'}
+                            onCheckedChange={(checked) =>
+                              handleStatusChange(item, checked ? 'Settled' : 'Unsettled')
+                            }
+                            aria-label={`Settle payment for ${item.description}`}
+                          />
+                          <Label htmlFor={`settle-switch-${item.id}`}>
+                            {item.status === 'Settled' ? 'Settled' : 'Unsettled'}
+                          </Label>
+                        </div>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
