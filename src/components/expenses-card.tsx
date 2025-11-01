@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Upload } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 
@@ -39,6 +39,7 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { ImportExpensesDialog } from './import-expenses-dialog';
 
 interface ExpensesCardProps {
   expenses: Expense[];
