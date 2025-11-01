@@ -11,7 +11,7 @@ import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
 import { SummaryCard } from '@/components/summary-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppData, ChildSupport, Expense, MonthData } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, MonthData, ParentNames } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
@@ -142,6 +142,11 @@ function DashboardComponent() {
 
   const updateChildSupport = (updatedChildSupport: ChildSupport) => {
     updateCurrentMonthData({ childSupport: updatedChildSupport });
+  };
+  
+  const handleUpdateParentNames = (parentNames: ParentNames) => {
+    // This now triggers the global update in the context
+    updateAppData({ parentNames });
   };
 
   const handleMarkAllAsSettled = () => {
@@ -339,7 +344,7 @@ function DashboardComponent() {
               <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
                 <ParentNamesCard
                     parentNames={currentMonthData.parentNames}
-                    onUpdate={(parentNames) => updateCurrentMonthData({ parentNames })}
+                    onUpdate={handleUpdateParentNames}
                 />
                 <ChildSupportCard
                   childSupport={currentMonthData.childSupport}
@@ -385,5 +390,3 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
-
-    

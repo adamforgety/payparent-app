@@ -46,14 +46,30 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     setAppData(prevData => {
       if (!prevData || !user || !firestore) return prevData;
       
-      const updatedData: AppData = { 
-          ...prevData, 
-          ...newData,
-          months: {
-              ...prevData.months,
-              ...newData.months,
-          }
-      };
+      let updatedData: AppData;
+
+      // Special handling for parentNames to update all months
+      if (newData.parentNames) {
+        const newParentNames = newData.parentNames;
+        const updatedMonths = { ...prevData.months };
+        for (const monthId in updatedMonths) {
+          updatedMonths[monthId] = {
+            ...updatedMonths[monthId],
+            parentNames: newParentNames
+          };
+        }
+        updatedData = { ...prevData, ...newData, months: updatedMonths };
+      } else {
+        // Standard merge for other properties
+        updatedData = { 
+            ...prevData, 
+            ...newData,
+            months: {
+                ...prevData.months,
+                ...newData.months,
+            }
+        };
+      }
       
       // Use the new, decoupled save function
       saveUserData(firestore, user.uid, updatedData);
