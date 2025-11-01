@@ -12,8 +12,8 @@ export const initialData: AppData = {
       year: today.getFullYear(),
       month: today.getMonth() + 1,
       childSupport: {
-        amount: 500,
-        paidBy: 'Parent 2',
+        amount: 0,
+        paidBy: 'None',
         status: 'Unpaid',
       },
       expenseSplit: {
@@ -21,37 +21,14 @@ export const initialData: AppData = {
         'Parent 2': 50,
       },
       medicalExpenseSplit: {
-        'Parent 1': 60,
-        'Parent 2': 40,
+        'Parent 1': 50,
+        'Parent 2': 50,
       },
       parentNames: {
-        'Parent 1': 'Jane Doe',
-        'Parent 2': 'John Smith',
+        'Parent 1': 'Parent 1',
+        'Parent 2': 'Parent 2',
       },
-      expenses: [
-        {
-          id: '1',
-          date: new Date().toISOString(),
-          description: 'School Books',
-          amount: 75.5,
-          paidBy: 'Parent 1',
-          category: 'Education',
-          status: 'Unpaid',
-          year: today.getFullYear(),
-          month: today.getMonth() + 1,
-        },
-        {
-          id: '2',
-          date: new Date().toISOString(),
-          description: 'Doctor Visit',
-          amount: 150,
-          paidBy: 'Parent 2',
-          category: 'Medical',
-          status: 'Unpaid',
-          year: today.getFullYear(),
-          month: today.getMonth() + 1,
-        },
-      ],
+      expenses: [],
     },
   },
 };
