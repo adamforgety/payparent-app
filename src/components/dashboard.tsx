@@ -43,7 +43,7 @@ function DashboardComponent() {
         id: monthId,
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
-        childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unpaid' } : { amount: 0, paidBy: 'None', status: 'Unpaid' },
+        childSupport: lastMonthData?.childSupport ? { ...lastMonthData.childSupport, status: 'Unsettled' } : { amount: 0, paidBy: 'None', status: 'Unsettled' },
         expenseSplit: lastMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
         medicalExpenseSplit: lastMonthData?.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
         parentNames: lastMonthData?.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
@@ -115,7 +115,7 @@ function DashboardComponent() {
             id: targetMonthId,
             year: getYear(expenseDate),
             month: getMonth(expenseDate) + 1,
-            childSupport: mostRecentMonthData?.childSupport ? { ...mostRecentMonthData.childSupport, status: 'Unpaid' } : { amount: 0, paidBy: 'None', status: 'Unpaid' },
+            childSupport: mostRecentMonthData?.childSupport ? { ...mostRecentMonthData.childSupport, status: 'Unsettled' } : { amount: 0, paidBy: 'None', status: 'Unsettled' },
             expenseSplit: mostRecentMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
             medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
             parentNames: mostRecentMonthData?.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
@@ -144,56 +144,56 @@ function DashboardComponent() {
     updateCurrentMonthData({ childSupport: updatedChildSupport });
   };
 
-  const handleMarkAllAsPaid = () => {
+  const handleMarkAllAsSettled = () => {
     if (!currentMonthData) return;
 
     let madeChanges = false;
     const updatedExpenses = currentMonthData.expenses.map(exp => {
-      if (exp.status === 'Unpaid') {
+      if (exp.status === 'Unsettled') {
         madeChanges = true;
-        return { ...exp, status: 'Paid' };
+        return { ...exp, status: 'Settled' };
       }
       return exp;
     });
     
     let updatedChildSupport = currentMonthData.childSupport;
-    if (currentMonthData.childSupport.status === 'Unpaid' && currentMonthData.childSupport.amount > 0) {
-      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Paid' };
+    if (currentMonthData.childSupport.status === 'Unsettled' && currentMonthData.childSupport.amount > 0) {
+      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Settled' };
       madeChanges = true;
     }
     
     if (madeChanges) {
       updateCurrentMonthData({ expenses: updatedExpenses, childSupport: updatedChildSupport });
       toast({
-        title: 'All Items Marked as Paid',
-        description: 'All unpaid expenses and child support for this month are now paid.',
+        title: 'All Items Marked as Settled',
+        description: 'All unsettled expenses and child support for this month are now settled.',
       });
     }
   };
 
-  const handleMarkAllAsUnpaid = () => {
+  const handleMarkAllAsUnsettled = () => {
     if (!currentMonthData) return;
 
     let madeChanges = false;
     const updatedExpenses = currentMonthData.expenses.map(exp => {
-      if (exp.status === 'Paid') {
+      if (exp.status === 'Settled') {
         madeChanges = true;
-        return { ...exp, status: 'Unpaid' };
+        return { ...exp, status: 'Unsettled' };
       }
       return exp;
     });
 
     let updatedChildSupport = currentMonthData.childSupport;
-    if (currentMonthData.childSupport.status === 'Paid' && currentMonthData.childSupport.amount > 0) {
-      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Unpaid' };
+    if (currentMonthData.childSupport.status === 'Settled' && currentMonthData.childSupport.amount > 0) {
+      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Unsettled' };
       madeChanges = true;
     }
 
     if (madeChanges) {
       updateCurrentMonthData({ expenses: updatedExpenses, childSupport: updatedChildSupport });
       toast({
-        title: 'All Items Marked as Unpaid',
-        description: 'All paid expenses and child support for this month have been reverted to unpaid.',
+        title: 'All Items Marked as Unsettled',
+        description: 'All settled expenses and child support for this month have been reverted to unsettled.',
       });
     }
   };
@@ -318,8 +318,8 @@ function DashboardComponent() {
                     onDelete={deleteExpense}
                     onUpdateExpense={updateExpense}
                     onUpdateChildSupport={updateChildSupport}
-                    onMarkAllAsPaid={handleMarkAllAsPaid}
-                    onMarkAllAsUnpaid={handleMarkAllAsUnpaid}
+                    onMarkAllAsSettled={handleMarkAllAsSettled}
+                    onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
                     currentDate={currentDate}
                     parentNames={currentMonthData.parentNames}
                   >
@@ -382,3 +382,5 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
+
+    

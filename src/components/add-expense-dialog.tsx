@@ -120,7 +120,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
       date: values.date.toISOString(),
       paidBy: values.paidBy as Parent,
       category: values.category as ExpenseCategory,
-      status: 'Unpaid',
+      status: 'Unsettled',
       receiptUrl: receiptData.receiptUrl ?? null,
       receiptFilename: receiptData.receiptFilename ?? null,
     });
@@ -299,3 +299,5 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
     </Dialog>
   );
 }
+
+    

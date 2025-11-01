@@ -72,7 +72,7 @@ export function SettleBalanceDialog({
 
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
     const expensesPaidByMe = expenses
-      .filter((exp) => exp.paidBy === parent && exp.status === 'Unpaid')
+      .filter((exp) => exp.paidBy === parent && exp.status === 'Unsettled')
       .map((exp): ItemToSettle => {
         const split = exp.category === 'Medical' ? medicalOtherParentSplit : otherParentSplit;
         return {
@@ -87,7 +87,7 @@ export function SettleBalanceDialog({
       });
 
     const childSupportToMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
+    if (childSupport.paidBy === otherParent && childSupport.amount > 0 && childSupport.status === 'Unsettled') {
       childSupportToMe.push({
         id: 'child-support',
         description: 'Child Support',
@@ -104,7 +104,7 @@ export function SettleBalanceDialog({
 
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
     const expensesPaidByOther = expenses
-      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unpaid')
+      .filter((exp) => exp.paidBy === otherParent && exp.status === 'Unsettled')
       .map((exp): ItemToSettle => {
         const split = exp.category === 'Medical' ? medicalParentSplit : parentSplit;
         return {
@@ -119,7 +119,7 @@ export function SettleBalanceDialog({
       });
 
     const childSupportFromMe: ItemToSettle[] = [];
-    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status === 'Unpaid') {
+    if (childSupport.paidBy === parent && childSupport.amount > 0 && childSupport.status === 'Unsettled') {
       childSupportFromMe.push({
         id: 'child-support',
         description: 'Child Support',
@@ -134,32 +134,32 @@ export function SettleBalanceDialog({
     return [...expensesPaidByOther, ...childSupportFromMe].filter(item => item.owedAmount > 0);
   }, [expenses, childSupport, parent, otherParent, parentSplit, medicalParentSplit]);
 
-  const handleMarkAsPaid = (item: ItemToSettle) => {
+  const handleMarkAsSettled = (item: ItemToSettle) => {
     if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
-      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Settled' });
     } else {
-      onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+      onUpdateChildSupport({ ...childSupport, status: 'Settled' });
     }
     toast({
-      title: 'Payment Marked as Paid',
-      description: `"${item.description}" has been marked as paid.`,
+      title: 'Payment Marked as Settled',
+      description: `"${item.description}" has been marked as settled.`,
     });
   };
   
-  const handleMarkAllAsPaid = () => {
+  const handleMarkAllAsSettled = () => {
     itemsOwedByMe.forEach(item => {
-      if (item.status === 'Unpaid') {
+      if (item.status === 'Unsettled') {
         if (item.type === 'expense') {
           const originalExpense = expenses.find(exp => exp.id === item.id);
-          if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Paid' });
+          if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Settled' });
         } else {
-          onUpdateChildSupport({ ...childSupport, status: 'Paid' });
+          onUpdateChildSupport({ ...childSupport, status: 'Settled' });
         }
       }
     });
      toast({
-      title: 'All Owed Items Marked as Paid',
+      title: 'All Owed Items Marked as Settled',
       description: `All items you owed have been updated.`,
     });
   };
@@ -176,7 +176,7 @@ export function SettleBalanceDialog({
         <DialogHeader>
           <DialogTitle>Settle Balances</DialogTitle>
           <DialogDescription>
-             Review unpaid items and mark them as paid to settle the balance with {otherParentName}.
+             Review unsettled items and mark them as settled to settle the balance with {otherParentName}.
           </DialogDescription>
         </DialogHeader>
         
@@ -209,8 +209,8 @@ export function SettleBalanceDialog({
             <TabsContent value="owed-to-me">
               <SettlementTable 
                   items={itemsOwedToMe}
-                  actionLabel="Mark as Paid"
-                  onItemAction={handleMarkAsPaid}
+                  actionLabel="Mark as Settled"
+                  onItemAction={handleMarkAsSettled}
                   actionVariant='default'
                   isReceiving={true}
               />
@@ -218,10 +218,10 @@ export function SettleBalanceDialog({
             <TabsContent value="owed-by-me">
                 <SettlementTable 
                   items={itemsOwedByMe}
-                  actionLabel="Mark as Paid"
-                  onItemAction={handleMarkAsPaid}
+                  actionLabel="Mark as Settled"
+                  onItemAction={handleMarkAsSettled}
                   actionVariant='destructive'
-                  onMarkAllPaid={handleMarkAllAsPaid}
+                  onMarkAllSettled={handleMarkAllAsSettled}
                   isReceiving={false}
                 />
             </TabsContent>
@@ -245,19 +245,19 @@ interface SettlementTableProps {
   onItemAction: (item: ItemToSettle) => void;
   actionVariant: 'default' | 'destructive';
   isReceiving: boolean;
-  onMarkAllPaid?: () => void;
+  onMarkAllSettled?: () => void;
 }
 
-function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isReceiving, onMarkAllPaid }: SettlementTableProps) {
+function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isReceiving, onMarkAllSettled }: SettlementTableProps) {
   
-  const canMarkAllPaid = items.some(item => item.status === 'Unpaid');
+  const canMarkAllSettled = items.some(item => item.status === 'Unsettled');
   
   return (
     <>
-       {onMarkAllPaid && (
+       {onMarkAllSettled && (
           <div className="flex justify-end my-4">
-            <Button onClick={onMarkAllPaid} disabled={!canMarkAllPaid} variant="destructive">
-              Mark All as Paid
+            <Button onClick={onMarkAllSettled} disabled={!canMarkAllSettled} variant="destructive">
+              Mark All as Settled
             </Button>
           </div>
         )}
@@ -268,7 +268,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
               <TableHead>Description</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Owed Amount</TableHead>
-              {!isReceiving && <TableHead className="w-[120px] text-right">Action</TableHead>}
+              {!isReceiving && <TableHead className="w-auto text-right">Action</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -281,7 +281,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
                     </TableCell>
                     <TableCell>
                       <Badge variant="destructive">
-                        Unpaid
+                        Unsettled
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
@@ -303,7 +303,7 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
             ) : (
               <TableRow>
                 <TableCell colSpan={isReceiving ? 3 : 4} className="h-24 text-center">
-                  No unpaid items in this category.
+                  No unsettled items in this category.
                 </TableCell>
               </TableRow>
             )}
@@ -313,3 +313,5 @@ function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isRe
       </>
   )
 }
+
+    

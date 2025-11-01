@@ -38,9 +38,9 @@ export function SummaryCard({
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 
-  const unpaidExpenses = expenses.filter(e => e.status === 'Unpaid');
+  const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
   
-  const unpaidPaidByParent = unpaidExpenses
+  const unsettledPaidByParent = unsettledExpenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
@@ -64,14 +64,14 @@ export function SummaryCard({
     return totalShare;
   };
     
-  const parentExpenseShare = calculateShare(unpaidExpenses, expenseSplit, medicalExpenseSplit, parent);
+  const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
   
   // This is the balance from shared expenses only.
   // Positive means you are owed money, negative means you owe money for expenses.
-  const expenseBalance = unpaidPaidByParent - parentExpenseShare;
+  const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
   let childSupportBalance = 0;
-  if (childSupport.status === 'Unpaid' && childSupport.paidBy !== 'None') {
+  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
         // You are the payer. This amount is owed by you.
         childSupportBalance = -childSupport.amount;
@@ -95,8 +95,8 @@ export function SummaryCard({
   }
   
   const isButtonDisabled = !(
-      expenses.some(e => e.status === 'Unpaid') ||
-      (childSupport.amount > 0 && childSupport.status === 'Unpaid')
+      expenses.some(e => e.status === 'Unsettled') ||
+      (childSupport.amount > 0 && childSupport.status === 'Unsettled')
   );
 
   return (
@@ -123,8 +123,8 @@ export function SummaryCard({
                 <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
             </div>
             <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">You Paid (unpaid items)</p>
-                <p className="font-semibold text-green-600">+${unpaidPaidByParent.toFixed(2)}</p>
+                <p className="text-muted-foreground">You Paid (unsettled items)</p>
+                <p className="font-semibold text-green-600">+${unsettledPaidByParent.toFixed(2)}</p>
             </div>
              <Separator/>
              <div className="flex items-center justify-between text-sm">
@@ -135,7 +135,7 @@ export function SummaryCard({
             </div>
         </div>
 
-        {childSupport.amount > 0 && childSupport.status === 'Unpaid' && (
+        {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
             <div className='space-y-2 rounded-md bg-muted/30 p-3'>
                  <h4 className="font-medium text-sm">Child Support</h4>
                  <div className="flex items-center justify-between text-sm">
@@ -165,7 +165,7 @@ export function SummaryCard({
           </p>
         </div>
         <p className="pt-2 text-xs text-muted-foreground">
-          This is the outstanding balance for the month based on unpaid items.
+          This is the outstanding balance for the month based on unsettled items.
         </p>
       </CardContent>
       <CardFooter>
@@ -188,3 +188,5 @@ export function SummaryCard({
     </Card>
   );
 }
+
+    

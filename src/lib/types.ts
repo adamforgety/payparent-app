@@ -8,7 +8,7 @@ export type ExpenseCategory =
   | 'Child Support'
   | 'Other';
 
-export type PaymentStatus = 'Unpaid' | 'Paid';
+export type PaymentStatus = 'Unsettled' | 'Settled';
 
 export interface Expense {
   id: string;
@@ -70,3 +70,5 @@ export interface UserDoc {
   id: string;
   appData: AppData;
 }
+
+    

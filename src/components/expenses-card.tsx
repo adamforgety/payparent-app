@@ -44,8 +44,8 @@ interface ExpensesCardProps {
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
-  onMarkAllAsPaid: () => void;
-  onMarkAllAsUnpaid: () => void;
+  onMarkAllAsSettled: () => void;
+  onMarkAllAsUnsettled: () => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -73,8 +73,8 @@ export function ExpensesCard({
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
-  onMarkAllAsPaid,
-  onMarkAllAsUnpaid,
+  onMarkAllAsSettled,
+  onMarkAllAsUnsettled,
   children,
   currentDate,
   parentNames,
@@ -103,12 +103,12 @@ export function ExpensesCard({
     if (statusFilter === 'all') {
       return allItems;
     }
-    const filterStatus: PaymentStatus = statusFilter === 'paid' ? 'Paid' : 'Unpaid';
+    const filterStatus: PaymentStatus = statusFilter === 'settled' ? 'Settled' : 'Unsettled';
     return allItems.filter(item => item.status === filterStatus);
   }, [allItems, statusFilter]);
   
-  const hasUnpaidItems = allItems.some(item => item.status === 'Unpaid');
-  const hasPaidItems = allItems.some(item => item.status === 'Paid');
+  const hasUnsettledItems = allItems.some(item => item.status === 'Unsettled');
+  const hasSettledItems = allItems.some(item => item.status === 'Settled');
 
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
@@ -172,13 +172,13 @@ export function ExpensesCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onMarkAllAsPaid} disabled={!hasUnpaidItems}>
+                <DropdownMenuItem onClick={onMarkAllAsSettled} disabled={!hasUnsettledItems}>
                   <CheckCheck className="mr-2 h-4 w-4" />
-                  Mark All Paid
+                  Mark All Settled
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onMarkAllAsUnpaid} disabled={!hasPaidItems}>
+                <DropdownMenuItem onClick={onMarkAllAsUnsettled} disabled={!hasSettledItems}>
                   <XCircle className="mr-2 h-4 w-4" />
-                  Mark All Unpaid
+                  Mark All Unsettled
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                  <ExportButton
@@ -198,8 +198,8 @@ export function ExpensesCard({
       <CardContent>
         <div className="no-print flex items-center gap-2 mb-4">
           <Button variant={statusFilter === 'all' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All ({allItems.length})</Button>
-          <Button variant={statusFilter === 'unpaid' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('unpaid')}>Unpaid ({allItems.filter(i => i.status === 'Unpaid').length})</Button>
-          <Button variant={statusFilter === 'paid' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('paid')}>Paid ({allItems.filter(i => i.status === 'Paid').length})</Button>
+          <Button variant={statusFilter === 'unsettled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('unsettled')}>Unsettled ({allItems.filter(i => i.status === 'Unsettled').length})</Button>
+          <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({allItems.filter(i => i.status === 'Settled').length})</Button>
         </div>
         <Table>
           <TableHeader>
@@ -253,8 +253,21 @@ export function ExpensesCard({
                     <TableCell>
                       {!reimbursementRequired ? (
                         <Badge variant="outline">Not Required</Badge>
-                      ) : item.status === 'Paid' ? (
-                        <Badge variant="success">Settled</Badge>
+                      ) : item.status === 'Settled' ? (
+                         <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge 
+                                variant="success" 
+                                className="cursor-pointer" 
+                                onClick={() => handleStatusChange(item, 'Unsettled')}
+                              >
+                                Settled
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>Mark as Unsettled</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ) : (
                         <TooltipProvider>
                           <Tooltip>
@@ -263,7 +276,7 @@ export function ExpensesCard({
                                 variant="destructive"
                                 size="sm"
                                 className="h-auto px-2 py-1"
-                                onClick={() => handleStatusChange(item, 'Paid')}
+                                onClick={() => handleStatusChange(item, 'Settled')}
                               >
                                 Settle
                               </Button>
@@ -373,6 +386,6 @@ export function ExpensesCard({
   );
 }
 
-type StatusFilter = 'all' | 'paid' | 'unpaid';
+type StatusFilter = 'all' | 'settled' | 'unsettled';
 
     
