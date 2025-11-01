@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes, User } from 'firebase/auth';
 import { initializeFirebase } from '@/firebase';
 
 const loginSchema = z.object({
@@ -29,6 +29,8 @@ function getErrorMessage(error: any): string {
                 return "An account with this email address already exists.";
             case AuthErrorCodes.WEAK_PASSWORD:
                 return "The password is too weak. It must be at least 8 characters long.";
+            case 'auth/popup-closed-by-user':
+                return 'Sign-in process was cancelled.';
             default:
                 return "An unexpected error occurred. Please try again.";
         }
@@ -55,4 +57,13 @@ export async function signup(values: z.infer<typeof signupSchema>) {
   } catch (error) {
     return { success: false, error: getErrorMessage(error) };
   }
+}
+
+export async function handleGoogleSignIn(user: User) {
+    if (!user) {
+        return { success: false, error: 'User not found.' };
+    }
+    // We don't need to do anything special here for now, as the data creation
+    // is handled on the client-side when a new user is detected.
+    return { success: true, userId: user.uid };
 }
