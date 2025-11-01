@@ -276,6 +276,9 @@ function DashboardComponent() {
             </TabsList>
             <TabsContent value="dashboard">
               <div className="mt-8">
+                <div className="mb-6 flex justify-end">
+                    <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
+                </div>
                 <Tabs defaultValue="parent-1" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
