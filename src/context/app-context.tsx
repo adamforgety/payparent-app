@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import type { AppData, UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useFirebase, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 const LOCAL_STORAGE_KEY = 'payparent_app_data';
 
@@ -36,30 +36,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (userDoc) {
         // Data from Firestore exists
         setAppData(userDoc.appData);
-      } else if (user) {
-        // No Firestore data, check local storage or use initial
-        try {
-          const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
-          if (storedData) {
-            const localData = JSON.parse(storedData);
-            setAppData(localData);
-            // One-time migration to Firestore
-            if (userDocRef) {
-                setDoc(userDocRef, { id: user.uid, appData: localData }, { merge: true });
-                localStorage.removeItem(LOCAL_STORAGE_KEY); // Clean up local
-            }
-          } else {
-            const initial = { ...initialData, id: user.uid };
-            setAppData(initial);
-             if (userDocRef) {
-                setDoc(userDocRef, { id: user.uid, appData: initial }, { merge: true });
-            }
-          }
-        } catch (error) {
-          console.error("Error with data initialization:", error);
-          const initial = { ...initialData, id: user.uid };
-          setAppData(initial);
-        }
+      } else if (user && userDocRef) {
+        // No Firestore data, use initial and save it
+        const initial = { ...initialData, id: user.uid };
+        setAppData(initial);
+        setDocumentNonBlocking(userDocRef, { id: user.uid, appData: initial }, { merge: true });
       }
     }
 
@@ -72,10 +53,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       
       const updatedData = { ...prevData, ...newData } as AppData;
 
-      setDoc(userDocRef, { appData: updatedData }, { merge: true })
-        .catch(error => {
-            console.error("Failed to save to Firestore:", error);
-        });
+      // Use the correct non-blocking update function
+      setDocumentNonBlocking(userDocRef, { appData: updatedData }, { merge: true });
       
       return updatedData;
     });
