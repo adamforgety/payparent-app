@@ -4,7 +4,7 @@ import { format, startOfMonth } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ChildSupport, Expense, ParentNames } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { DropdownMenuItem } from './ui/dropdown-menu';
@@ -14,6 +14,8 @@ interface ExportButtonProps {
   childSupport: ChildSupport;
   currentDate: Date;
   parentNames: ParentNames;
+  expenseSplit: ExpenseSplit;
+  medicalExpenseSplit: MedicalExpenseSplit;
   asChild?: boolean;
 }
 
@@ -22,30 +24,57 @@ export function ExportButton({
   childSupport,
   currentDate,
   parentNames,
+  expenseSplit,
+  medicalExpenseSplit,
   asChild = false,
 }: ExportButtonProps) {
   const handleExport = () => {
-    const childSupportAsExpense: Omit<Expense, 'id' | 'status'> | null =
+    const childSupportItem =
       childSupport.amount > 0 && childSupport.paidBy !== 'None'
         ? {
+            id: 'child-support',
             date: startOfMonth(currentDate).toISOString(),
             description: 'Child Support',
             amount: childSupport.amount,
             paidBy: childSupport.paidBy,
-            category: 'Child Support',
+            category: 'Child Support' as const,
+            status: childSupport.status,
+            year: currentDate.getFullYear(),
+            month: currentDate.getMonth() + 1,
           }
         : null;
-        
-    const allItems = [...(childSupportAsExpense ? [childSupportAsExpense] : []), ...expenses];
 
+    const allItems: (Expense | (typeof childSupportItem))[] = [
+      ...(childSupportItem ? [childSupportItem] : []),
+      ...expenses,
+    ];
 
-    const dataToExport = allItems.map((item) => ({
-      Date: format(new Date(item.date), 'yyyy-MM-dd'),
-      Description: item.description,
-      Category: item.category,
-      'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy],
-      Amount: item.amount,
-    }));
+    const dataToExport = allItems.map((item) => {
+      let parent1Share = 0;
+      let parent2Share = 0;
+
+      if (item.category === 'Child Support') {
+        if (item.paidBy === 'Parent 1') {
+          parent1Share = item.amount;
+        } else if (item.paidBy === 'Parent 2') {
+          parent2Share = item.amount;
+        }
+      } else {
+        const split = item.category === 'Medical' ? medicalExpenseSplit : expenseSplit;
+        parent1Share = item.amount * (split['Parent 1'] / 100);
+        parent2Share = item.amount * (split['Parent 2'] / 100);
+      }
+
+      return {
+        Date: format(new Date(item.date), 'yyyy-MM-dd'),
+        Description: item.description,
+        Category: item.category,
+        'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy],
+        Amount: item.amount,
+        [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
+        [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
@@ -55,7 +84,7 @@ export function ExportButton({
       `transactions-${format(currentDate, 'MMMM-yyyy')}.xlsx`
     );
   };
-  
+
   const isDisabled = expenses.length === 0 && childSupport.amount === 0;
 
   if (asChild) {
@@ -68,7 +97,7 @@ export function ExportButton({
   }
 
   return (
-     <TooltipProvider>
+    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

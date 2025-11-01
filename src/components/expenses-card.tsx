@@ -28,7 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
@@ -40,7 +40,7 @@ interface ExpensesCardProps {
   expenses: Expense[];
   childSupport: ChildSupport;
   expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: ExpenseSplit;
+  medicalExpenseSplit: MedicalExpenseSplit;
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
@@ -184,6 +184,8 @@ export function ExpensesCard({
                   childSupport={childSupport}
                   currentDate={currentDate}
                   parentNames={parentNames}
+                  expenseSplit={expenseSplit}
+                  medicalExpenseSplit={medicalExpenseSplit}
                   asChild
                 />
               </DropdownMenuContent>
