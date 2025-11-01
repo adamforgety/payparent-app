@@ -43,7 +43,7 @@ export function PageHeader({ totalExpenses }: PageHeaderProps) {
   };
 
   const getInitials = (email: string | null | undefined) => {
-    if (!email) return '?';
+    if (!email) return null;
     return email[0].toUpperCase();
   };
 
@@ -91,7 +91,7 @@ export function PageHeader({ totalExpenses }: PageHeaderProps) {
                 <Button variant="outline" size="icon" className="rounded-full">
                   <Avatar>
                     <AvatarFallback>
-                      {getInitials(user.email)}
+                      {getInitials(user.email) ?? <UserIcon className='h-5 w-5' />}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
