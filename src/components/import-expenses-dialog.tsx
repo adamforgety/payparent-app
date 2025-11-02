@@ -203,6 +203,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           </DialogDescription>
           <div className="text-sm text-muted-foreground pt-2">
             <p className='mb-2'>The <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span> column must match one of the current parent names: "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Invalid rows will be skipped.</p>
+            <p className="mb-2">You only need to add the total amount paid; the system will automatically calculate the appropriate percentage distribution based on your settings.</p>
              <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
               <Download className="mr-2 h-4 w-4" />
               Download Template
