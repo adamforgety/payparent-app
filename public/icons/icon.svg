@@ -1,0 +1,9 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="512" height="512" rx="96" fill="hsl(0 0% 100%)"/>
+<path d="M149.333 384V352C149.333 334.333 156.667 317.333 169.333 305C182 292.667 199 285.333 216.667 285.333H294.667C312.333 285.333 329.333 292.667 342 305C354.667 317.333 362 334.333 362 352V384" stroke="hsl(250 60% 60%)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M256 253.333C285.333 253.333 309.333 229.333 309.333 200C309.333 170.667 285.333 146.667 256 146.667C226.667 146.667 202.667 170.667 202.667 200C202.667 229.333 226.667 253.333 256 253.333Z" stroke="hsl(250 60% 60%)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M294.667 285.333H336.667C354.333 285.333 371.333 292.667 384 305C396.667 317.333 404.333 334.333 404.333 352V384" stroke="hsl(250 60% 60%)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M216.667 285.333H128C110.333 285.333 93.3333 292.667 80.6667 305C68 317.333 60.6667 334.333 60.6667 352V384" stroke="hsl(250 60% 60%)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M309.333 200C309.333 170.667 333.333 146.667 362.667 146.667C392 146.667 416.333 170.667 416.333 200C416.333 229.333 392 253.333 362.667 253.333" stroke="hsl(250 60% 60%)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M202.667 200C202.667 170.667 178.667 146.667 149.333 146.667C120 146.667 95.6667 170.667 95.6667 200C95.6667 229.333 120 253.333 149.333 253.333" stroke="hsl(250 60% 60%)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
