@@ -133,7 +133,7 @@ export function SummaryCard({
         return { monthId, balance: -1 * (expenseBalance + childSupportBalance) };
       })
       .filter((item) => item.balance !== 0);
-  }, [appData.months, currentMonthId, parent, expenseSplit, medicalExpenseSplit]);
+  }, [appData.months, currentMonthId, parent]);
 
   const previousMonthsTotalBalance = previousBalances.reduce(
     (acc, curr) => acc + curr.balance,
@@ -217,7 +217,7 @@ export function SummaryCard({
             <p className="font-semibold">${parentExpenseShare.toFixed(2)}</p>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <p className="text-muted-foreground">You Paid (unsettled items)</p>
+            <p className="text-muted-foreground">Unsettled Expenses You Paid</p>
             <p className="font-semibold text-green-600">
               +${unsettledPaidByParent.toFixed(2)}
             </p>
@@ -260,7 +260,7 @@ export function SummaryCard({
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-sm py-2">
                 <div className="flex justify-between w-full pr-4">
-                  <span>Balance from Previous Months</span>
+                  <span className="font-medium">Balance from Previous Months</span>
                   <span
                     className={cn(
                       'font-semibold',
@@ -334,6 +334,8 @@ export function SummaryCard({
           childSupport={childSupport}
           netBalance={currentMonthNetBalance}
           parentNames={parentNames}
+          appData={appData}
+          currentMonthId={currentMonthId}
         >
           <Button className="w-full" disabled={isButtonDisabled}>
             <HandCoins className="mr-2 h-4 w-4" />
