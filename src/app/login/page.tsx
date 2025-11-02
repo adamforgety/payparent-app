@@ -7,7 +7,7 @@ import { useState, useTransition, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,7 @@ function getErrorMessage(error: any): string {
           case AuthErrorCodes.USER_DISABLED:
               return "This user account has been disabled.";
           case AuthErrorCodes.USER_NOT_FOUND:
+          case 'auth/wrong-password':
           case AuthErrorCodes.INVALID_LOGIN_CREDENTIALS:
               return "Invalid credentials. Please try again.";
           case AuthErrorCodes.EMAIL_EXISTS:
@@ -113,6 +114,7 @@ export default function LoginPage() {
     if (!firestore) return null;
     try {
       const usersRef = collection(firestore, 'users');
+      // Note the query path 'appData.username' to match the nested structure
       const q = query(usersRef, where('appData.username', '==', username), limit(1));
       const querySnapshot = await getDocs(q);
 
@@ -124,6 +126,7 @@ export default function LoginPage() {
       return userDoc.email;
     } catch (error) {
       console.error("Client-side error finding user by username:", error);
+      // Let's not show a toast here to avoid spamming errors, but log it.
       return null;
     }
   }, [firestore]);
@@ -136,14 +139,17 @@ export default function LoginPage() {
       try {
         let emailToLogin = emailOrUsername;
         
+        // If it doesn't look like an email, treat it as a username
         if (!emailOrUsername.includes('@')) {
           const foundEmail = await findEmailByUsername(emailOrUsername);
           if (foundEmail) {
             emailToLogin = foundEmail;
           } else {
-            loginForm.setError('emailOrUsername', {
-              type: 'manual',
-              message: 'Username not found.',
+            // If username is not found, we can show a specific error
+            toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'Invalid credentials. Please try again.',
             });
             return;
           }
@@ -167,16 +173,20 @@ export default function LoginPage() {
   const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
     startTransition(async () => {
       try {
-        const existingEmail = await findEmailByUsername(values.username);
-        if (existingEmail) {
-          signupForm.setError('username', {
-            type: 'manual',
-            message: 'This username is already taken.'
+        // 1. Check if the username is already taken before creating the user
+        const usernameExists = await findEmailByUsername(values.username);
+        if (usernameExists) {
+          signupForm.setError('username', { 
+            type: 'manual', 
+            message: 'This username is already taken. Please choose another.' 
           });
           return;
         }
-      
+
+        // 2. Create the user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        
+        // 3. Create the user document in Firestore with the username
         const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email, values.username);
         
         if (actionResult.success) {
@@ -184,6 +194,7 @@ export default function LoginPage() {
             router.push(next);
             router.refresh();
         } else {
+           // This handles errors from the server action (e.g., Firestore permissions)
            toast({
             variant: 'destructive',
             title: 'Sign-up Failed',
@@ -192,6 +203,7 @@ export default function LoginPage() {
         }
 
       } catch (error) {
+        // This handles errors from createUserWithEmailAndPassword (e.g., email already exists)
         toast({
           variant: 'destructive',
           title: 'Sign-up Failed',
@@ -429,3 +441,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

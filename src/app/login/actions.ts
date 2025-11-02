@@ -2,7 +2,7 @@
 
 import { doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
-import type { UserDoc } from '@/lib/types';
+import type { UserDoc, AppData } from '@/lib/types';
 import { initialData } from '@/lib/data';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -18,9 +18,11 @@ export async function handleNewUser(userId: string, email: string | null, userna
 
     const { firestore } = initializeFirebase();
     
-    // Deep copy initial data and set the user-specific username.
-    const appData = JSON.parse(JSON.stringify(initialData));
-    appData.username = username;
+    // Create a fresh copy of the initial app data structure
+    const appData: AppData = {
+        ...JSON.parse(JSON.stringify(initialData)),
+        username: username, // Set the user-specific username
+    };
     
     // Create the full UserDoc payload with the correct nested structure.
     const userDocPayload: UserDoc = {
@@ -32,6 +34,7 @@ export async function handleNewUser(userId: string, email: string | null, userna
     const userDocRef = doc(firestore, 'users', userId);
     
     try {
+        // Using setDoc to create the document with the full payload
         await setDoc(userDocRef, userDocPayload);
         return { success: true, userId: userId };
     } catch (serverError: any) {
@@ -42,10 +45,11 @@ export async function handleNewUser(userId: string, email: string | null, userna
           requestResourceData: userDocPayload,
         });
 
-        // The error is emitted globally and will be caught by a listener component.
-        // For server actions, this error will now appear in the server logs.
+        // Emit the error. This can be caught by a global listener on the client
+        // or will just be logged on the server.
         errorEmitter.emit('permission-error', permissionError);
 
+        // Return a generic error to the client for security.
         return { success: false, error: 'Could not create user profile in database.' };
     }
 }

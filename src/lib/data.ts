@@ -4,10 +4,9 @@ import { format } from 'date-fns';
 const today = new Date();
 const monthId = format(today, 'yyyy-MM');
 
-// Note: The top-level `id` and `username` properties on AppData are deprecated
-// and will be removed in a future version. They are managed within the UserDoc.
-export const initialData: Omit<AppData, 'id' | 'username'> = {
-  username: 'default_user', // This will be replaced by the actual username at creation.
+// The initial structure for the `appData` object.
+// The `username` will be added to this structure when a new user is created.
+export const initialData: Omit<AppData, 'username'> = {
   months: {
     [monthId]: {
       id: monthId,
@@ -34,3 +33,5 @@ export const initialData: Omit<AppData, 'id' | 'username'> = {
     },
   },
 };
+
+    
