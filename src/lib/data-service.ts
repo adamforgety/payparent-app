@@ -10,7 +10,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 /**
  * Fetches the user's application data from Firestore.
  * If the user document doesn't exist, it creates it with initial data.
- * It also corrects old default parent names if found.
  * @param firestore - The Firestore instance.
  * @param userId - The ID of the user.
  * @returns A promise that resolves to the AppData.
@@ -21,32 +20,16 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
     const docSnap = await getDoc(userDocRef);
 
     if (docSnap.exists()) {
-      // Document exists, get its data.
+      // Document exists, return its data.
       const userDoc = docSnap.data() as UserDoc;
-      let appData = userDoc.appData;
-
-      // Check for and correct old parent names.
-      let needsUpdate = false;
-      for (const monthId in appData.months) {
-        const monthData = appData.months[monthId];
-        if (monthData.parentNames['Parent 1'] === 'Mother' || monthData.parentNames['Parent 2'] === 'Father') {
-          monthData.parentNames['Parent 1'] = 'Parent 1';
-          monthData.parentNames['Parent 2'] = 'Parent 2';
-          needsUpdate = true;
-        }
-      }
-
-      // If we corrected any names, save the changes back to Firestore.
-      if (needsUpdate) {
-        console.log("Correcting old parent names in the database.");
-        await saveUserData(firestore, userId, appData);
-      }
-
-      return appData;
+      return userDoc.appData;
     } else {
       // Document doesn't exist, create it with initial data.
       console.log('No user document found. Creating one with initial data.');
-      const initial = { ...initialData, id: userId };
+      
+      const initial = JSON.parse(JSON.stringify(initialData));
+      initial.id = userId;
+      
       await saveUserData(firestore, userId, initial);
       
       // Return the initial data for immediate use in the app.
@@ -55,7 +38,9 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
   } catch (error) {
     console.error("Error fetching or creating user document:", error);
     // In case of error, fall back to a local version of initial data.
-    return { ...initialData, id: userId };
+    const fallbackData = JSON.parse(JSON.stringify(initialData));
+    fallbackData.id = userId;
+    return fallbackData;
   }
 }
 
@@ -71,17 +56,20 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
     return;
   }
   const userDocRef = doc(firestore, 'users', userId);
-  const userDocPayload: UserDoc = { id: userId, appData };
+  const userDocPayload: UserDoc = { id: userId, appData: appData, email: appData.months[Object.keys(appData.months)[0]]?.parentNames?.['Parent 1'] || null };
   
+  // Create a deep copy to avoid Firestore read-only errors in dev
+  const payloadToSave = JSON.parse(JSON.stringify(userDocPayload));
+
   try {
-    await setDoc(userDocRef, userDocPayload, { merge: true });
+    await setDoc(userDocRef, payloadToSave, { merge: true });
   } catch (error) {
      errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: userDocRef.path,
         operation: 'write',
-        requestResourceData: userDocPayload,
+        requestResourceData: payloadToSave,
       })
     );
     // Re-throw the error if you want the caller to be able to handle it too
