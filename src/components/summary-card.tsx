@@ -177,9 +177,9 @@ export function SummaryCard({
   let transferDescription = 'All settled up';
   if (!isSettled) {
     if (totalNetBalance < 0) {
-      transferDescription = `${otherParentName} owes you`;
+      transferDescription = `${otherParentName} Owes You`;
     } else if (totalNetBalance > 0) {
-      transferDescription = `You owe ${otherParentName}`;
+      transferDescription = `You Owe ${otherParentName}`;
     }
   }
 
@@ -306,7 +306,7 @@ export function SummaryCard({
         <Separator />
         
         <div className="rounded-lg bg-secondary/50 p-4 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base font-medium text-foreground">
             {transferDescription}
           </p>
           <p
