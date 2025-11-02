@@ -37,9 +37,7 @@ import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { ImportExpensesDialog } from './import-expenses-dialog';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -89,7 +87,7 @@ export function ExpensesCard({
   
   const allItems = useMemo<DisplayItem[]>(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
-    if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && !childSupport.ignored) {
+    if (childSupport.amount > 0 && childSupport.paidBy !== 'None') {
         const childSupportItem: DisplayItem = {
             id: 'child-support',
             date: startOfMonth(currentDate).toISOString(),
@@ -135,7 +133,7 @@ export function ExpensesCard({
       }
     }
     
-    if (childSupport.paidBy === parent && !childSupport.ignored) {
+    if (childSupport.paidBy === parent) {
       totalShare += childSupport.amount;
     }
     
@@ -372,7 +370,7 @@ export function ExpensesCard({
             ${totalExpenses.toFixed(2)}
           </span>
         </div>
-        {childSupport.amount > 0 && !childSupport.ignored && (
+        {childSupport.amount > 0 && (
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Child Support:</span>
             <span className="font-medium">

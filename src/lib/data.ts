@@ -15,7 +15,6 @@ export const initialData: AppData = {
         amount: 0,
         paidBy: 'None',
         status: 'Unsettled',
-        ignored: false,
       },
       expenseSplit: {
         'Parent 1': 50,

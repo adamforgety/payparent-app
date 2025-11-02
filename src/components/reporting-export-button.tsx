@@ -37,13 +37,6 @@ export function ReportingExportButton({
 }: ReportingExportButtonProps) {
   const handleExport = () => {
     const dataToExport = transactions
-      .filter(item => {
-        // Exclude ignored child support payments
-        if (item.category === 'Child Support') {
-          return !item.ignored;
-        }
-        return true;
-      })
       .map((item) => {
         let parent1Share = 0;
         let parent2Share = 0;
