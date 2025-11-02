@@ -146,10 +146,10 @@ export function SettleBalanceDialog({
   }, [expenses, childSupport, parent, otherParent, expenseSplit, medicalExpenseSplit]);
 
   const handleMarkAsSettled = (item: ItemToSettle) => {
+    const monthId = format(new Date(), 'yyyy-MM');
     if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
       if(originalExpense) {
-        const monthId = format(new Date(originalExpense.date), 'yyyy-MM');
         updateExpense({ ...originalExpense, status: 'Settled' }, monthId);
       }
     } else {
@@ -164,10 +164,10 @@ export function SettleBalanceDialog({
   const handleMarkAllAsSettled = () => {
     itemsOwedByMe.forEach(item => {
       if (item.status === 'Unsettled') {
+        const monthId = format(new Date(), 'yyyy-MM');
         if (item.type === 'expense') {
           const originalExpense = expenses.find(exp => exp.id === item.id);
           if(originalExpense) {
-            const monthId = format(new Date(originalExpense.date), 'yyyy-MM');
             updateExpense({ ...originalExpense, status: 'Settled' }, monthId);
           }
         } else {
@@ -215,11 +215,11 @@ export function SettleBalanceDialog({
           <Tabs defaultValue="owed-by-me" className="mt-4">
             <TabsList className="grid w-full grid-cols-2 h-auto flex-wrap">
               <TabsTrigger value="owed-to-me" className="flex-wrap h-auto py-1.5">
-                <span className="mr-2">Owed to You ({itemsOwedToMe.length})</span>
+                <span className="mr-2">{otherParentName} Owes You ({itemsOwedToMe.length})</span>
                 <span className="text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
                 </TabsTrigger>
               <TabsTrigger value="owed-by-me" className="flex-wrap h-auto py-1.5">
-                <span className="mr-2">Owed by You ({itemsOwedByMe.length})</span>
+                <span className="mr-2">You Owe {otherParentName} ({itemsOwedByMe.length})</span>
                 <span className="text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
                 </TabsTrigger>
             </TabsList>
