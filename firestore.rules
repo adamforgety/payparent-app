@@ -13,8 +13,8 @@
  * Key Security Decisions:
  * - A user must be authenticated to access any data.
  * - A user can read/write their own `/users/{userId}` document.
- * - A user can read/write any data under `/users/{coParentId}/...` if their own `/users/{userId}` document has a `coParentId` field that matches the `{coParentId}` in the path.
- * - This allows for a two-way data sharing model once two users have linked their accounts.
+ * - A user can read their co-parent's profile to facilitate UI features.
+ * - A user cannot write to their co-parent's profile (e.g., change their co-parent's email or link).
  *
  * Denormalization for Authorization:
  * The `coParentId` is stored directly in the user's document. This requires one `get()` call to check for the relationship, but avoids complex hierarchical rules.
@@ -40,15 +40,16 @@ service cloud.firestore {
 
     /**
      * @description Rules for the user's own profile document.
-     * - A user can always read and write their own profile.
-     * - A user can read their co-parent's profile to facilitate UI features.
-     * - A user cannot write to their co-parent's profile (e.g., change their co-parent's email or link).
+     * - A user can write to their own profile.
+     * - Any authenticated user can read any other user's profile to verify existence before linking. This does not expose sub-collections.
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
-      // Allow a user to read their co-parent's profile data (e.g., to see their email)
-      allow get: if isCoParent(userId);
+      allow write: if isOwner(userId);
+      // Allow any authenticated user to read the top-level user doc.
+      // This is needed to verify a co-parent's existence before linking accounts.
+      // This rule does NOT grant access to any sub-collections.
+      allow get: if request.auth != null;
     }
     
     /**
