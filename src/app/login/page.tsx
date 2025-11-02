@@ -7,7 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { handleGoogleSignIn, handleNewUser, getErrorMessage } from './actions';
+import { handleGoogleSignIn, handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 
@@ -40,6 +40,30 @@ const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
+
+function getErrorMessage(error: any): string {
+  if (typeof error === 'string') return error;
+  if (error && typeof error.code === 'string') {
+      switch (error.code) {
+          case AuthErrorCodes.INVALID_EMAIL:
+              return "The email address is not valid.";
+          case AuthErrorCodes.USER_DISABLED:
+              return "This user account has been disabled.";
+          case AuthErrorCodes.USER_NOT_FOUND:
+          case AuthErrorCodes.INVALID_LOGIN_CREDENTIALS:
+              return "Invalid email or password. Please try again.";
+          case AuthErrorCodes.EMAIL_EXISTS:
+              return "An account with this email address already exists.";
+          case AuthErrorCodes.WEAK_PASSWORD:
+              return "The password is too weak. It must be at least 8 characters long.";
+          case 'auth/popup-closed-by-user':
+              return 'Sign-in process was cancelled.';
+          default:
+              return "An unexpected error occurred. Please try again.";
+      }
+  }
+  return "An unknown error occurred.";
+}
 
 const GoogleIcon = () => (
     <svg className="h-4 w-4" viewBox="0 0 48 48">
