@@ -103,9 +103,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     reportTitle,
     reportDescription,
   } = useMemo(() => {
-    const reportTitleForMonth = (month: string) => month === 'all' ? 'Yearly Report' : 'Monthly Report';
+    const reportTitleForMonth = (month: string) => month === 'all' ? 'Year-to-Date Report' : 'Monthly Report';
     const reportDescriptionForPeriod = (year: string, month: string) => 
-      `An overview of all expenses for ${month === 'all' ? year : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
+      `An overview of all expenses for ${month === 'all' ? `the year ${year}` : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
 
     if (!appData?.months || Object.keys(appData.months).length === 0) {
       const year = String(getYear(new Date()));
@@ -212,7 +212,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   }, [appData, selectedYear, selectedMonth]);
   
   useEffect(() => {
-    if (!availableMonths.some(m => m.value === selectedMonth)) {
+    // If the selected month is no longer available in the new year's list, reset to 'all'
+    if (selectedMonth !== 'all' && !availableMonths.some(m => m.value === selectedMonth)) {
       setSelectedMonth('all');
     }
   }, [selectedYear, availableMonths, selectedMonth]);
@@ -534,14 +535,16 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         </TableRow>
                     )}
                   </TableBody>
-                  <TableFooter>
-                    <TableRow className="bg-secondary/50 font-bold">
-                      <TableCell colSpan={4}>Grand Totals</TableCell>
-                      <TableCell className="text-right">${totalAmount.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${totalParent1Share.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${totalParent2Share.toFixed(2)}</TableCell>
-                    </TableRow>
-                  </TableFooter>
+                  {sortedTransactions.length > 0 && (
+                    <TableFooter>
+                      <TableRow className="bg-secondary/50 font-bold">
+                        <TableCell colSpan={4}>Grand Totals</TableCell>
+                        <TableCell className="text-right">${totalAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${totalParent1Share.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${totalParent2Share.toFixed(2)}</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  )}
                 </Table>
               </div>
           </TabsContent>
