@@ -218,7 +218,7 @@ function DashboardComponent() {
         <PageHeader
           totalExpenses={totalExpenses}
         />
-        <main className="container mx-auto p-4 md:p-8">
+        <main className="container mx-auto p-4 pb-24 md:p-8">
           <div className="mb-8 hidden print-only">
             <div className="print-header flex items-center justify-between">
               <Logo />
@@ -370,7 +370,7 @@ function DashboardComponent() {
                 </div>
             </TabsContent>
             <TabsContent value="reporting">
-              <div className="mt-6">
+               <div className="mt-6">
                 <ReportingPage appData={appData} />
               </div>
             </TabsContent>
@@ -413,7 +413,7 @@ function DashboardComponent() {
               </div>
             </TabsContent>
           </Tabs>
-          <div className="fixed bottom-8 right-8 z-50 no-print">
+          <div className="fixed bottom-8 left-8 z-50 no-print md:left-auto md:right-8">
             <TooltipProvider>
                 <Tooltip>
                 <TooltipTrigger asChild>
@@ -423,7 +423,7 @@ function DashboardComponent() {
                         </Button>
                       </AddExpenseDialog>
                 </TooltipTrigger>
-                <TooltipContent side="left">
+                <TooltipContent side="right" sideOffset={15}>
                     <p>Add New Expense</p>
                 </TooltipContent>
                 </Tooltip>
@@ -455,3 +455,5 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
+
+    
