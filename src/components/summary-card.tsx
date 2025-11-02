@@ -124,9 +124,11 @@ export function SummaryCard({
           !isFutureMonth
         ) {
           if (monthData.childSupport.paidBy === parent) {
-            childSupportBalance = monthData.childSupport.amount;
-          } else {
+            // If I paid, it's a debit from my perspective for this calculation
             childSupportBalance = -monthData.childSupport.amount;
+          } else {
+             // If they paid, it's a credit to me
+            childSupportBalance = monthData.childSupport.amount;
           }
         }
         
@@ -161,10 +163,12 @@ export function SummaryCard({
   const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
 
   if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
-    if (childSupport.paidBy === parent) {
-      childSupportBalance = childSupport.amount;
-    } else {
+     if (childSupport.paidBy === parent) {
+      // If I am the payer, this is a debit (money I paid out)
       childSupportBalance = -childSupport.amount;
+    } else {
+      // If the other parent is the payer, this is a credit for me (money I received)
+      childSupportBalance = childSupport.amount;
     }
   }
 
@@ -176,10 +180,10 @@ export function SummaryCard({
 
   let transferDescription = 'All settled up';
   if (!isSettled) {
-    if (totalNetBalance < 0) {
-      transferDescription = `${otherParentName} Owes You`;
-    } else if (totalNetBalance > 0) {
+    if (totalNetBalance > 0) {
       transferDescription = `You Owe ${otherParentName}`;
+    } else if (totalNetBalance < 0) {
+      transferDescription = `${otherParentName} Owes You`;
     }
   }
 
