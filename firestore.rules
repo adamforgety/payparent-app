@@ -39,24 +39,32 @@ service cloud.firestore {
     }
     
     /**
-     * @description Helper function to check if the write operation is only an attempt to link accounts.
-     * It ensures that a user can only write their own UID to another user's `coParentId` field.
-     * It also allows a user to set their own `coParentId` to null (unlinking).
+     * @description Helper function to check if the write operation is only an attempt to link or unlink accounts.
      */
     function isLinkingOperation(userId) {
-      // The incoming data must have a coParentId field.
-      // The value of that coParentId must be the requesting user's UID.
-      // The write must only affect the coParentId field.
-      let isLinkingAnother = request.resource.data.keys().hasOnly(['coParentId']) &&
-                             request.resource.data.coParentId == request.auth.uid;
-                             
-      // Allows a user to unlink themselves.
-      let isUnlinkingSelf = isOwner(userId) &&
-                            (request.resource.data.coParentId == null ||
-                            (resource.data.coParentId != null && request.resource.data.coParentId != resource.data.coParentId));
+        // The requesting user must be authenticated.
+        if (request.auth == null) {
+            return false;
+        }
+
+        let isLinkingAnotherUser = 
+            // The document being written to is NOT the requester's own document.
+            !isOwner(userId) &&
+            // The write is only modifying the `coParentId` field.
+            request.resource.data.keys().hasOnly(['coParentId', 'appData', 'id', 'email']) &&
+            // The value being written to `coParentId` is the requester's own UID.
+            request.resource.data.coParentId == request.auth.uid;
+            
+        let isUpdatingSelf =
+            // The document being written to IS the requester's own document.
+            isOwner(userId) &&
+            // The write is only modifying the `coParentId` field.
+             request.resource.data.keys().hasOnly(['coParentId', 'appData', 'id', 'email']);
 
 
-      return isLinkingAnother || isUnlinkingSelf;
+        // The operation is allowed if the user is linking to another user
+        // OR if they are updating their own coParentId (to link or unlink).
+        return isLinkingAnotherUser || isUpdatingSelf;
     }
 
 
@@ -68,7 +76,7 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow write: if isOwner(userId) || isLinkingOperation(userId);
+      allow write: if isLinkingOperation(userId);
       allow get: if request.auth != null;
     }
     
