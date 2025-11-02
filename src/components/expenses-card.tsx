@@ -181,7 +181,7 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex flex-wrap items-center justify-start sm:justify-end gap-2">
+          <div className="no-print flex items-center justify-start sm:justify-end gap-2">
             {children}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
