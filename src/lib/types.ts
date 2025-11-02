@@ -60,8 +60,7 @@ export interface MonthData {
 }
 
 export interface AppData {
-  id: string;
-  username?: string;
+  username: string;
   months: {
     [monthId: string]: MonthData;
   };

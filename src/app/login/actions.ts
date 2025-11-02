@@ -11,18 +11,16 @@ import { FirestorePermissionError } from '@/firebase/errors';
 /**
  * Handles the creation of a new user document in Firestore after sign-up.
  */
-export async function handleNewUser(userId: string, email: string | null, username?: string) {
-    if (!userId) {
-        return { success: false, error: 'User not found.' };
+export async function handleNewUser(userId: string, email: string | null, username: string) {
+    if (!userId || !email) {
+        return { success: false, error: 'User ID or email not provided.' };
     }
 
     const { firestore } = initializeFirebase();
     
-    // Deep copy initial data and set the user-specific ID and username.
+    // Deep copy initial data and set the user-specific username.
     const appData = JSON.parse(JSON.stringify(initialData));
-    if (username) {
-        appData.username = username;
-    }
+    appData.username = username;
     
     // Create the full UserDoc payload with the correct nested structure.
     const userDocPayload: UserDoc = {
@@ -33,11 +31,10 @@ export async function handleNewUser(userId: string, email: string | null, userna
 
     const userDocRef = doc(firestore, 'users', userId);
     
-    // Use setDoc to create the document for the new user.
-    // We are NOT awaiting the setDoc call. Instead, we chain a .catch() block
-    // to it. This is a specific pattern required by the error handling architecture
-    // to generate detailed, contextual errors for security rule violations.
-    setDoc(userDocRef, userDocPayload).catch((serverError) => {
+    try {
+        await setDoc(userDocRef, userDocPayload);
+        return { success: true, userId: userId };
+    } catch (serverError: any) {
         // Create the rich, contextual error.
         const permissionError = new FirestorePermissionError({
           path: userDocRef.path,
@@ -46,12 +43,9 @@ export async function handleNewUser(userId: string, email: string | null, userna
         });
 
         // The error is emitted globally and will be caught by a listener component.
-        // This avoids manual console.error and provides a better debugging experience.
         // For server actions, this error will now appear in the server logs.
         errorEmitter.emit('permission-error', permissionError);
-    });
 
-    // We return success optimistically. If an error occurs, it will be
-    // handled by the global error handler.
-    return { success: true, userId: userId };
+        return { success: false, error: 'Could not create user profile in database.' };
+    }
 }

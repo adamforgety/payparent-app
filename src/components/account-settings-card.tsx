@@ -110,6 +110,7 @@ export function AccountSettingsCard() {
   }, [appData?.username, usernameForm]);
 
   const findEmailByUsername = async (username: string): Promise<string | null> => {
+      if (!firestore) return null;
       try {
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('appData.username', '==', username), limit(1));

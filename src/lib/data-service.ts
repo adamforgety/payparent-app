@@ -31,24 +31,22 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       
       const auth = getAuth();
       const email = auth.currentUser?.email || null;
-      // Use display name as a fallback for username if available
-      const username = auth.currentUser?.displayName || undefined; 
+      // Generate a default username from the email if possible
+      const username = email ? email.split('@')[0] : `user_${userId.substring(0, 5)}`; 
 
       await handleNewUser(userId, email, username);
       
       // Return a local copy of the initial data for the current session.
       const newInitialData = JSON.parse(JSON.stringify(initialData));
-      newInitialData.id = userId;
-      if (username) {
-        newInitialData.username = username;
-      }
+      newInitialData.username = username;
       return newInitialData;
     }
   } catch (error) {
     console.error("Error fetching or creating user document:", error);
     // In case of error, fall back to a local version of initial data.
     const fallbackData = JSON.parse(JSON.stringify(initialData));
-    fallbackData.id = userId;
+    const email = getAuth().currentUser?.email;
+    fallbackData.username = email ? email.split('@')[0] : `user_${userId.substring(0, 5)}`;
     return fallbackData;
   }
 }
@@ -78,7 +76,8 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
 
   try {
     // Use updateDoc to merge changes into the nested appData object correctly.
-    await updateDoc(userDocRef, flattenedPayload);
+    // setDoc with merge:true can also be used but updateDoc is more idiomatic for partial updates.
+    await setDoc(userDocRef, flattenedPayload, { merge: true });
   } catch (error) {
      errorEmitter.emit(
       'permission-error',

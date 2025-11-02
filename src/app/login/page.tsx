@@ -184,16 +184,16 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email, values.username);
         
-        if (actionResult.error) {
+        if (actionResult.success) {
+            toast({ title: 'Sign-up Successful', description: 'Welcome! You are now logged in.' });
+            router.push(next);
+            router.refresh();
+        } else {
            toast({
             variant: 'destructive',
             title: 'Sign-up Failed',
             description: actionResult.error,
           });
-        } else {
-            toast({ title: 'Sign-up Successful', description: 'Welcome! You are now logged in.' });
-            router.push(next);
-            router.refresh();
         }
 
       } catch (error) {

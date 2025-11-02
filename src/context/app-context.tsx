@@ -17,7 +17,7 @@ import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
 
 interface AppContextType {
   appData: AppData | null;
-  updateAppData: (newData: Partial<AppData>) => void;
+  updateAppData: (newData: Partial<Omit<AppData, 'id'>>) => void;
   isLoading: boolean;
   addExpense: (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   addImportedExpenses: (
@@ -61,7 +61,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   }, [user, firestore]);
 
   const updateAppData = useCallback(
-    async (newData: Partial<AppData>) => {
+    async (newData: Partial<Omit<AppData, 'id'>>) => {
       if (!user || !firestore) return;
 
       // Use a function for state updates to get the most recent state
@@ -335,7 +335,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       updateExpense,
       updateChildSupport,
     }),
-    [appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense]
+    [appData, updateAppData, isLoading]
   );
 
   if (isLoading) {

@@ -4,9 +4,10 @@ import { format } from 'date-fns';
 const today = new Date();
 const monthId = format(today, 'yyyy-MM');
 
-export const initialData: AppData = {
-  id: 'new-user', // This will be replaced by the user's UID
-  username: '',
+// Note: The top-level `id` and `username` properties on AppData are deprecated
+// and will be removed in a future version. They are managed within the UserDoc.
+export const initialData: Omit<AppData, 'id' | 'username'> = {
+  username: 'default_user', // This will be replaced by the actual username at creation.
   months: {
     [monthId]: {
       id: monthId,
@@ -33,5 +34,3 @@ export const initialData: AppData = {
     },
   },
 };
-
-    
