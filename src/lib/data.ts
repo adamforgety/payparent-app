@@ -6,8 +6,7 @@ const monthId = format(today, 'yyyy-MM');
 
 // The initial structure for the `appData` object.
 // The `username` will be added to this structure when a new user is created.
-export const initialData: AppData = {
-  username: '', // This will be set during user creation
+export const initialData: Omit<AppData, 'username'> = {
   months: {
     [monthId]: {
       id: monthId,

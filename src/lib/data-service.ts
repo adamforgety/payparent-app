@@ -37,14 +37,19 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       await handleNewUser(userId, email, username);
       
       // Return a local copy of the initial data for the current session.
-      const newInitialData = JSON.parse(JSON.stringify(initialData));
-      newInitialData.username = username;
+      const newInitialData: AppData = {
+          ...JSON.parse(JSON.stringify(initialData)),
+          username: username
+      }
       return newInitialData;
     }
   } catch (error) {
     console.error("Error fetching or creating user document:", error);
     // In case of error, fall back to a local version of initial data.
-    const fallbackData = JSON.parse(JSON.stringify(initialData));
+    const fallbackData: AppData = {
+        ...JSON.parse(JSON.stringify(initialData)),
+        username: ''
+    };
     const email = getAuth().currentUser?.email;
     fallbackData.username = email ? email.split('@')[0] : `user_${userId.substring(0, 5)}`;
     return fallbackData;
