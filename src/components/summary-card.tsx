@@ -213,7 +213,7 @@ export function SummaryCard({
         <div className="space-y-2 rounded-md bg-muted/30 p-3">
           <h4 className="font-medium text-sm">This Month's Balance</h4>
           <div className="flex items-center justify-between text-sm">
-            <p className="text-muted-foreground">Your Share</p>
+            <p className="text-muted-foreground">Your Share of Expenses</p>
             <p className="font-semibold">${parentExpenseShare.toFixed(2)}</p>
           </div>
           <div className="flex items-center justify-between text-sm">
@@ -240,7 +240,7 @@ export function SummaryCard({
           )}
           <Separator />
           <div className="flex items-center justify-between text-sm">
-            <p className="text-muted-foreground">Net Owed by You</p>
+            <p className="text-muted-foreground">Your Net Balance for Month</p>
             <p
               className={cn(
                 'font-semibold',
