@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { getYear, format, parse } from 'date-fns';
+import { getYear, format, parse, isAfter, startOfMonth } from 'date-fns';
 import { BarChart, ReceiptText, Search, ArrowUpDown } from 'lucide-react';
 import {
   Bar,
@@ -120,8 +120,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
       };
     }
+    
+    const today = startOfMonth(new Date());
 
-    const allMonthKeys = Object.keys(appData.months).sort().reverse();
+    const allMonthKeys = Object.keys(appData.months)
+      .filter(monthId => !isAfter(parse(monthId, 'yyyy-MM', new Date()), today))
+      .sort()
+      .reverse();
+
     const years = new Set<string>();
     allMonthKeys.forEach(monthId => years.add(monthId.substring(0, 4)));
     const sortedYears = Array.from(years);
