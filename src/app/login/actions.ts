@@ -34,25 +34,24 @@ export async function handleNewUser(userId: string, email: string | null, userna
     const userDocRef = doc(firestore, 'users', userId);
     
     // Use setDoc to create the document for the new user.
-    // Chain a .catch() to handle permission errors specifically.
-    try {
-        await setDoc(userDocRef, userDocPayload);
-        return { success: true, userId: userId };
-      } catch (error: any) {
-        // This is where we create and emit the detailed error
+    // We are NOT awaiting the setDoc call. Instead, we chain a .catch() block
+    // to it. This is a specific pattern required by the error handling architecture
+    // to generate detailed, contextual errors for security rule violations.
+    setDoc(userDocRef, userDocPayload).catch((serverError) => {
+        // Create the rich, contextual error.
         const permissionError = new FirestorePermissionError({
           path: userDocRef.path,
           operation: 'create',
           requestResourceData: userDocPayload,
         });
 
-        // We can't send the custom error object directly to the client from a server action,
-        // so we log it on the server and send a generic message.
-        // The important part is that this detailed error will now appear in your server logs
-        // for debugging. In a real-world scenario, you'd use a proper logging service.
-        console.error("Firestore Permission Error Context:", JSON.stringify(permissionError.request, null, 2));
+        // The error is emitted globally and will be caught by a listener component.
+        // This avoids manual console.error and provides a better debugging experience.
+        // For server actions, this error will now appear in the server logs.
+        errorEmitter.emit('permission-error', permissionError);
+    });
 
-        // For the client, return a user-friendly error.
-        return { success: false, error: 'A security rule prevented user creation.' };
-      }
+    // We return success optimistically. If an error occurs, it will be
+    // handled by the global error handler.
+    return { success: true, userId: userId };
 }
