@@ -360,13 +360,13 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   );
 
   return (
-    <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 mt-4">
-        <TabsTrigger value="transactions">All Transactions</TabsTrigger>
-        <TabsTrigger value="summary">Summary</TabsTrigger>
-      </TabsList>
-      <div className="mt-6">
-        <Card>
+    <div className="mt-6">
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+        </TabsList>
+        <Card className="mt-6">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -631,7 +631,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
             </TabsContent>
           </CardContent>
         </Card>
-      </div>
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }
