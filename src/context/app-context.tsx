@@ -95,7 +95,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       },
       (error: FirestoreError) => {
         const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
-        console.error("Permission error on user doc snapshot:", contextualError);
         errorEmitter.emit('permission-error', contextualError);
       }
     );
@@ -103,6 +102,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     // 2. Listener for the actual app data (which might be the co-parent's data)
     let dataUnsubscribe: () => void = () => {};
     const setDataListener = async () => {
+        if (!user || !firestore) return; // Guard against running before auth is ready
+
         const currentUserDoc = (await getDoc(userDocRef)).data() as UserDoc | undefined;
         const targetId = currentUserDoc?.coParentId || user.uid;
         const dataDocRef = doc(firestore, 'users', targetId);
@@ -116,7 +117,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           },
           (error: FirestoreError) => {
             const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
-            console.error("Permission error on main data snapshot:", contextualError);
             errorEmitter.emit('permission-error', contextualError);
             setAppData(null);
             setIsLoading(false);
@@ -372,6 +372,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       updateChildSupport,
       coParentData,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [appData, updateAppData, isLoading, coParentData]
   );
 
