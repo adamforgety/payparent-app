@@ -247,8 +247,8 @@ function DashboardComponent() {
           </div>
 
           <div className="flex flex-col items-center justify-center gap-4 mb-8 no-print">
-            {activeTab !== 'reporting' && (
-              <div className="flex items-center gap-2">
+            {activeTab !== 'reporting' ? (
+              <div className="flex items-center gap-2 h-10">
                 <Button
                   variant="outline"
                   size="icon"
@@ -269,6 +269,8 @@ function DashboardComponent() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
+            ) : (
+               <div className="h-10" />
             )}
           </div>
 
