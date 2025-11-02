@@ -2,7 +2,7 @@
 
 import { format, isAfter, startOfMonth, parse } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, MoreVertical } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
 import { Badge } from './ui/badge';
@@ -47,14 +47,22 @@ export function AllUnsettledExpensesCard({
   onDeleteExpense
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
+  const [showPastDueOnly, setShowPastDueOnly] = useState(false);
 
   const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
-    const items: UnsettledItem[] = [];
+    let items: UnsettledItem[] = [];
     if (!appData?.months) return items;
 
-    const today = startOfMonth(new Date());
+    const today = new Date();
+    const currentMonthId = format(today, 'yyyy-MM');
+    const todayStartOfMonth = startOfMonth(today);
 
     for (const monthId in appData.months) {
+      // Filter out current month items if the switch is on
+      if (showPastDueOnly && monthId === currentMonthId) {
+        continue;
+      }
+      
       const monthData = appData.months[monthId];
       const monthDate = parse(monthId, 'yyyy-MM', new Date());
 
@@ -81,9 +89,7 @@ export function AllUnsettledExpensesCard({
         });
 
       // Add unsettled child support (if not in a future month)
-      if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isAfter(monthDate, today)) {
-        // The `monthId` is 'yyyy-MM'. Appending '-01' makes it 'yyyy-MM-dd'.
-        // `parse` will correctly interpret this as the first day of the month in the local timezone.
+      if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isAfter(monthDate, todayStartOfMonth)) {
         const localDate = parse(`${monthId}-01`, 'yyyy-MM-dd', new Date());
         
         items.push({
@@ -96,7 +102,6 @@ export function AllUnsettledExpensesCard({
           category: 'Child Support',
           type: 'child_support',
           parentNames: monthData.parentNames,
-          // These splits are not relevant for child support, but need to be on the type
           expenseSplit: monthData.expenseSplit, 
           medicalExpenseSplit: monthData.medicalExpenseSplit,
           originalChildSupport: monthData.childSupport,
@@ -106,7 +111,7 @@ export function AllUnsettledExpensesCard({
 
     // Sort by date descending
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [appData.months]);
+  }, [appData.months, showPastDueOnly]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -139,6 +144,14 @@ export function AllUnsettledExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
+        <div className="flex items-center space-x-2 mb-4">
+          <Switch
+            id="past-due-only"
+            checked={showPastDueOnly}
+            onCheckedChange={setShowPastDueOnly}
+          />
+          <Label htmlFor="past-due-only">Show Past Due Items Only</Label>
+        </div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
