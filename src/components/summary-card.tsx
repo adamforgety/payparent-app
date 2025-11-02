@@ -87,7 +87,9 @@ export function SummaryCard({
       const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
       let childSupportBalance = 0;
-      if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None') {
+      // Only factor in past child support if it's explicitly settled.
+      // This allows ignoring pre-divorce or irrelevant past support payments.
+      if (monthData.childSupport.status === 'Settled' && monthData.childSupport.paidBy !== 'None') {
         if (monthData.childSupport.paidBy === parent) {
           childSupportBalance = -monthData.childSupport.amount;
         } else {
