@@ -383,21 +383,32 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           <DialogTitle>
             {step === 'upload' ? 'Import Expenses from Excel' : 'Preview Import'}
           </DialogTitle>
-           <DialogDescription>
-            {step === 'upload' ? 
-              `Upload a file with columns for Date, Description, Category, Amount, and Paid By (name must match "${parentNames['Parent 1']}" or "${parentNames['Parent 2']}").`
-             : 
-              'Review the expenses found in your file. Correct any errors and click "Confirm Import" to add them to your ledger.'
-            }
-          </DialogDescription>
-             {step === 'upload' && (
-                <div className="pt-2">
-                    <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal text-sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Template
-                    </Button>
-                </div>
-            )}
+          {step === 'upload' ? (
+            <>
+              <DialogDescription>
+                Upload a file with columns for Date, Description, Category,
+                Amount, and Paid By (name must match "{parentNames['Parent 1']}" or "
+                {parentNames['Parent 2']}"). For the amount, enter the total amount
+                paid; the system will automatically calculate the percentage
+                distribution.
+              </DialogDescription>
+              <div className="pt-2">
+                <Button
+                  variant="link"
+                  onClick={handleDownloadTemplate}
+                  className="p-0 h-auto font-normal text-sm"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Template
+                </Button>
+              </div>
+            </>
+          ) : (
+            <DialogDescription>
+              Review the expenses found in your file. Correct any errors and
+              click "Confirm Import" to add them to your ledger.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {step === 'upload' && (
