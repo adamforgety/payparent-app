@@ -161,7 +161,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     medicalExpenseSplit: monthData.medicalExpenseSplit,
                 });
             });
-            if (monthData.childSupport.amount > 0) {
+            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None') {
                 allTransactionsForPeriod.push({
                     ...monthData.childSupport,
                     id: `cs-${monthId}`,
