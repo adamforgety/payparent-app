@@ -140,61 +140,51 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             }
 
             const { date, description, category, paidby, amount } = normalizedRow;
+            const validationErrors: string[] = [];
 
             // --- Data Validation ---
-            if (!date) {
-              failures.push({ row, reason: 'Missing Date' });
-              return;
-            }
-            if (!description) {
-              failures.push({ row, reason: 'Missing Description' });
-              return;
-            }
-             if (!amount) {
-              failures.push({ row, reason: 'Missing Amount' });
-              return;
-            }
-            if (!paidby) {
-              failures.push({row, reason: 'Missing Payer'})
-              return;
-            }
-
+            if (!date) validationErrors.push('Missing Date');
+            if (!description) validationErrors.push('Missing Description');
+            if (!amount) validationErrors.push('Missing Amount');
+            if (!paidby) validationErrors.push('Missing Payer');
+            
             let parsedDate = new Date(date);
-            if (typeof date === 'number') {
-                parsedDate = new Date(Date.UTC(0, 0, date - 1));
-            }
-             if (isNaN(parsedDate.getTime())) {
-                failures.push({ row, reason: `Invalid Date: "${date}"` });
-                return;
-            }
-
-            // Stricter amount validation
-            const amountAsString = String(amount).trim();
-            if (!/^[0-9]+(\.[0-9]{1,2})?$/.test(amountAsString)) {
-              failures.push({ row, reason: 'Invalid Amount' });
-              return;
+            if (date) {
+                if (typeof date === 'number') {
+                    parsedDate = new Date(Date.UTC(0, 0, date - 1));
+                }
+                if (isNaN(parsedDate.getTime())) {
+                    validationErrors.push(`Invalid Date: "${date}"`);
+                }
             }
 
-            const parsedAmount = parseFloat(amountAsString);
-            if (isNaN(parsedAmount) || parsedAmount <= 0) {
-              failures.push({ row, reason: 'Invalid Amount' });
-              return;
+            const amountAsString = String(amount || '').trim();
+            if (amount && !/^[0-9]+(\.[0-9]{1,2})?$/.test(amountAsString)) {
+              validationErrors.push('Invalid Amount');
             }
-
+            
             let paidByParent: Parent | null = null;
-            if (typeof paidby === 'string') {
-              const paidByLower = paidby.toLowerCase();
-              if (paidByLower === parent1NameLower) {
-                paidByParent = 'Parent 1';
-              } else if (paidByLower === parent2NameLower) {
-                paidByParent = 'Parent 2';
-              }
+            if (paidby) {
+                if (typeof paidby === 'string') {
+                    const paidByLower = paidby.toLowerCase();
+                    if (paidByLower === parent1NameLower) {
+                        paidByParent = 'Parent 1';
+                    } else if (paidByLower === parent2NameLower) {
+                        paidByParent = 'Parent 2';
+                    }
+                }
+                if (!paidByParent) {
+                    validationErrors.push(`Unrecognized Payer: "${paidby}"`);
+                }
             }
-            if (!paidByParent) {
-              failures.push({ row, reason: `Unrecognized Payer: "${paidby}"` });
-              return;
+            
+            if (validationErrors.length > 0) {
+              failures.push({ row, reason: validationErrors.join(', ') });
+              return; // Move to the next row
             }
 
+            // At this point, basic validation passed, so we can parse more strictly.
+            const parsedAmount = parseFloat(amountAsString);
             let expenseCategory: ExpenseCategory = 'Other';
             if (category && ALL_CATEGORIES.some(c => c.toLowerCase() === category.toLowerCase())) {
                 expenseCategory = ALL_CATEGORIES.find(c => c.toLowerCase() === category.toLowerCase())!;
@@ -204,7 +194,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
               date: parsedDate.toISOString(),
               description: String(description),
               amount: parsedAmount,
-              paidBy: paidByParent,
+              paidBy: paidByParent!,
               category: expenseCategory,
               status: 'Unsettled',
               receiptUrl: null,
