@@ -130,37 +130,34 @@ export default function LoginPage() {
 
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
-      let email = values.emailOrUsername;
-      const password = values.password;
-
+      const { emailOrUsername, password } = values;
+      let emailToLogin = emailOrUsername;
+      
       try {
-        // First, try to sign in directly, assuming input is an email.
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: 'Login Successful', description: 'Welcome back!' });
-        router.push(next);
-        router.refresh();
-      } catch (error: any) {
-        // If it's a "user not found" or "invalid email" error AND the input isn't an email, try it as a username.
-        if (
-          (error.code === AuthErrorCodes.USER_NOT_FOUND || error.code === AuthErrorCodes.INVALID_EMAIL) &&
-          !email.includes('@')
-        ) {
-          try {
-            const foundEmail = await findEmailByUsername(email);
-            if (foundEmail) {
-              // If we found an email, retry signing in with it.
-              await signInWithEmailAndPassword(auth, foundEmail, password);
-              toast({ title: 'Login Successful', description: 'Welcome back!' });
-              router.push(next);
-              router.refresh();
-              return; // Success, exit the function.
-            }
-          } catch (retryError) {
-             // If the retry fails, fall through to the generic error toast.
+        // If the input doesn't look like an email, treat it as a username and find the real email.
+        if (!emailOrUsername.includes('@')) {
+          const foundEmail = await findEmailByUsername(emailOrUsername);
+          if (foundEmail) {
+            emailToLogin = foundEmail;
+          } else {
+            // If username is not found, we can fail early.
+            toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'Invalid credentials. Please try again.',
+            });
+            return;
           }
         }
         
-        // If any of the above fails, show a generic error toast.
+        // Proceed with login using either the original email or the one found via username.
+        await signInWithEmailAndPassword(auth, emailToLogin, password);
+        toast({ title: 'Login Successful', description: 'Welcome back!' });
+        router.push(next);
+        router.refresh();
+
+      } catch (error: any) {
+        // Catch any other auth errors (like wrong password).
         toast({
           variant: 'destructive',
           title: 'Login Failed',
@@ -433,5 +430,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
