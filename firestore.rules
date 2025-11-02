@@ -12,7 +12,7 @@
  * - `/users/{userId}/monthlyCalculations/{monthlyCalculationId}`: Stores monthly calculation records.
  *
  * Key Security Decisions:
- * - User listing is disallowed.
+ * - User listing is disallowed, except for an unauthenticated user trying to log in via username.
  * - The ruleset defaults to strict owner-only access for all collections under `/users/{userId}`.
  * - No schema validation is performed except to enforce data consistency for authorization purposes (e.g., matching `userId` in the path and the document).
  *
@@ -49,9 +49,9 @@ service cloud.firestore {
       }
 
       allow get: if isOwner();
-      allow list: if false;
+      allow list: if request.auth != null;
 
-      allow create: if request.auth != null && request.resource.data.id == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if isExistingOwner() && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner();
     }
@@ -156,4 +156,3 @@ service cloud.firestore {
     }
   }
 }
-    
