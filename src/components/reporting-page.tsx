@@ -90,6 +90,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     String(getYear(new Date()))
   );
   const [selectedMonth, setSelectedMonth] = useState<string>('all'); // 'all' or 'yyyy-MM'
+  const [activeSubTab, setActiveSubTab] = useState('transactions');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
 
@@ -359,206 +360,206 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-              <BarChart className="h-5 w-5 text-secondary-foreground" />
-            </span>
-            <div>
-              <CardTitle>{reportTitle}</CardTitle>
-              <CardDescription>
-                {reportDescription}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-full sm:w-32">
-                <SelectValue placeholder="Select year" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableYears.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={availableMonths.length === 0}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Select month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Months</SelectItem>
-                {availableMonths.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <ReportingExportButton 
-              transactions={allTransactions}
-              periodLabel={selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM-yyyy')}
-              parentNames={parentNamesForPeriod}
-            />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-         <Tabs defaultValue="transactions" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="transactions">All Transactions</TabsTrigger>
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-          </TabsList>
-          <TabsContent value="transactions" className="mt-6">
-            <div className='flex flex-col sm:flex-row gap-4 mb-4'>
-                <div className='relative flex-1'>
-                    <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-                    <Input 
-                      type="search"
-                      placeholder="Search by description, category, or parent..."
-                      className="pl-8 w-full"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-             <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHeader sortKey="date">Date</SortableHeader>
-                      <SortableHeader sortKey="description">Description</SortableHeader>
-                      <SortableHeader sortKey="category">Category</SortableHeader>
-                      <SortableHeader sortKey="paidBy">Paid By</SortableHeader>
-                      <SortableHeader sortKey="amount" className="text-right">Total Amount</SortableHeader>
-                      <SortableHeader sortKey="parent1Share" className="text-right">{parentNamesForPeriod['Parent 1']}'s Share</SortableHeader>
-                      <SortableHeader sortKey="parent2Share" className="text-right">{parentNamesForPeriod['Parent 2']}'s Share</SortableHeader>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedTransactions.length > 0 ? sortedTransactions.map((transaction) => {
-                      const parent1Share = getShare(transaction, 'Parent 1');
-                      const parent2Share = getShare(transaction, 'Parent 2');
-
-                      return (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{format(new Date(transaction.date), 'MMM d, yyyy')}</TableCell>
-                        <TableCell className="font-medium">
-                          {transaction.description}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={transaction.category === 'Child Support' ? 'default' : 'outline'}>
-                            {transaction.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                            {transaction.paidBy && transaction.paidBy !== 'None' &&
-                              <Badge variant={transaction.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>
-                                  {transaction.parentNames[transaction.paidBy]}
-                              </Badge>
-                            }
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">${transaction.amount.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${parent1Share.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${parent2Share.toFixed(2)}</TableCell>
-                      </TableRow>
-                    )}) : (
-                       <TableRow>
-                          <TableCell colSpan={7} className="h-24 text-center">
-                            {searchTerm ? `No transactions found for "${searchTerm}".` : "No transactions in this period."}
-                          </TableCell>
-                        </TableRow>
-                    )}
-                  </TableBody>
-                  {sortedTransactions.length > 0 && (
-                    <TableFooter>
-                      <TableRow className="bg-secondary/50 font-bold">
-                        <TableCell colSpan={4}>Grand Totals</TableCell>
-                        <TableCell className="text-right">${totalAmount.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${totalParent1Share.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${totalParent2Share.toFixed(2)}</TableCell>
-                      </TableRow>
-                    </TableFooter>
-                  )}
-                </Table>
+     <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                <BarChart className="h-5 w-5 text-secondary-foreground" />
+              </span>
+              <div>
+                <CardTitle>{reportTitle}</CardTitle>
+                <CardDescription>
+                  {reportDescription}
+                </CardDescription>
               </div>
-          </TabsContent>
-          <TabsContent value="summary" className="mt-6">
-            <p className="text-sm text-muted-foreground mb-4">
-                Note: This summary shows expenses by category and does not include child support payments.
-            </p>
-            {periodData.length > 0 ? (
-              <div className="space-y-8">
-                <div>
-                  <ChartContainer
-                    config={chartConfig}
-                    className="min-h-[250px] w-full"
-                  >
-                    <RechartsBarChart data={periodData} accessibilityLayer>
-                      <CartesianGrid vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth} disabled={availableMonths.length === 0}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {availableMonths.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <ReportingExportButton 
+                transactions={allTransactions}
+                periodLabel={selectedMonth === 'all' ? selectedYear : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM-yyyy')}
+                parentNames={parentNamesForPeriod}
+              />
+            </div>
+          </div>
+           <TabsList className="grid w-full grid-cols-2 mt-4">
+              <TabsTrigger value="transactions">All Transactions</TabsTrigger>
+              <TabsTrigger value="summary">Summary</TabsTrigger>
+            </TabsList>
+        </CardHeader>
+        <CardContent>
+            <TabsContent value="transactions" className="mt-0">
+              <div className='flex flex-col sm:flex-row gap-4 mb-4'>
+                  <div className='relative flex-1'>
+                      <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+                      <Input 
+                        type="search"
+                        placeholder="Search by description, category, or parent..."
+                        className="pl-8 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                       />
-                      <YAxis
-                        tickFormatter={(value) => `$${value}`}
-                       />
-                      <Tooltip
-                        cursor={false}
-                        content={<ChartTooltipContent indicator="dot" />}
-                      />
-                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={4} />
-                    </RechartsBarChart>
-                  </ChartContainer>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Category</TableHead>
-                          <TableHead className="text-right">Total Amount</TableHead>
+                  </div>
+              </div>
+              <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <SortableHeader sortKey="date">Date</SortableHeader>
+                        <SortableHeader sortKey="description">Description</SortableHeader>
+                        <SortableHeader sortKey="category">Category</SortableHeader>
+                        <SortableHeader sortKey="paidBy">Paid By</SortableHeader>
+                        <SortableHeader sortKey="amount" className="text-right">Total Amount</SortableHeader>
+                        <SortableHeader sortKey="parent1Share" className="text-right">{parentNamesForPeriod['Parent 1']}'s Share</SortableHeader>
+                        <SortableHeader sortKey="parent2Share" className="text-right">{parentNamesForPeriod['Parent 2']}'s Share</SortableHeader>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedTransactions.length > 0 ? sortedTransactions.map((transaction) => {
+                        const parent1Share = getShare(transaction, 'Parent 1');
+                        const parent2Share = getShare(transaction, 'Parent 2');
+
+                        return (
+                        <TableRow key={transaction.id}>
+                          <TableCell>{format(new Date(transaction.date), 'MMM d, yyyy')}</TableCell>
+                          <TableCell className="font-medium">
+                            {transaction.description}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={transaction.category === 'Child Support' ? 'default' : 'outline'}>
+                              {transaction.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                              {transaction.paidBy && transaction.paidBy !== 'None' &&
+                                <Badge variant={transaction.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>
+                                    {transaction.parentNames[transaction.paidBy]}
+                                </Badge>
+                              }
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">${transaction.amount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${parent1Share.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${parent2Share.toFixed(2)}</TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {periodData.map((item) => (
-                          <TableRow key={item.name}>
-                            <TableCell className="font-medium">
-                              <Badge variant="outline">{item.name}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              ${item.amount.toFixed(2)}
+                      )}) : (
+                        <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                              {searchTerm ? `No transactions found for "${searchTerm}".` : "No transactions in this period."}
                             </TableCell>
                           </TableRow>
-                        ))}
+                      )}
+                    </TableBody>
+                    {sortedTransactions.length > 0 && (
+                      <TableFooter>
                         <TableRow className="bg-secondary/50 font-bold">
-                           <TableCell>Total</TableCell>
-                           <TableCell className="text-right">${totalPeriodExpenses.toFixed(2)}</TableCell>
+                          <TableCell colSpan={4}>Grand Totals</TableCell>
+                          <TableCell className="text-right">${totalAmount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${totalParent1Share.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${totalParent2Share.toFixed(2)}</TableCell>
                         </TableRow>
-                      </TableBody>
-                    </Table>
+                      </TableFooter>
+                    )}
+                  </Table>
+                </div>
+            </TabsContent>
+            <TabsContent value="summary" className="mt-0">
+              <p className="text-sm text-muted-foreground mb-4">
+                  Note: This summary shows expenses by category and does not include child support payments.
+              </p>
+              {periodData.length > 0 ? (
+                <div className="space-y-8">
+                  <div>
+                    <ChartContainer
+                      config={chartConfig}
+                      className="min-h-[250px] w-full"
+                    >
+                      <RechartsBarChart data={periodData} accessibilityLayer>
+                        <CartesianGrid vertical={false} />
+                        <XAxis
+                          dataKey="name"
+                          tickLine={false}
+                          tickMargin={10}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          tickFormatter={(value) => `$${value}`}
+                        />
+                        <Tooltip
+                          cursor={false}
+                          content={<ChartTooltipContent indicator="dot" />}
+                        />
+                        <Bar dataKey="amount" fill="hsl(var(--primary))" radius={4} />
+                      </RechartsBarChart>
+                    </ChartContainer>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Total Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {periodData.map((item) => (
+                            <TableRow key={item.name}>
+                              <TableCell className="font-medium">
+                                <Badge variant="outline">{item.name}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                ${item.amount.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="bg-secondary/50 font-bold">
+                            <TableCell>Total</TableCell>
+                            <TableCell className="text-right">${totalPeriodExpenses.toFixed(2)}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
-                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                    <ReceiptText className="h-8 w-8" />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                      <ReceiptText className="h-8 w-8" />
+                  </div>
+                  <p className="font-medium">No expenses logged for this period.</p>
+                  <p className="text-sm">Once you add expenses, a summary will appear here.</p>
                 </div>
-                <p className="font-medium">No expenses logged for this period.</p>
-                <p className="text-sm">Once you add expenses, a summary will appear here.</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+              )}
+            </TabsContent>
+        </CardContent>
+      </Card>
+    </Tabs>
   );
 }
