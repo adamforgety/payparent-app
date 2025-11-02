@@ -296,7 +296,7 @@ function DashboardComponent() {
                     </Tooltip>
                 </TooltipProvider>
               </div>
-              <div className="mt-8">
+              <div className="mt-6">
                 <Tabs defaultValue="parent-1" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
@@ -373,7 +373,7 @@ function DashboardComponent() {
             <TabsContent value="reporting">
               <div className="mt-6">
                   <ReportingPage appData={appData} />
-                </div>
+              </div>
             </TabsContent>
             <TabsContent value="settings">
               <div className="mt-6">
