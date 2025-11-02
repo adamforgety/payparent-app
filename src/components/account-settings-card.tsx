@@ -13,6 +13,7 @@ import {
   updatePassword,
   AuthErrorCodes,
 } from 'firebase/auth';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +35,8 @@ import {
 import { useFirebase } from '@/firebase';
 import { Separator } from './ui/separator';
 import { useAppContext } from '@/context/app-context';
-import { findEmailByUsername } from '@/app/login/actions';
+import type { UserDoc } from '@/lib/types';
+
 
 const usernameSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters.').max(20, 'Username must be 20 characters or less.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
@@ -78,7 +80,7 @@ function getFirebaseAuthErrorMessage(error: any): string {
 }
 
 export function AccountSettingsCard() {
-  const { auth, user } = useFirebase();
+  const { auth, user, firestore } = useFirebase();
   const { appData, updateAppData } = useAppContext();
   const { toast } = useToast();
   const [isUsernamePending, startUsernameTransition] = useTransition();
@@ -107,6 +109,25 @@ export function AccountSettingsCard() {
     }
   }, [appData?.username, usernameForm]);
 
+  const findEmailByUsername = async (username: string): Promise<string | null> => {
+      try {
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('appData.username', '==', username), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          return null;
+        }
+        
+        const userDoc = querySnapshot.docs[0].data() as UserDoc;
+        return userDoc.email;
+      } catch (error) {
+        console.error("Client-side error finding user by username:", error);
+        return null;
+      }
+    };
+
+
   const onUsernameSubmit = (values: z.infer<typeof usernameSchema>) => {
     startUsernameTransition(async () => {
       if (values.username === appData?.username) {
@@ -116,9 +137,9 @@ export function AccountSettingsCard() {
         });
         return;
       }
-      // Check if username is already taken
+      // Check if username is already taken by another user
       const existingEmail = await findEmailByUsername(values.username);
-      if (existingEmail) {
+      if (existingEmail && existingEmail !== user?.email) {
           usernameForm.setError('username', {
               type: 'manual',
               message: 'This username is already taken. Please choose another one.'

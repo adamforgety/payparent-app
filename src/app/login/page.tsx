@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -30,9 +31,10 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { findEmailByUsername, handleNewUser } from './actions';
+import { handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
+import type { UserDoc } from '@/lib/types';
 
 const signupSchema = z
   .object({
@@ -90,7 +92,7 @@ export default function LoginPage() {
   const [isResetDialogOpen, setResetDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/';
-  const { auth } = useFirebase();
+  const { auth, firestore } = useFirebase();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -107,30 +109,58 @@ export default function LoginPage() {
     defaultValues: { email: '' },
   });
 
+  const findEmailByUsername = async (username: string): Promise<string | null> => {
+      try {
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('appData.username', '==', username), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          return null;
+        }
+
+        const userDoc = querySnapshot.docs[0].data() as UserDoc;
+        return userDoc.email;
+      } catch (error) {
+        console.error("Client-side error finding user by username:", error);
+        return null;
+      }
+    };
+
 
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
-      try {
-        let email = values.emailOrUsername;
-        // If it's not an email, assume it's a username and try to find the email
-        if (!email.includes('@')) {
-          const foundEmail = await findEmailByUsername(email);
-          if (!foundEmail) {
-            toast({
-              variant: 'destructive',
-              title: 'Login Failed',
-              description: 'User not found.',
-            });
-            return;
-          }
-          email = foundEmail;
-        }
+      let email = values.emailOrUsername;
+      const password = values.password;
 
-        await signInWithEmailAndPassword(auth, email, values.password);
+      try {
+        // First, try to sign in directly, assuming input is an email.
+        await signInWithEmailAndPassword(auth, email, password);
         toast({ title: 'Login Successful', description: 'Welcome back!' });
         router.push(next);
-        router.refresh(); 
-      } catch (error) {
+        router.refresh();
+      } catch (error: any) {
+        // If it's a "user not found" error AND the input isn't an email, try it as a username.
+        if (
+          (error.code === AuthErrorCodes.USER_NOT_FOUND || error.code === AuthErrorCodes.INVALID_EMAIL) &&
+          !email.includes('@')
+        ) {
+          try {
+            const foundEmail = await findEmailByUsername(email);
+            if (foundEmail) {
+              // If we found an email, retry signing in with it.
+              await signInWithEmailAndPassword(auth, foundEmail, password);
+              toast({ title: 'Login Successful', description: 'Welcome back!' });
+              router.push(next);
+              router.refresh();
+              return; // Success, exit the function.
+            }
+          } catch (retryError) {
+             // If the retry fails, fall through to the generic error toast.
+          }
+        }
+        
+        // If any of the above fails, show a generic error toast.
         toast({
           variant: 'destructive',
           title: 'Login Failed',
@@ -143,6 +173,16 @@ export default function LoginPage() {
   const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
     startTransition(async () => {
       try {
+        // First check if username is already taken
+        const existingEmail = await findEmailByUsername(values.username);
+        if (existingEmail) {
+          signupForm.setError('username', {
+            type: 'manual',
+            message: 'This username is already taken.'
+          });
+          return;
+        }
+      
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email, values.username);
         

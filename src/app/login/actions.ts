@@ -1,35 +1,9 @@
 'use server';
 
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
 import type { UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
-
-/**
- * Finds a user's email by their username.
- * This enables them to log in with a username instead of an email.
- */
-export async function findEmailByUsername(username: string): Promise<string | null> {
-  try {
-    const { firestore } = initializeFirebase();
-    const usersRef = collection(firestore, 'users');
-    // Correctly query the nested appData.username field.
-    const q = query(usersRef, where('appData.username', '==', username));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      return null;
-    }
-    
-    // Return the email of the first user found.
-    const userDoc = querySnapshot.docs[0].data() as UserDoc;
-    return userDoc.email;
-
-  } catch (error) {
-    console.error("Error finding user by username:", error);
-    return null;
-  }
-}
 
 /**
  * Handles the creation of a new user document in Firestore after sign-up.
