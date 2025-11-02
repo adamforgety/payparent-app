@@ -204,7 +204,7 @@ export function AllUnsettledExpensesCard({
                             <>
                               <EditExpenseDialog
                                 expense={item.originalExpense}
-                                onUpdateExpense={onUpdateExpense}
+                                onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)}
                                 parentNames={item.parentNames}
                                 monthId={item.monthId}
                               />
