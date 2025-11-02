@@ -165,6 +165,10 @@
         "name": {
           "type": "string",
           "description": "The user's full name."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's unique username, used as a login alias."
         }
       },
       "required": [

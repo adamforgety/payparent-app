@@ -61,6 +61,7 @@ export interface MonthData {
 
 export interface AppData {
   id: string;
+  username?: string;
   months: {
     [monthId: string]: MonthData;
   };
@@ -70,5 +71,8 @@ export interface AppData {
 export interface UserDoc {
   id: string;
   email: string | null;
+  username?: string;
   appData: AppData;
 }
+
+    

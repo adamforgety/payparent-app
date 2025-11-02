@@ -56,7 +56,12 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
     return;
   }
   const userDocRef = doc(firestore, 'users', userId);
-  const userDocPayload: UserDoc = { id: userId, appData: appData, email: appData.months[Object.keys(appData.months)[0]]?.parentNames?.['Parent 1'] || null };
+  const userDocPayload: UserDoc = { 
+    id: userId, 
+    appData: appData, 
+    email: appData.months[Object.keys(appData.months)[0]]?.parentNames?.['Parent 1'] || null,
+    username: appData.username,
+  };
   
   // Create a deep copy to avoid Firestore read-only errors in dev
   const payloadToSave = JSON.parse(JSON.stringify(userDocPayload));
@@ -76,3 +81,5 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
     throw error;
   }
 }
+
+    

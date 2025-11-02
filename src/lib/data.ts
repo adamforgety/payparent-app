@@ -6,6 +6,7 @@ const monthId = format(today, 'yyyy-MM');
 
 export const initialData: AppData = {
   id: 'new-user', // This will be replaced by the user's UID
+  username: '',
   months: {
     [monthId]: {
       id: monthId,
@@ -32,3 +33,5 @@ export const initialData: AppData = {
     },
   },
 };
+
+    
