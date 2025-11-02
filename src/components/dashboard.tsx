@@ -43,10 +43,12 @@ function DashboardComponent() {
       const newMonthDate = parse(monthId, 'yyyy-MM', new Date());
       const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
-      // Only copy child support if the new month is AFTER the most recent month
-      const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate) 
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+      // When creating a new month, carry over the amount, but reset paidBy and status.
+      const childSupportSettings: ChildSupport = {
+        amount: isAfter(newMonthDate, mostRecentMonthDate) ? mostRecentMonthData.childSupport.amount : 0,
+        paidBy: 'None', 
+        status: 'Unsettled' 
+      };
 
 
       const newMonthData: MonthData = {
@@ -87,8 +89,8 @@ function DashboardComponent() {
         ...dataToUpdate,
       };
 
-      // If child support settings changed, propagate to future months
-      if (dataToUpdate.childSupport) {
+      // If child support amount changed, propagate to future months
+      if (dataToUpdate.childSupport && dataToUpdate.childSupport.amount !== currentMonthData.childSupport.amount) {
         const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
         for (const key in updatedMonths) {
             const monthDate = parse(key, 'yyyy-MM', new Date());
@@ -96,8 +98,8 @@ function DashboardComponent() {
                 updatedMonths[key] = {
                     ...updatedMonths[key],
                     childSupport: {
-                      ...updatedMonths[key].childSupport, // keep existing status
-                      ...dataToUpdate.childSupport,
+                      ...updatedMonths[key].childSupport, 
+                      amount: dataToUpdate.childSupport.amount,
                     }
                 };
             }

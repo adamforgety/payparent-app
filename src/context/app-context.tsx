@@ -142,10 +142,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
       const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
       
-      const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled' };
-
+      const childSupportSettings: ChildSupport = {
+        amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
+        paidBy: 'None',
+        status: 'Unsettled'
+      };
 
       targetMonthData = {
         id: targetMonthId,
@@ -201,9 +202,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
         const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
-        const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled' };
+        const childSupportSettings: ChildSupport = {
+            amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
+            paidBy: 'None',
+            status: 'Unsettled'
+        };
 
         targetMonthData = {
           id: targetMonthId,
@@ -278,9 +281,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const newMonthDate = parse(newMonthId, 'yyyy-MM', new Date());
         const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
-        const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled' };
+        const childSupportSettings: ChildSupport = {
+          amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
+          paidBy: 'None',
+          status: 'Unsettled'
+        };
         
         targetMonthData = {
           id: newMonthId,
@@ -355,3 +360,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    
