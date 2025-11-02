@@ -141,8 +141,12 @@ function DashboardComponent() {
   };
   
   const handleUpdateParentNames = (parentNames: ParentNames) => {
-    // This now triggers the global update in the context
-    updateAppData({ parentNames });
+    if (!appData) return;
+    const updatedMonths = { ...appData.months };
+    for (const key in updatedMonths) {
+      updatedMonths[key].parentNames = parentNames;
+    }
+    updateAppData({ months: updatedMonths });
   };
 
   const handleMarkAllAsSettled = () => {
@@ -381,12 +385,12 @@ function DashboardComponent() {
                   <TabsContent value="app">
                     <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
                       <ParentNamesCard
-                          parentNames={appData.months[Object.keys(appData.months)[0]].parentNames}
+                          parentNames={currentMonthData.parentNames}
                           onUpdate={handleUpdateParentNames}
                       />
                       <ChildSupportCard
                         childSupport={currentMonthData.childSupport}
-                        onUpdate={(cs) => updateChildSupport(cs, monthId)}
+                        onUpdate={(cs) => updateCurrentMonthData({ childSupport: cs })}
                         parentNames={currentMonthData.parentNames}
                       />
                       <ParentSplitCard

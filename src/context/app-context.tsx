@@ -17,7 +17,7 @@ import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
 
 interface AppContextType {
   appData: AppData | null;
-  updateAppData: (newData: Partial<Omit<AppData, 'id'>>) => void;
+  updateAppData: (newData: Partial<Omit<AppData, 'id' | 'email'>>) => void;
   isLoading: boolean;
   addExpense: (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   addImportedExpenses: (
@@ -61,48 +61,24 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   }, [user, firestore]);
 
   const updateAppData = useCallback(
-    async (newData: Partial<Omit<AppData, 'id'>>) => {
-      if (!user || !firestore) return;
+    async (newData: Partial<Omit<AppData, 'id'|'email'>>) => {
+      if (!user || !firestore || !appData) return;
 
-      // Use a function for state updates to get the most recent state
-      setAppData((prevAppData) => {
-        if (!prevAppData) return null;
-
-        let updatedData: AppData;
-
-        // Special handling for parentNames to update all months
-        if (newData.parentNames) {
-          const newParentNames = newData.parentNames;
-          const updatedMonths = { ...prevAppData.months };
-          for (const monthId in updatedMonths) {
-            updatedMonths[monthId] = {
-              ...updatedMonths[monthId],
-              parentNames: newParentNames,
-            };
-          }
-          updatedData = { ...prevAppData, ...newData, months: updatedMonths };
-        } else {
-          // Standard merge for other properties
-          updatedData = {
-            ...prevAppData,
-            ...newData,
-            months: {
-              ...prevAppData.months,
-              ...newData.months,
-            },
-          };
-        }
-
-        // Asynchronously save to Firestore
-        saveUserData(firestore, user.uid, updatedData).catch((error) => {
-          console.error('Failed to save data:', error);
-          // Optionally revert state or show an error
-        });
-
-        return updatedData;
+      setAppData(prev => {
+        if (!prev) return null;
+        const updated = {
+          ...prev,
+          ...newData,
+           months: {
+            ...prev.months,
+            ...newData.months,
+          },
+        };
+        saveUserData(firestore, user.uid, updated).catch(console.error);
+        return updated;
       });
     },
-    [user, firestore]
+    [user, firestore, appData]
   );
   
   const updateChildSupport = (updatedChildSupport: ChildSupport, monthId: string) => {
@@ -335,7 +311,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       updateExpense,
       updateChildSupport,
     }),
-    [appData, updateAppData, isLoading]
+    [appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense, updateChildSupport]
   );
 
   if (isLoading) {

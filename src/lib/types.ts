@@ -64,8 +64,6 @@ export interface AppData {
   months: {
     [monthId: string]: MonthData;
   };
-  // Explicitly add parentNames here for global updates
-  parentNames?: ParentNames;
 }
 
 // This is the definitive structure for the /users/{userId} document

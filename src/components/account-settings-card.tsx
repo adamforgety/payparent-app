@@ -171,6 +171,9 @@ export function AccountSettingsCard() {
         const credential = EmailAuthProvider.credential(user.email, values.password);
         await reauthenticateWithCredential(user, credential);
         await updateEmail(user, values.newEmail);
+        
+        // Also update the email in the Firestore document
+        updateAppData({ email: values.newEmail });
 
         toast({
           title: 'Email Updated',

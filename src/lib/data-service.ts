@@ -1,6 +1,6 @@
 'use client';
 
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initialData } from '@/lib/data';
 import type { AppData, UserDoc } from '@/lib/types';
 import type { Firestore } from 'firebase/firestore';
@@ -53,38 +53,33 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
 
 /**
  * Saves the user's application data to Firestore.
- * This performs a deep merge on the `appData` object.
+ * This performs an update on the user document.
  * @param firestore - The Firestore instance.
  * @param userId - The ID of the user.
- * @param appData - The partial application data to save.
+ * @param appData - The application data to save.
  */
-export async function saveUserData(firestore: Firestore, userId: string, appData: Partial<AppData>): Promise<void> {
+export async function saveUserData(firestore: Firestore, userId: string, appData: AppData): Promise<void> {
   if (!firestore || !userId) {
     console.error("Firestore or User ID is not available. Cannot save.");
     return;
   }
   const userDocRef = doc(firestore, 'users', userId);
   
-  // To merge nested objects, we use dot notation.
-  // This creates a flat object like { 'appData.username': 'new_name', 'appData.months.2024-05': { ... } }
-  const flattenedPayload: { [key: string]: any } = {};
-  for (const key in appData) {
-    if (Object.prototype.hasOwnProperty.call(appData, key)) {
-      flattenedPayload[`appData.${key}`] = (appData as any)[key];
-    }
-  }
+  // Create the payload to be saved. We are replacing the entire appData object.
+  const payload = {
+    appData: appData
+  };
 
   try {
-    // Use updateDoc to merge changes into the nested appData object correctly.
-    // setDoc with merge:true can also be used but updateDoc is more idiomatic for partial updates.
-    await setDoc(userDocRef, flattenedPayload, { merge: true });
+    // Use set with merge:true to update the appData field without overwriting other top-level fields like 'id' or 'email'.
+    await setDoc(userDocRef, payload, { merge: true });
   } catch (error) {
      errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: userDocRef.path,
         operation: 'update',
-        requestResourceData: flattenedPayload,
+        requestResourceData: payload,
       })
     );
     // Re-throw the error so the caller can handle it if needed

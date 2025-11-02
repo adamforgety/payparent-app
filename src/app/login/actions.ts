@@ -53,5 +53,3 @@ export async function handleNewUser(userId: string, email: string | null, userna
         return { success: false, error: 'Could not create user profile in database.' };
     }
 }
-
-    
