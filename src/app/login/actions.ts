@@ -2,9 +2,8 @@
 
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
-import type { AppData, UserDoc } from '@/lib/types';
+import type { UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
-import { saveUserData } from '@/lib/data-service';
 
 /**
  * Finds a user's email by their username.
@@ -14,8 +13,8 @@ export async function findEmailByUsername(username: string): Promise<string | nu
   try {
     const { firestore } = initializeFirebase();
     const usersRef = collection(firestore, 'users');
-    // It's assumed usernames are unique. Add DB constraints if needed.
-    const q = query(usersRef, where('username', '==', username));
+    // Correctly query the nested appData.username field.
+    const q = query(usersRef, where('appData.username', '==', username));
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
@@ -33,8 +32,7 @@ export async function findEmailByUsername(username: string): Promise<string | nu
 }
 
 /**
- * Handles the creation of a new user after email/password sign-up.
- * It ensures a corresponding user document is created in Firestore.
+ * Handles the creation of a new user document in Firestore after sign-up.
  */
 export async function handleNewUser(userId: string, email: string | null, username?: string) {
     if (!userId) {
@@ -43,20 +41,22 @@ export async function handleNewUser(userId: string, email: string | null, userna
     try {
         const { firestore } = initializeFirebase();
         
-        // Deep copy initial data and set the user-specific ID.
-        const initialAppData: AppData = JSON.parse(JSON.stringify(initialData));
-        initialAppData.id = userId;
-        initialAppData.username = username;
-
-        // Create the full UserDoc payload, ensuring the top-level username is set
+        // Deep copy initial data and set the user-specific ID and username.
+        const appData = JSON.parse(JSON.stringify(initialData));
+        appData.id = userId;
+        if (username) {
+            appData.username = username;
+        }
+        
+        // Create the full UserDoc payload with the correct nested structure.
         const userDocPayload: UserDoc = {
           id: userId,
           email: email,
-          username: username,
-          appData: initialAppData,
+          appData: appData,
         };
 
         const userDocRef = doc(firestore, 'users', userId);
+        // Use setDoc to create the document for the new user.
         await setDoc(userDocRef, userDocPayload);
 
         return { success: true, userId: userId };

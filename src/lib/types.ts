@@ -65,14 +65,14 @@ export interface AppData {
   months: {
     [monthId: string]: MonthData;
   };
+  // Explicitly add parentNames here for global updates
+  parentNames?: ParentNames;
 }
 
-// Add this to your types
+// This is the definitive structure for the /users/{userId} document
 export interface UserDoc {
   id: string;
   email: string | null;
-  username?: string;
+  // All app-specific data is nested here
   appData: AppData;
 }
-
-    

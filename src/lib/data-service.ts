@@ -1,13 +1,13 @@
 'use client';
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { initialData } from '@/lib/data';
 import type { AppData, UserDoc } from '@/lib/types';
 import type { Firestore } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { getAuth } from 'firebase/auth';
 import { handleNewUser } from '@/app/login/actions';
+import { getAuth } from 'firebase/auth';
 
 /**
  * Fetches the user's application data from Firestore.
@@ -22,12 +22,8 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
     const docSnap = await getDoc(userDocRef);
 
     if (docSnap.exists()) {
-      // Document exists, return its data.
+      // Document exists, return its nested appData.
       const userDoc = docSnap.data() as UserDoc;
-      // Make sure the top-level username is synced with appData
-      if (userDoc.appData.username !== userDoc.username) {
-        userDoc.appData.username = userDoc.username;
-      }
       return userDoc.appData;
     } else {
       // Document doesn't exist, create it with initial data.
@@ -35,14 +31,17 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       
       const auth = getAuth();
       const email = auth.currentUser?.email || null;
-      const username = auth.currentUser?.displayName || undefined; // Or another source for username
+      // Use display name as a fallback for username if available
+      const username = auth.currentUser?.displayName || undefined; 
 
       await handleNewUser(userId, email, username);
       
+      // Return a local copy of the initial data for the current session.
       const newInitialData = JSON.parse(JSON.stringify(initialData));
       newInitialData.id = userId;
-      newInitialData.username = username;
-
+      if (username) {
+        newInitialData.username = username;
+      }
       return newInitialData;
     }
   } catch (error) {
@@ -56,7 +55,7 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
 
 /**
  * Saves the user's application data to Firestore.
- * This function performs a merge, so you only need to provide the fields to update.
+ * This performs a deep merge on the `appData` object.
  * @param firestore - The Firestore instance.
  * @param userId - The ID of the user.
  * @param appData - The partial application data to save.
@@ -68,44 +67,28 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
   }
   const userDocRef = doc(firestore, 'users', userId);
   
-  // To keep the top-level username in sync, we create a payload that updates both locations.
-  const payloadToSave: { [key: string]: any } = {
-    appData: appData
-  };
-
-  if (appData.username !== undefined) {
-    payloadToSave.username = appData.username;
-  }
-  
-  // Firestore's setDoc with { merge: true } can't handle nested objects well without this.
-  // We need to use dot notation for nested fields to ensure only they are updated.
+  // To merge nested objects, we use dot notation.
+  // This creates a flat object like { 'appData.username': 'new_name', 'appData.months.2024-05': { ... } }
   const flattenedPayload: { [key: string]: any } = {};
-  if (payloadToSave.username !== undefined) {
-    flattenedPayload['username'] = payloadToSave.username;
-  }
-
-  for (const key in payloadToSave.appData) {
-    if (Object.prototype.hasOwnProperty.call(payloadToSave.appData, key)) {
-      flattenedPayload[`appData.${key}`] = (payloadToSave.appData as any)[key];
+  for (const key in appData) {
+    if (Object.prototype.hasOwnProperty.call(appData, key)) {
+      flattenedPayload[`appData.${key}`] = (appData as any)[key];
     }
   }
 
-
   try {
     // Use updateDoc to merge changes into the nested appData object correctly.
-    // Using setDoc with merge would overwrite the entire appData object.
-    await setDoc(userDocRef, flattenedPayload, { merge: true });
-
+    await updateDoc(userDocRef, flattenedPayload);
   } catch (error) {
      errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: userDocRef.path,
-        operation: 'update', // or 'write'
+        operation: 'update',
         requestResourceData: flattenedPayload,
       })
     );
-    // Re-throw the error if you want the caller to be able to handle it too
+    // Re-throw the error so the caller can handle it if needed
     throw error;
   }
 }
