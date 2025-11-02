@@ -63,8 +63,8 @@
   }
 
   /* Hide the Vercel development logo */
-  body > svg[aria-label="Vercel logomark"] {
-    display: none;
+  body > svg:last-of-type {
+    display: none !important;
   }
 }
 
