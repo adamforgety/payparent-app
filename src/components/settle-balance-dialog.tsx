@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useDashboard } from './dashboard-provider';
 import { useAppContext } from '@/context/app-context';
+import { format } from 'date-fns';
 
 interface SettleBalanceDialogProps {
   parent: Parent;

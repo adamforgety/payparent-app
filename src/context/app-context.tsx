@@ -9,7 +9,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import type { AppData, Expense, ParentNames } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, ParentNames } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
@@ -25,6 +25,7 @@ interface AppContextType {
   ) => void;
   deleteExpense: (expenseId: string, monthId: string) => void;
   updateExpense: (updatedExpense: Expense, originalMonthId: string) => void;
+  updateChildSupport: (updatedChildSupport: ChildSupport) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -103,6 +104,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     },
     [user, firestore]
   );
+  
+  const updateChildSupport = (updatedChildSupport: ChildSupport) => {
+    if (!appData) return;
+    const currentMonthId = format(new Date(), 'yyyy-MM');
+    const monthData = appData.months[currentMonthId];
+    if (monthData) {
+      const updatedMonthData = { ...monthData, childSupport: updatedChildSupport };
+      updateAppData({ months: { ...appData.months, [currentMonthId]: updatedMonthData } });
+    }
+  };
 
   const addExpense = (
     newExpense: Omit<Expense, 'id' | 'year' | 'month'>
@@ -132,8 +143,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
       
       const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled' };
 
 
       targetMonthData = {
@@ -146,8 +157,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           'Parent 2': 50,
         },
         medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {
-          'Parent 1': 48,
-          'Parent 2': 52,
+          'Parent 1': 50,
+          'Parent 2': 50,
         },
         parentNames: mostRecentMonthData?.parentNames || {
           'Parent 1': 'Parent 1',
@@ -191,8 +202,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
         const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled' };
 
         targetMonthData = {
           id: targetMonthId,
@@ -204,8 +215,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
             'Parent 2': 50,
           },
           medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {
-            'Parent 1': 48,
-            'Parent 2': 52,
+            'Parent 1': 50,
+            'Parent 2': 50,
           },
           parentNames: mostRecentMonthData?.parentNames || {
             'Parent 1': 'Parent 1',
@@ -268,8 +279,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
         const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
-        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
-        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled' };
         
         targetMonthData = {
           id: newMonthId,
@@ -279,8 +290,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           expenseSplit:
             mostRecentMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
           medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {
-            'Parent 1': 48,
-            'Parent 2': 52,
+            'Parent 1': 50,
+            'Parent 2': 50,
           },
           parentNames: mostRecentMonthData?.parentNames || {
             'Parent 1': 'Parent 1',
@@ -318,6 +329,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       addImportedExpenses,
       deleteExpense,
       updateExpense,
+      updateChildSupport,
     }),
     [appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense]
   );
