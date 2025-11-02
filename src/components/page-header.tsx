@@ -1,17 +1,10 @@
 'use client';
 
-import { Download, LogOut, Sparkles, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
-import { AiAdviceSheet } from '@/components/ai-advice-sheet';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { useAuth, useFirebase } from '@/firebase';
 import {
   DropdownMenu,
@@ -33,10 +26,6 @@ export function PageHeader({ totalExpenses }: PageHeaderProps) {
   const { user } = useFirebase();
   const router = useRouter();
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleSignOut = async () => {
     await signOut(auth);
     router.push('/login');
@@ -52,39 +41,6 @@ export function PageHeader({ totalExpenses }: PageHeaderProps) {
       <div className="container mx-auto flex items-center justify-between">
         <Logo />
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <AiAdviceSheet currentMonthlyExpenses={totalExpenses}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Sparkles className="h-4 w-4" />
-                      <span className="sr-only">Smart Budgeting Advice</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Smart Budgeting Advice</p>
-                  </TooltipContent>
-                </Tooltip>
-              </AiAdviceSheet>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handlePrint}
-                    aria-label="Export Monthly Report"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Export Monthly Report</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
