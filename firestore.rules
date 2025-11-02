@@ -40,6 +40,7 @@ service cloud.firestore {
     
     /**
      * @description Helper function to check if the write operation is only an attempt to link or unlink accounts.
+     * A write is allowed if it's the user updating their own coParentId, OR if they are setting another user's coParentId to their own uid.
      */
     function isLinkingOperation(userId) {
         // The requesting user must be authenticated.
@@ -47,24 +48,24 @@ service cloud.firestore {
             return false;
         }
 
-        let isLinkingAnotherUser = 
+        let isUpdatingSelf = 
+            // The document being written to IS the requester's own document.
+            isOwner(userId) &&
+            // The write is only modifying the `coParentId` and other expected fields.
+            // This prevents overwriting other sensitive data.
+            request.resource.data.diff(resource.data).affectedKeys.hasOnly(['coParentId']);
+
+        let isBeingLinkedByOther =
             // The document being written to is NOT the requester's own document.
             !isOwner(userId) &&
             // The write is only modifying the `coParentId` field.
-            request.resource.data.keys().hasOnly(['coParentId', 'appData', 'id', 'email']) &&
+            request.resource.data.diff(resource.data).affectedKeys.hasOnly(['coParentId']) &&
             // The value being written to `coParentId` is the requester's own UID.
             request.resource.data.coParentId == request.auth.uid;
             
-        let isUpdatingSelf =
-            // The document being written to IS the requester's own document.
-            isOwner(userId) &&
-            // The write is only modifying the `coParentId` field.
-             request.resource.data.keys().hasOnly(['coParentId', 'appData', 'id', 'email']);
-
-
         // The operation is allowed if the user is linking to another user
         // OR if they are updating their own coParentId (to link or unlink).
-        return isLinkingAnotherUser || isUpdatingSelf;
+        return isUpdatingSelf || isBeingLinkedByOther;
     }
 
 
