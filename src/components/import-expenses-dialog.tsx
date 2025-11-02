@@ -446,8 +446,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           </DialogTitle>
            {step === 'upload' ? (
             <DialogDescription>
-              Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". 
-              The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Enter the total amount paid; the system will auto-calculate the percentage split.
+              Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Add only the amount paid; the system will auto-calculate the percentage split.
             </DialogDescription>
           ) : (
             <DialogDescription>
@@ -659,7 +658,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                                                 disabled={Object.keys(fail.errors).length > 0}
                                                                 className="h-8 w-8"
                                                             >
-                                                                <Check className="h-4 w-4" />
+                                                                <Check className={cn("h-4 w-4", Object.keys(fail.errors).length === 0 && "text-green-600")} />
                                                             </Button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
