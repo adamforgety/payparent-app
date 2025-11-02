@@ -217,7 +217,7 @@ export function SummaryCard({
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
         <div className="space-y-2 rounded-md bg-muted/30 p-3">
-          <h4 className="font-medium text-sm">This Month's Balance</h4>
+          <h4 className="font-medium text-sm underline">This Month's Balance</h4>
           <div className="flex items-center justify-between text-sm">
             <p className="text-muted-foreground">Your Share of Expenses</p>
             <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
