@@ -36,7 +36,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, isUserLoading } = useFirebase();
 
   const [appData, setAppData] = useState<AppData | null>(null);
   const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
@@ -44,11 +44,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
   // Effect to load initial data and set up listeners
   useEffect(() => {
-    if (!user || !firestore) {
-      setIsLoading(false);
-      setAppData(null);
-      setCoParentData(null);
+    // Wait until the initial auth check is complete before doing anything.
+    if (isUserLoading || !firestore) {
+      setIsLoading(true);
       return;
+    }
+    
+    // If auth is checked and there's no user, we are done.
+    if (!user) {
+        setIsLoading(false);
+        setAppData(null);
+        setCoParentData(null);
+        return;
     }
 
     setIsLoading(true);
@@ -132,7 +139,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       dataUnsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, firestore]);
+  }, [user, firestore, isUserLoading]);
 
   const updateAppData = useCallback(
     (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
