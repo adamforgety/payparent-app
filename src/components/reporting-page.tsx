@@ -212,8 +212,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   }, [appData, selectedYear, selectedMonth]);
   
   useEffect(() => {
-    setSelectedMonth('all');
-  }, [selectedYear]);
+    if (!availableMonths.some(m => m.value === selectedMonth)) {
+      setSelectedMonth('all');
+    }
+  }, [selectedYear, availableMonths, selectedMonth]);
   
   const getShare = (transaction: Transaction, parent: Parent) => {
     if (transaction.category === 'Reimbursement') {
