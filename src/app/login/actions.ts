@@ -1,8 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes, User } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes, type User } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
+import type { AppData, UserDoc } from '@/lib/types';
+import { initialData } from '@/lib/data';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -39,6 +42,13 @@ function getErrorMessage(error: any): string {
 }
 
 
+async function createNewUserDocument(firestore: any, userId: string): Promise<void> {
+    const userDocRef = doc(firestore, 'users', userId);
+    const initialAppData: AppData = { ...initialData, id: userId };
+    const userDocPayload: UserDoc = { id: userId, appData: initialAppData };
+    await setDoc(userDocRef, userDocPayload);
+}
+
 export async function login(values: z.infer<typeof loginSchema>) {
   try {
     const { auth } = initializeFirebase();
@@ -51,8 +61,10 @@ export async function login(values: z.infer<typeof loginSchema>) {
 
 export async function signup(values: z.infer<typeof signupSchema>) {
   try {
-    const { auth } = initializeFirebase();
+    const { auth, firestore } = initializeFirebase();
     const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+    // Create a new document in Firestore for the new user
+    await createNewUserDocument(firestore, userCredential.user.uid);
     return { success: true, userId: userCredential.user.uid };
   } catch (error) {
     return { success: false, error: getErrorMessage(error) };
@@ -63,7 +75,19 @@ export async function handleGoogleSignIn(user: User) {
     if (!user) {
         return { success: false, error: 'User not found.' };
     }
-    // We don't need to do anything special here for now, as the data creation
-    // is handled on the client-side when a new user is detected.
-    return { success: true, userId: user.uid };
+    try {
+        const { firestore } = initializeFirebase();
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+
+        // If the user doesn't have a document in Firestore, create one.
+        if (!docSnap.exists()) {
+            await createNewUserDocument(firestore, user.uid);
+        }
+
+        return { success: true, userId: user.uid };
+
+    } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+    }
 }
