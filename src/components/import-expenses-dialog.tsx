@@ -210,12 +210,14 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
               });
               return;
             }
-
-            // At this point, basic validation passed, so we can parse more strictly.
+            
             const parsedAmount = parseFloat(amountAsString);
             let expenseCategory: ExpenseCategory = 'Other';
-            if (category && ALL_CATEGORIES.some(c => c.toLowerCase() === category.toLowerCase())) {
-                expenseCategory = ALL_CATEGORIES.find(c => c.toLowerCase() === category.toLowerCase())!;
+            if (category) {
+              const matchedCategory = ALL_CATEGORIES.find(c => c.toLowerCase() === String(category).toLowerCase());
+              if (matchedCategory) {
+                expenseCategory = matchedCategory;
+              }
             }
 
             const expenseObject: ParsedExpense = {
@@ -296,7 +298,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
   }
   
   const ErrorDisplay = ({ error, value }: { error?: string; value: string }) => {
-    if (!error) return <>{value}</>;
+    if (!error) return <div>{value}</div>;
     return (
       <div className="text-destructive font-medium">
         <div className="line-through text-muted-foreground">{value || '""'}</div>
