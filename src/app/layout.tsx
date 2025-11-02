@@ -6,6 +6,7 @@ import { FirebaseClientProvider } from '@/firebase';
 export const metadata: Metadata = {
   title: 'PayParent',
   description: 'Child Support & Expense Tracker',
+  manifest: '/manifest.ts',
 };
 
 export default function RootLayout({
