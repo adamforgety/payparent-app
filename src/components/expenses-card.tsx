@@ -333,7 +333,7 @@ export function ExpensesCard({
                         <div className="flex justify-end gap-1 h-8 w-full">
                           {item.type === 'expense' && (
                             <>
-                                <EditExpenseDialog expense={item as Expense} onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)} parentNames={parentNames} />
+                                <EditExpenseDialog expense={item as Expense} onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)} parentNames={parentNames} monthId={monthId} />
                                 <TooltipProvider>
                                     <Tooltip>
                                     <TooltipTrigger asChild>
