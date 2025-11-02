@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload, Download, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Upload, Download, ArrowLeft, RefreshCw, Trash2 } from 'lucide-react';
 
 import {
   Dialog,
@@ -174,7 +174,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     XLSX.writeFile(workbook, 'Expense_Import_Template.xlsx');
   };
 
-  const validateRow = (rowData: RowData, parentNames: ParentNames): { errors: RowErrors, parsedExpense: ParsedExpense | null } => {
+  const validateRow = (rowData: RowData): { errors: RowErrors, parsedExpense: ParsedExpense | null } => {
     const errors: RowErrors = {};
     const { date, description, amount, paidBy, category } = rowData;
 
@@ -198,7 +198,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     }
     if (!amount) {
       errors.amount = 'Missing';
-    } else if (!/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
+    } else if (isNaN(parseFloat(amountAsString)) || !isFinite(Number(amountAsString))) {
         errors.amount = 'Invalid Number';
     }
 
@@ -273,7 +273,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
               amount: String(normalizedRow.amount),
             };
 
-            const { errors, parsedExpense } = validateRow(rowData, parentNames);
+            const { errors, parsedExpense } = validateRow(rowData);
             
             if (parsedExpense) {
               const uniqueKey = `${parsedExpense.date}-${parsedExpense.description}-${parsedExpense.amount}-${parsedExpense.paidBy}`;
@@ -343,7 +343,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     updatedFailedImports[index].data[field] = value;
 
     // Live re-validation
-    const { errors } = validateRow(updatedFailedImports[index].data, parentNames);
+    const { errors } = validateRow(updatedFailedImports[index].data);
     updatedFailedImports[index].errors = errors;
     
     setFailedImports(updatedFailedImports);
@@ -351,7 +351,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
 
   const handleRetryFailedRow = (index: number) => {
     const rowToRetry = failedImports[index];
-    const { errors, parsedExpense } = validateRow(rowToRetry.data, parentNames);
+    const { errors, parsedExpense } = validateRow(rowToRetry.data);
 
     if (parsedExpense) {
       // Move from failed to successful
@@ -370,6 +370,54 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     }
   };
 
+  const handleSuccessfulRowChange = (index: number, field: keyof ParsedExpense, value: string | number | Date) => {
+    const updatedSuccessfulImports = [...successfulImports];
+    const itemToUpdate = { ...updatedSuccessfulImports[index] };
+
+    if (field === 'date' && value instanceof Date) {
+        itemToUpdate.date = value.toISOString();
+    } else if (field === 'amount' && typeof value === 'string') {
+        let amountAsString = value.trim();
+        if (amountAsString.startsWith('$')) {
+            amountAsString = amountAsString.substring(1).trim();
+        }
+        itemToUpdate.amount = parseFloat(amountAsString) || 0;
+    } else if (typeof value === 'string') {
+        (itemToUpdate as any)[field] = value;
+    }
+
+    const rowData: RowData = {
+        date: format(new Date(itemToUpdate.date), 'yyyy-MM-dd'),
+        description: itemToUpdate.description,
+        category: itemToUpdate.category,
+        paidBy: parentNames[itemToUpdate.paidBy],
+        amount: String(itemToUpdate.amount),
+    };
+
+    const { errors, parsedExpense } = validateRow(rowData);
+    
+    if (parsedExpense) {
+        updatedSuccessfulImports[index] = parsedExpense;
+        setSuccessfulImports(updatedSuccessfulImports);
+    } else {
+        // If the edit made it invalid, move it to failed imports
+        setSuccessfulImports(prev => prev.filter((_, i) => i !== index));
+        setFailedImports(prev => [
+            ...prev,
+            { rowNumber: -1, data: rowData, errors } // -1 indicates it came from the successful list
+        ]);
+    }
+  };
+  
+  const removeSuccessfulRow = (index: number) => {
+    setSuccessfulImports(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const removeFailedRow = (index: number) => {
+    setFailedImports(prev => prev.filter((_, i) => i !== index));
+  };
+
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -383,16 +431,22 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           <DialogTitle>
             {step === 'upload' ? 'Import Expenses from Excel' : 'Preview Import'}
           </DialogTitle>
-          {step === 'upload' ? (
-            <>
-              <DialogDescription>
-                Upload a file with columns for Date, Description, Category,
-                Amount, and Paid By (name must match "{parentNames['Parent 1']}" or "
-                {parentNames['Parent 2']}"). For the amount, enter the total amount
-                paid; the system will automatically calculate the percentage
-                distribution.
-              </DialogDescription>
-              <div className="pt-2">
+           {step === 'upload' ? (
+            <DialogDescription>
+              Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". 
+              The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}".
+              Enter the total amount paid; the system will auto-calculate the percentage split.
+            </DialogDescription>
+          ) : (
+            <DialogDescription>
+              Review the expenses found in your file. You can edit or remove items before the final import.
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        {step === 'upload' && (
+          <>
+            <div className="pt-2">
                 <Button
                   variant="link"
                   onClick={handleDownloadTemplate}
@@ -401,41 +455,32 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                   <Download className="mr-2 h-4 w-4" />
                   Download Template
                 </Button>
-              </div>
-            </>
-          ) : (
-            <DialogDescription>
-              Review the expenses found in your file. Correct any errors and
-              click "Confirm Import" to add them to your ledger.
-            </DialogDescription>
-          )}
-        </DialogHeader>
-
-        {step === 'upload' && (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onFileParse)} className="space-y-4 pt-4">
-              <FormField
-                control={form.control}
-                name="file"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Excel File</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept={ACCEPTED_FILE_TYPES.join(',')}
-                        onChange={(e) => field.onChange(e.target.files)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="submit">Preview Import</Button>
-              </DialogFooter>
-            </form>
-          </Form>
+            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onFileParse)} className="space-y-4 pt-4">
+                <FormField
+                  control={form.control}
+                  name="file"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Excel File</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept={ACCEPTED_FILE_TYPES.join(',')}
+                          onChange={(e) => field.onChange(e.target.files)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit">Preview Import</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </>
         )}
 
         {step === 'preview' && (
@@ -447,21 +492,72 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead className="w-[150px]">Date</TableHead>
                                     <TableHead>Description</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead>Paid By</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="w-[150px]">Category</TableHead>
+                                    <TableHead className="w-[180px]">Paid By</TableHead>
+                                    <TableHead className="w-[130px] text-right">Amount</TableHead>
+                                    <TableHead className="w-[50px] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {successfulImports.map((exp, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell>{format(new Date(exp.date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell>{exp.description}</TableCell>
-                                        <TableCell><Badge variant="outline">{exp.category}</Badge></TableCell>
-                                        <TableCell>{parentNames[exp.paidBy]}</TableCell>
-                                        <TableCell className="text-right">${exp.amount.toFixed(2)}</TableCell>
+                                    <TableRow key={`success-${i}`}>
+                                        <TableCell>
+                                            <Input
+                                                value={format(new Date(exp.date), 'yyyy-MM-dd')}
+                                                onChange={(e) => handleSuccessfulRowChange(i, 'date', new Date(e.target.value))}
+                                                type="date"
+                                                className="h-8"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input
+                                                value={exp.description}
+                                                onChange={(e) => handleSuccessfulRowChange(i, 'description', e.target.value)}
+                                                className="h-8"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Select
+                                                value={exp.category}
+                                                onValueChange={(value) => handleSuccessfulRowChange(i, 'category', value)}
+                                            >
+                                                <SelectTrigger className="h-8">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Select
+                                                value={exp.paidBy}
+                                                onValueChange={(value) => handleSuccessfulRowChange(i, 'paidBy', value)}
+                                            >
+                                                <SelectTrigger className="h-8">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Parent 1">{parentNames['Parent 1']}</SelectItem>
+                                                    <SelectItem value="Parent 2">{parentNames['Parent 2']}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input
+                                                value={exp.amount}
+                                                onChange={(e) => handleSuccessfulRowChange(i, 'amount', e.target.value)}
+                                                className="h-8 text-right"
+                                                type="number"
+                                            />
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeSuccessfulRow(i)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -481,12 +577,12 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                     <TableHead className="w-[150px]">Category</TableHead>
                                     <TableHead className="w-[180px]">Paid By</TableHead>
                                     <TableHead className="w-[130px]">Amount</TableHead>
-                                    <TableHead className="w-[50px] text-right">Retry</TableHead>
+                                    <TableHead className="w-[100px] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {failedImports.map((fail, i) => (
-                                    <TableRow key={fail.rowNumber}>
+                                    <TableRow key={`fail-${fail.rowNumber}-${i}`}>
                                         <TableCell>
                                             <Input
                                                 value={fail.data.date}
@@ -540,24 +636,29 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             {fail.errors.amount && <div className="text-xs text-destructive mt-1">{fail.errors.amount}</div>}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                         <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleRetryFailedRow(i)}
-                                                            disabled={Object.keys(fail.errors).length > 0}
-                                                            className="h-8 w-8"
-                                                        >
-                                                            <RefreshCw className="h-4 w-4" />
-                                                        </Button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Retry Import for this Row</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
+                                            <div className="flex items-center justify-end">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleRetryFailedRow(i)}
+                                                                disabled={Object.keys(fail.errors).length > 0}
+                                                                className="h-8 w-8"
+                                                            >
+                                                                <RefreshCw className="h-4 w-4" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Validate Row</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeFailedRow(i)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -570,7 +671,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 <Button variant="outline" onClick={() => setStep('upload')}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
                 </Button>
-                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && failedImports.length > 0}>
+                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0}>
                   Confirm Import ({successfulImports.length})
                 </Button>
             </DialogFooter>
