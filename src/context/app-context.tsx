@@ -61,24 +61,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   }, [user, firestore]);
 
   const updateAppData = useCallback(
-    async (newData: Partial<Omit<AppData, 'id'|'email'>>) => {
-      if (!user || !firestore || !appData) return;
+    async (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
+      if (!user || !firestore) return;
 
+      // Use a functional update to get the latest state
       setAppData(prev => {
         if (!prev) return null;
+        
+        // Deep merge months object
+        const newMonths = { ...prev.months };
+        if (newData.months) {
+          for (const monthId in newData.months) {
+            newMonths[monthId] = {
+              ...(newMonths[monthId] || {}), // Keep existing month data if any
+              ...newData.months[monthId],    // Overwrite with new data
+            };
+          }
+        }
+
         const updated = {
           ...prev,
           ...newData,
-           months: {
-            ...prev.months,
-            ...newData.months,
-          },
+          months: newMonths,
         };
+
         saveUserData(firestore, user.uid, updated).catch(console.error);
         return updated;
       });
     },
-    [user, firestore, appData]
+    [user, firestore]
   );
   
   const updateChildSupport = (updatedChildSupport: ChildSupport, monthId: string) => {

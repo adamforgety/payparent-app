@@ -1,6 +1,6 @@
 'use client';
 
-import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse } from 'date-fns';
+import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isBefore, isEqual } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
@@ -11,7 +11,7 @@ import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
 import { SummaryCard } from '@/components/summary-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppData, ChildSupport, Expense, MonthData, ParentNames } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, MonthData, ParentNames, ExpenseSplit, MedicalExpenseSplit } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
@@ -43,11 +43,10 @@ function DashboardComponent() {
       if (!mostRecentMonthData) return;
       
       const newMonthDate = parse(monthId, 'yyyy-MM', new Date());
-      const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
       // When creating a new month, carry over the amount, but reset paidBy and status.
       const childSupportSettings: ChildSupport = {
-        amount: isAfter(newMonthDate, mostRecentMonthDate) ? mostRecentMonthData.childSupport.amount : 0,
+        amount: mostRecentMonthData.childSupport.amount,
         paidBy: 'None', 
         status: 'Unsettled' 
       };
@@ -80,32 +79,26 @@ function DashboardComponent() {
     );
   };
   
-  const updateCurrentMonthData = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
+  const updateSettingsForCurrentAndFutureMonths = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
       if (!appData || !currentMonthData) return;
 
       const updatedMonths = { ...appData.months };
+      const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
       
-      // Update the current month
-      updatedMonths[monthId] = {
-        ...currentMonthData,
-        ...dataToUpdate,
-      };
-
-      // If child support amount changed, propagate to future months
-      if (dataToUpdate.childSupport && dataToUpdate.childSupport.amount !== currentMonthData.childSupport.amount) {
-        const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
-        for (const key in updatedMonths) {
-            const monthDate = parse(key, 'yyyy-MM', new Date());
-            if (isAfter(monthDate, currentMonthDate)) {
-                updatedMonths[key] = {
-                    ...updatedMonths[key],
-                    childSupport: {
-                      ...updatedMonths[key].childSupport, 
-                      amount: dataToUpdate.childSupport.amount,
-                    }
-                };
-            }
-        }
+      // Iterate over all months and update the current one and all future ones
+      for (const key in updatedMonths) {
+          const monthDate = parse(key, 'yyyy-MM', new Date());
+          if (isAfter(monthDate, currentMonthDate) || isEqual(monthDate, currentMonthDate)) {
+              updatedMonths[key] = {
+                  ...updatedMonths[key],
+                  ...dataToUpdate,
+                  // Ensure specific nested objects are merged correctly if they exist in dataToUpdate
+                  ...(dataToUpdate.childSupport && { childSupport: { ...updatedMonths[key].childSupport, ...dataToUpdate.childSupport } }),
+                  ...(dataToUpdate.expenseSplit && { expenseSplit: { ...updatedMonths[key].expenseSplit, ...dataToUpdate.expenseSplit } }),
+                  ...(dataToUpdate.medicalExpenseSplit && { medicalExpenseSplit: { ...updatedMonths[key].medicalExpenseSplit, ...dataToUpdate.medicalExpenseSplit } }),
+                  ...(dataToUpdate.parentNames && { parentNames: { ...updatedMonths[key].parentNames, ...dataToUpdate.parentNames } }),
+              };
+          }
       }
       
       updateAppData({ months: updatedMonths });
@@ -131,22 +124,13 @@ function DashboardComponent() {
     contextUpdateExpense(updatedExpense, originalMonthId);
   };
 
-  const updateChildSupport = (updatedChildSupport: ChildSupport, csMonthId: string) => {
+  const updateChildSupportForSingleMonth = (updatedChildSupport: ChildSupport, csMonthId: string) => {
     if (!appData) return;
     const monthData = appData.months[csMonthId];
     if (monthData) {
         const updatedMonthData = { ...monthData, childSupport: updatedChildSupport };
         updateAppData({ months: { ...appData.months, [csMonthId]: updatedMonthData } });
     }
-  };
-  
-  const handleUpdateParentNames = (parentNames: ParentNames) => {
-    if (!appData) return;
-    const updatedMonths = { ...appData.months };
-    for (const key in updatedMonths) {
-      updatedMonths[key].parentNames = parentNames;
-    }
-    updateAppData({ months: updatedMonths });
   };
 
   const handleMarkAllAsSettled = () => {
@@ -168,7 +152,7 @@ function DashboardComponent() {
     }
     
     if (madeChanges) {
-      updateCurrentMonthData({ expenses: updatedExpenses, childSupport: updatedChildSupport });
+      updateAppData({ months: { ...appData.months, [monthId]: { ...currentMonthData, expenses: updatedExpenses, childSupport: updatedChildSupport } } });
       toast({
         title: 'All Items Marked as Settled',
         description: 'All unsettled expenses and child support for this month are now settled.',
@@ -195,7 +179,7 @@ function DashboardComponent() {
     }
 
     if (madeChanges) {
-      updateCurrentMonthData({ expenses: updatedExpenses, childSupport: updatedChildSupport });
+      updateAppData({ months: { ...appData.months, [monthId]: { ...currentMonthData, expenses: updatedExpenses, childSupport: updatedChildSupport } } });
       toast({
         title: 'All Items Marked as Unsettled',
         description: 'All settled expenses and child support for this month have been reverted to unsettled.',
@@ -227,7 +211,7 @@ function DashboardComponent() {
   return (
     <DashboardProvider
       onUpdateExpense={handleUpdateExpense}
-      onUpdateChildSupport={updateChildSupport}
+      onUpdateChildSupport={updateChildSupportForSingleMonth}
     >
       <div className="flex flex-col">
         <PageHeader
@@ -334,7 +318,7 @@ function DashboardComponent() {
                         medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                         onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
                         onUpdateExpense={handleUpdateExpense}
-                        onUpdateChildSupport={(cs) => updateChildSupport(cs, monthId)}
+                        onUpdateChildSupport={(cs) => updateChildSupportForSingleMonth(cs, monthId)}
                         onMarkAllAsSettled={handleMarkAllAsSettled}
                         onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
                         currentDate={currentDate}
@@ -348,7 +332,7 @@ function DashboardComponent() {
                         <AllUnsettledExpensesCard 
                             appData={appData}
                             onUpdateExpense={handleUpdateExpense}
-                            onUpdateChildSupport={updateChildSupport}
+                            onUpdateChildSupport={updateChildSupportForSingleMonth}
                             onDeleteExpense={handleDeleteExpense}
                             currentDate={currentDate}
                         />
@@ -372,21 +356,21 @@ function DashboardComponent() {
                     <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
                       <ParentNamesCard
                           parentNames={currentMonthData.parentNames}
-                          onUpdate={handleUpdateParentNames}
+                          onUpdate={(parentNames: ParentNames) => updateSettingsForCurrentAndFutureMonths({ parentNames })}
                       />
                       <ChildSupportCard
                         childSupport={currentMonthData.childSupport}
-                        onUpdate={(cs) => updateCurrentMonthData({ childSupport: cs })}
+                        onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
                         parentNames={currentMonthData.parentNames}
                       />
                       <ParentSplitCard
                         expenseSplit={currentMonthData.expenseSplit}
-                        onUpdate={(expenseSplit) => updateCurrentMonthData({ expenseSplit })}
+                        onUpdate={(expenseSplit: ExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ expenseSplit })}
                         parentNames={currentMonthData.parentNames}
                       />
                       <MedicalSplitCard
                         expenseSplit={currentMonthData.medicalExpenseSplit}
-                        onUpdate={(medicalExpenseSplit) => updateCurrentMonthData({ medicalExpenseSplit })}
+                        onUpdate={(medicalExpenseSplit: MedicalExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ medicalExpenseSplit })}
                         parentNames={currentMonthData.parentNames}
                       />
                     </div>
