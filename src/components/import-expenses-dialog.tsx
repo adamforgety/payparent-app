@@ -31,6 +31,7 @@ import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types'
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -55,10 +56,26 @@ interface ImportExpensesDialogProps {
 }
 
 type ParsedExpense = Omit<Expense, 'id' | 'year' | 'month'>;
+
 type FailedImport = {
-  row: any;
-  reason: string;
+    rowNumber: number;
+    data: {
+        date: string;
+        description: string;
+        category: string;
+        paidBy: string;
+        amount: string;
+    };
+    errors: {
+        date?: string;
+        description?: string;
+        category?: string;
+        paidBy?: string;
+        amount?: string;
+        general?: string;
+    };
 };
+
 
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
@@ -133,34 +150,35 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         const seen = new Set<string>();
 
 
-        jsonData.forEach((row) => {
+        jsonData.forEach((row, index) => {
             const normalizedRow: {[key: string]: any} = {};
             for (const key in row) {
               normalizedRow[key.toLowerCase().replace(/[^a-z0-9]/gi, '')] = row[key];
             }
 
             const { date, description, category, paidby, amount } = normalizedRow;
-            const validationErrors: string[] = [];
+            const errors: FailedImport['errors'] = {};
 
             // --- Data Validation ---
-            if (!date) validationErrors.push('Missing Date');
-            if (!description) validationErrors.push('Missing Description');
-            if (!amount) validationErrors.push('Missing Amount');
-            if (!paidby) validationErrors.push('Missing Payer');
+            if (!date) errors.date = 'Missing';
+            if (!description) errors.description = 'Missing';
+            if (!amount) errors.amount = 'Missing';
+            if (!paidby) errors.paidBy = 'Missing';
             
             let parsedDate = new Date(date);
             if (date) {
                 if (typeof date === 'number') {
+                    // Excel date serial number
                     parsedDate = new Date(Date.UTC(0, 0, date - 1));
                 }
                 if (isNaN(parsedDate.getTime())) {
-                    validationErrors.push(`Invalid Date: "${date}"`);
+                    errors.date = 'Invalid Date';
                 }
             }
 
             const amountAsString = String(amount || '').trim();
-            if (amount && !/^[0-9]+(\.[0-9]{1,2})?$/.test(amountAsString)) {
-              validationErrors.push('Invalid Amount');
+             if (amount && !/^[0-9]+(\.[0-9]{1,2})?$/.test(amountAsString)) {
+               errors.amount = 'Invalid Number';
             }
             
             let paidByParent: Parent | null = null;
@@ -174,13 +192,23 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                     }
                 }
                 if (!paidByParent) {
-                    validationErrors.push(`Unrecognized Payer: "${paidby}"`);
+                    errors.paidBy = 'Unrecognized Payer';
                 }
             }
             
-            if (validationErrors.length > 0) {
-              failures.push({ row, reason: validationErrors.join(', ') });
-              return; // Move to the next row
+            if (Object.keys(errors).length > 0) {
+              failures.push({
+                rowNumber: index + 2,
+                data: {
+                  date: date ?? '',
+                  description: description ?? '',
+                  category: category ?? '',
+                  paidBy: paidby ?? '',
+                  amount: amount ?? '',
+                },
+                errors,
+              });
+              return;
             }
 
             // At this point, basic validation passed, so we can parse more strictly.
@@ -203,7 +231,17 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
 
             const uniqueKey = `${expenseObject.date}-${expenseObject.description}-${expenseObject.amount}-${expenseObject.paidBy}`;
             if (seen.has(uniqueKey)) {
-                failures.push({ row, reason: 'Duplicate row in file' });
+                 failures.push({
+                    rowNumber: index + 2,
+                    data: {
+                        date: date,
+                        description: description,
+                        category: category,
+                        paidBy: paidby,
+                        amount: amount,
+                    },
+                    errors: { general: 'Duplicate row in file' },
+                });
                 return;
             }
 
@@ -235,17 +273,11 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     }
 
     if (failedImports.length > 0) {
-        const reasons = failedImports.map(f => f.reason).reduce((acc, reason) => {
-          acc[reason] = (acc[reason] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const reasonSummary = Object.entries(reasons).map(([reason, count]) => `${count}x ${reason}`).join(', ');
-
+        const totalFailed = failedImports.length;
         toast({
           variant: successfulImports.length > 0 ? 'default' : 'destructive',
-          title: `Import Complete: ${successfulImports.length} added, ${failedImports.length} failed.`,
-          description: `Failure reasons: ${reasonSummary}`,
+          title: `Import Complete: ${successfulImports.length} added, ${totalFailed} failed.`,
+          description: `Review the skipped rows in the preview.`,
         });
       } else if (successfulImports.length > 0) {
          toast({
@@ -262,6 +294,18 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     
     handleOpenChange(false);
   }
+  
+  const ErrorDisplay = ({ error, value }: { error?: string, value: string }) => {
+    if (!error) return <>{value}</>;
+    return (
+        <div className="text-destructive font-medium">
+            <p className="line-through text-muted-foreground">{value || '""'}</p>
+            <p>
+                <Badge variant="destructive">{error}</Badge>
+            </p>
+        </div>
+    );
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -368,15 +412,38 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Row Data</TableHead>
-                                    <TableHead>Reason</TableHead>
+                                    <TableHead>Row</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Paid By</TableHead>
+                                    <TableHead>Amount</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {failedImports.map((fail, i) => (
                                     <TableRow key={i}>
-                                        <TableCell className="text-sm font-mono">{Object.values(fail.row).join(', ')}</TableCell>
-                                        <TableCell><Badge variant="destructive">{fail.reason}</Badge></TableCell>
+                                        <TableCell className="font-mono">
+                                            {fail.rowNumber}
+                                            {fail.errors.general && (
+                                                <div className='mt-1'><Badge variant="destructive">{fail.errors.general}</Badge></div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <ErrorDisplay error={fail.errors.date} value={fail.data.date} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <ErrorDisplay error={fail.errors.description} value={fail.data.description} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <ErrorDisplay error={fail.errors.category} value={fail.data.category} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <ErrorDisplay error={fail.errors.paidBy} value={fail.data.paidBy} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <ErrorDisplay error={fail.errors.amount} value={fail.data.amount} />
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
