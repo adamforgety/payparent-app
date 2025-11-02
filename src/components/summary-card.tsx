@@ -1,13 +1,12 @@
 'use client';
 
-import { HandCoins, Scale } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import { useMemo } from 'react';
 
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -22,8 +21,6 @@ import type {
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Button } from './ui/button';
-import { SettleBalanceDialog } from './settle-balance-dialog';
 import { useAppContext } from '@/context/app-context';
 import { parse, isBefore, startOfDay, format, isAfter, startOfMonth } from 'date-fns';
 import {
@@ -189,19 +186,6 @@ export function SummaryCard({
     }
   }
 
-  const isButtonDisabled = !(
-    Object.values(appData.months).some((m) =>
-      m.expenses.some((e) => e.status === 'Unsettled')
-    ) ||
-    Object.values(appData.months).some(
-      (m) => {
-        const monthDate = parse(m.id, 'yyyy-MM', new Date());
-        const isFuture = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
-        return m.childSupport.amount > 0 && m.childSupport.status === 'Unsettled' && !isFuture;
-      }
-    )
-  );
-
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -263,7 +247,7 @@ export function SummaryCard({
 
         {previousBalances.length > 0 && (
           <div className="space-y-2 rounded-md bg-muted/30 p-3">
-            <h4 className="font-medium text-sm underline">Balance from Previous Months</h4>
+             <h4 className="font-medium text-sm underline">Balance from Previous Months</h4>
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1" className="border-b-0">
                 <AccordionTrigger className="text-sm py-0 pt-2 hover:no-underline">
@@ -337,25 +321,6 @@ export function SummaryCard({
           from all months.
         </p>
       </CardContent>
-      <CardFooter>
-        <SettleBalanceDialog
-          parent={parent}
-          otherParent={otherParent}
-          expenses={expenses}
-          expenseSplit={expenseSplit}
-          medicalExpenseSplit={medicalExpenseSplit}
-          childSupport={childSupport}
-          netBalance={currentMonthNetBalance}
-          parentNames={parentNames}
-          appData={appData}
-          currentMonthId={currentMonthId}
-        >
-          <Button className="w-full" disabled={isButtonDisabled}>
-            <HandCoins className="mr-2 h-4 w-4" />
-            Settle Balance
-          </Button>
-        </SettleBalanceDialog>
-      </CardFooter>
     </Card>
   );
 }

@@ -1,330 +1,326 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import type { Expense, Parent, ExpenseSplit, ChildSupport, PaymentStatus, ParentNames, MedicalExpenseSplit, AppData } from '@/lib/types';
-import { ScrollArea } from './ui/scroll-area';
-import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import { useAppContext } from '@/context/app-context';
-import { isAfter, startOfMonth } from 'date-fns';
+import { Scale } from 'lucide-react';
+import { useMemo } from 'react';
 
-interface SettleBalanceDialogProps {
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import type {
+  ChildSupport,
+  Expense,
+  ExpenseSplit,
+  Parent,
+  ParentNames,
+  MedicalExpenseSplit,
+  AppData,
+} from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { useAppContext } from '@/context/app-context';
+import { parse, isBefore, startOfDay, format, isAfter, startOfMonth } from 'date-fns';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from './ui/accordion';
+
+interface SummaryCardProps {
   parent: Parent;
-  otherParent: Parent;
   expenses: Expense[];
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
   childSupport: ChildSupport;
-  children: React.ReactNode;
-  netBalance: number;
   parentNames: ParentNames;
   appData: AppData;
   currentMonthId: string;
 }
 
-type ItemToSettle = {
-  id: string;
-  description: string;
-  totalAmount: number;
-  owedAmount: number;
-  status: PaymentStatus;
-  type: 'expense' | 'child_support';
-  originalPayer: Parent | 'None';
+const calculateShare = (
+  expenses: Expense[],
+  split: ExpenseSplit,
+  medicalSplit: MedicalExpenseSplit,
+  p: Parent
+): number => {
+  let totalShare = 0;
+
+  for (const expense of expenses) {
+    if (expense.category === 'Reimbursement') {
+      if (expense.paidBy !== p) {
+        totalShare += expense.amount;
+      }
+    } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+      const medicalParentSplitPercent = medicalSplit[p] / 100;
+      totalShare += expense.amount * medicalParentSplitPercent;
+    } else {
+      const parentSplitPercent = split[p] / 100;
+      totalShare += expense.amount * parentSplitPercent;
+    }
+  }
+  return totalShare;
 };
 
-export function SettleBalanceDialog({
+type PreviousBalance = {
+  monthId: string;
+  balance: number;
+};
+
+export function SummaryCard({
   parent,
-  otherParent,
   expenses,
   expenseSplit,
   medicalExpenseSplit,
   childSupport,
-  children,
-  netBalance,
   parentNames,
   appData,
   currentMonthId,
-}: SettleBalanceDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
-  const { updateExpense, updateChildSupport, updateAppData } = useAppContext();
-  
-  const allUnsettledItems = useMemo<ItemToSettle[]>(() => {
-    let items: ItemToSettle[] = [];
-    const isCurrentMonthFuture = isAfter(new Date(currentMonthId), startOfMonth(new Date()));
-
-    // Unsettled expenses for the current month
-    expenses
-        .filter(exp => exp.status === 'Unsettled')
-        .forEach(exp => {
-            let split = 0;
-            if (exp.category === 'Reimbursement') {
-                // The full amount is owed by the non-paying parent
-                split = 1;
-            } else if (exp.category === 'Medical' || exp.category === 'Child Care') {
-                // The share owed by the non-paying parent
-                split = medicalExpenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
-            } else {
-                // The share owed by the non-paying parent
-                split = expenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
-            }
-
-            items.push({
-                id: exp.id,
-                description: exp.description,
-                totalAmount: exp.amount,
-                owedAmount: exp.amount * split,
-                status: exp.status,
-                type: 'expense',
-                originalPayer: exp.paidBy,
-            });
-        });
-
-    // Unsettled child support for the current month
-    if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && childSupport.status === 'Unsettled' && !isCurrentMonthFuture) {
-        items.push({
-            id: `cs-${currentMonthId}`,
-            description: 'Child Support',
-            totalAmount: childSupport.amount,
-            owedAmount: childSupport.amount,
-            status: childSupport.status,
-            type: 'child_support',
-            originalPayer: childSupport.paidBy,
-        });
-    }
-        
-    return items.filter(item => item.owedAmount > 0);
-  }, [expenses, childSupport, expenseSplit, medicalExpenseSplit, parent, otherParent, currentMonthId]);
-
-  const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
-    // Other parent owes me for:
-    // 1. Expenses I paid (they owe their share)
-    // 2. Child support they paid to me (I receive this)
-    return allUnsettledItems.filter(item => {
-      if (item.type === 'expense') {
-        return item.originalPayer === parent;
-      }
-      if (item.type === 'child_support') {
-        return item.originalPayer === otherParent; // They paid me
-      }
-      return false;
-    });
-  }, [allUnsettledItems, parent, otherParent]);
-  
-  const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
-    // I owe other parent for:
-    // 1. Expenses they paid (I owe my share)
-    // 2. Child support I paid to them (They receive this)
-     return allUnsettledItems.filter(item => {
-      if (item.type === 'expense') {
-        return item.originalPayer === otherParent;
-      }
-      if (item.type === 'child_support') {
-        return item.originalPayer === parent; // I paid them
-      }
-      return false;
-    });
-  }, [allUnsettledItems, parent, otherParent]);
-
-
-  const handleMarkAsSettled = (item: ItemToSettle) => {
-    if (item.type === 'expense') {
-      const originalExpense = expenses.find(exp => exp.id === item.id);
-      if(originalExpense) {
-        updateExpense({ ...originalExpense, status: 'Settled' }, currentMonthId);
-      }
-    } else { // child_support
-      const updatedChildSupport = { ...childSupport, status: 'Settled' };
-      const updatedMonths = { ...appData.months, [currentMonthId]: { ...appData.months[currentMonthId], childSupport: updatedChildSupport }};
-      updateAppData({ months: updatedMonths });
-    }
-    toast({
-      title: 'Payment Marked as Settled',
-      description: `"${item.description}" has been marked as settled.`,
-    });
-  };
-  
-  const handleMarkAllAsSettled = () => {
-    itemsOwedByMe.forEach(item => {
-      if (item.status === 'Unsettled') {
-         handleMarkAsSettled(item);
-      }
-    });
-     toast({
-      title: 'All Owed Items Marked as Settled',
-      description: `All items you owed have been updated.`,
-    });
-  };
-
-  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + item.owedAmount, 0);
-  const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
-
+}: SummaryCardProps) {
+  const { updateExpense, updateChildSupport } = useAppContext();
+  const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
-  const finalNetBalance = totalOwedToMe - totalOwedByMe;
 
+  // --- Calculate Balance from Previous Months ---
+  const previousBalances = useMemo<PreviousBalance[]>(() => {
+    return Object.keys(appData.months)
+      .sort()
+      .filter((monthId) => {
+        const monthDate = parse(monthId, 'yyyy-MM', new Date());
+        const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
+        return isBefore(startOfDay(monthDate), startOfDay(currentDate));
+      })
+      .map((monthId) => {
+        const monthData = appData.months[monthId];
+        if (!monthData) return { monthId, balance: 0 };
+
+        const unsettledExpenses = monthData.expenses.filter(
+          (e) => e.status === 'Unsettled'
+        );
+        
+        const unsettledPaidByParent = unsettledExpenses
+          .filter((exp) => exp.paidBy === parent)
+          .reduce((sum, exp) => sum + exp.amount, 0);
+
+        const parentExpenseShare = calculateShare(
+          unsettledExpenses,
+          monthData.expenseSplit,
+          monthData.medicalExpenseSplit,
+          parent
+        );
+        const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+
+        let childSupportBalance = 0;
+        const monthDate = parse(monthId, 'yyyy-MM', new Date());
+        const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+
+        if (
+          monthData.childSupport.status === 'Unsettled' &&
+          monthData.childSupport.paidBy !== 'None' &&
+          !isFutureMonth
+        ) {
+          if (monthData.childSupport.paidBy === parent) {
+            // If I paid, it's a debit (money I paid out).
+            childSupportBalance = -monthData.childSupport.amount;
+          } else {
+             // If they paid, it's a credit to me.
+            childSupportBalance = monthData.childSupport.amount;
+          }
+        }
+        
+        return { monthId, balance: expenseBalance + childSupportBalance };
+      })
+      .filter((item) => item.balance !== 0);
+  }, [appData.months, currentMonthId, parent]);
+
+  const previousMonthsTotalBalance = previousBalances.reduce(
+    (acc, curr) => acc + curr.balance,
+    0
+  );
+
+  // --- Calculate Current Month's Balance ---
+  const unsettledExpenses = expenses.filter((e) => e.status === 'Unsettled');
+
+  const unsettledPaidByParent = unsettledExpenses
+    .filter((exp) => exp.paidBy === parent)
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const parentExpenseShare = calculateShare(
+    unsettledExpenses,
+    expenseSplit,
+    medicalExpenseSplit,
+    parent
+  );
+
+  const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+
+  let childSupportBalance = 0;
+  const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
+  const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
+
+  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
+     if (childSupport.paidBy === parent) {
+      // If I am the payer, this is a debit (money I paid out)
+      childSupportBalance = -childSupport.amount;
+    } else {
+      // If the other parent is the payer, this is a credit for me (money I received)
+      childSupportBalance = childSupport.amount;
+    }
+  }
+
+  const currentMonthNetBalance = expenseBalance + childSupportBalance;
+
+  const totalNetBalance = previousMonthsTotalBalance + currentMonthNetBalance;
+
+  const isSettled = totalNetBalance === 0;
+
+  let transferDescription = 'All settled up';
+  if (!isSettled) {
+    if (totalNetBalance < 0) {
+      transferDescription = `You Owe ${otherParentName}`;
+    } else if (totalNetBalance > 0) {
+      transferDescription = `${otherParentName} Owes You`;
+    }
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-2xl w-full grid-rows-[auto,minmax(0,1fr),auto] max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Settle Balance for This Month</DialogTitle>
-          <DialogDescription>
-             Review this month's unsettled items and mark them as settled to clear balances with {otherParentName}.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className='overflow-y-auto -mx-6 px-6 flex-1'>
-            <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-center">
-              <div className="text-sm text-muted-foreground">
-                {finalNetBalance >= 0 ? `${otherParentName} owes you` : `You owe ${otherParentName}`}
-              </div>
-              <div
+    <Card className="flex flex-col">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+            <Scale className="h-5 w-5 text-secondary-foreground" />
+          </span>
+          <div>
+            <CardTitle>{parentNames[parent]}</CardTitle>
+            <CardDescription>Monthly contribution summary.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow space-y-4">
+        <div className="space-y-2 rounded-md bg-muted/30 p-3">
+          <h4 className="font-medium text-sm underline">This Month's Balance</h4>
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">Your Share of Expenses</p>
+            <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">Unsettled Expenses You Paid</p>
+            <p className="font-semibold text-green-600">
+              +${unsettledPaidByParent.toFixed(2)}
+            </p>
+          </div>
+          {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
+            <div className="flex items-center justify-between text-sm">
+              <p className="text-muted-foreground">Child Support</p>
+              <p
                 className={cn(
-                  'text-2xl font-bold',
-                    finalNetBalance < 0 && 'text-destructive',
-                    finalNetBalance > 0 && 'text-green-600'
+                  'font-semibold',
+                  childSupportBalance > 0 && 'text-green-600',
+                  childSupportBalance < 0 && 'text-destructive'
                 )}
               >
-                ${Math.abs(finalNetBalance).toFixed(2)}
-              </div>
+                {childSupportBalance >= 0
+                  ? `+$${childSupportBalance.toFixed(2)}`
+                  : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
+              </p>
             </div>
-          <Tabs defaultValue="owed-by-me" className="mt-4">
-            <TabsList className="grid w-full grid-cols-2 h-auto flex-wrap">
-              <TabsTrigger value="owed-to-me" className="flex-wrap h-auto py-1.5">
-                <span className="mr-2">{otherParentName} Owes You ({itemsOwedToMe.length})</span>
-                <span className="text-primary font-bold">${totalOwedToMe.toFixed(2)}</span>
-                </TabsTrigger>
-              <TabsTrigger value="owed-by-me" className="flex-wrap h-auto py-1.5">
-                <span className="mr-2">You Owe {otherParentName} ({itemsOwedByMe.length})</span>
-                <span className="text-destructive font-bold">${totalOwedByMe.toFixed(2)}</span>
-                </TabsTrigger>
-            </TabsList>
-            <TabsContent value="owed-to-me">
-              <SettlementTable 
-                  items={itemsOwedToMe}
-                  actionLabel="Mark as Settled"
-                  onItemAction={handleMarkAsSettled}
-                  actionVariant='default'
-                  isReceiving={true}
-              />
-            </TabsContent>
-            <TabsContent value="owed-by-me">
-                <SettlementTable 
-                  items={itemsOwedByMe}
-                  actionLabel="Mark as Settled"
-                  onItemAction={handleMarkAsSettled}
-                  actionVariant='destructive'
-                  onMarkAllSettled={handleMarkAllAsSettled}
-                  isReceiving={false}
-                />
-            </TabsContent>
-          </Tabs>
+          )}
+          <Separator />
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">Your Net Balance for Month</p>
+            <p
+              className={cn(
+                'font-semibold',
+                currentMonthNetBalance > 0 && 'text-green-600',
+                currentMonthNetBalance < 0 && 'text-destructive'
+              )}
+            >
+              {currentMonthNetBalance >= 0
+                ? `+$${currentMonthNetBalance.toFixed(2)}`
+                : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
+            </p>
+          </div>
         </div>
 
-        <DialogFooter className="mt-4 shrink-0">
-          <DialogClose asChild>
-            <Button variant="outline" className="w-full sm:w-auto">Close</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-
-interface SettlementTableProps {
-  items: ItemToSettle[];
-  actionLabel: string;
-  onItemAction: (item: ItemToSettle) => void;
-  actionVariant: 'default' | 'destructive';
-  isReceiving: boolean;
-  onMarkAllSettled?: () => void;
-}
-
-function SettlementTable({ items, actionLabel, onItemAction, actionVariant, isReceiving, onMarkAllSettled }: SettlementTableProps) {
-  
-  const canMarkAllSettled = items.some(item => item.status === 'Unsettled');
-  
-  return (
-    <>
-       {onMarkAllSettled && (
-          <div className="flex justify-end my-4">
-            <Button onClick={onMarkAllSettled} disabled={!canMarkAllSettled} variant="destructive">
-              Mark All as Settled
-            </Button>
+        {previousBalances.length > 0 && (
+          <div className="space-y-2 rounded-md bg-muted/30 p-3">
+             <h4 className="font-medium text-sm underline">Balance from Previous Months</h4>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1" className="border-b-0">
+                <AccordionTrigger className="text-sm py-0 pt-2 hover:no-underline">
+                  <div className="flex justify-between w-full pr-4">
+                    <span className="text-muted-foreground">Total from Past Months</span>
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        previousMonthsTotalBalance > 0 && 'text-green-600',
+                        previousMonthsTotalBalance < 0 && 'text-destructive'
+                      )}
+                    >
+                      {previousMonthsTotalBalance >= 0
+                        ? `+$${previousMonthsTotalBalance.toFixed(2)}`
+                        : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-1 pl-2 pr-1 pt-2 border-t mt-2">
+                    {previousBalances.map(({ monthId, balance }) => (
+                      <div
+                        key={monthId}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <p className="text-muted-foreground">
+                          {format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}
+                        </p>
+                        <p
+                          className={cn(
+                            'font-medium',
+                            balance > 0 && 'text-green-600',
+                            balance < 0 && 'text-destructive'
+                          )}
+                        >
+                          {balance >= 0
+                            ? `+$${balance.toFixed(2)}`
+                            : `-$${Math.abs(balance).toFixed(2)}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         )}
-      <ScrollArea className="h-auto max-h-[40vh] rounded-md border">
-        <Table>
-          <TableHeader className="sticky top-0 bg-secondary">
-            <TableRow>
-              <TableHead>Description</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Owed Amount</TableHead>
-              {!isReceiving && <TableHead className="w-auto text-right">Action</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.length > 0 ? (
-              items.map((item) => (
-                  <TableRow key={`${item.id}-${item.type}`}>
-                    <TableCell>
-                      <p className="font-medium">{item.description}</p>
-                      <p className="text-xs text-muted-foreground">Total: ${item.totalAmount.toFixed(2)}</p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="destructive">
-                        Unsettled
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${item.owedAmount.toFixed(2)}
-                    </TableCell>
-                    {!isReceiving && (
-                      <TableCell className='text-right'>
-                        <Button
-                          variant={actionVariant}
-                          size="sm"
-                          onClick={() => onItemAction(item)}
-                        >
-                          {actionLabel}
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isReceiving ? 3 : 4} className="h-24 text-center">
-                  No unsettled items in this category.
-                </TableCell>
-              </TableRow>
+
+        <Separator />
+        
+        <div className="rounded-lg bg-secondary/50 p-4 text-center">
+          <p className="text-base font-medium text-foreground">
+            {transferDescription}
+          </p>
+          <p
+            className={cn(
+              'text-2xl font-bold',
+              !isSettled && totalNetBalance < 0 && 'text-destructive',
+              !isSettled && totalNetBalance > 0 && 'text-green-600'
             )}
-          </TableBody>
-        </Table>
-      </ScrollArea>
-      </>
-  )
+          >
+            {isSettled
+              ? '$0.00'
+              : totalNetBalance > 0
+                ? `+$${totalNetBalance.toFixed(2)}`
+                : `-$${Math.abs(totalNetBalance).toFixed(2)}`}
+          </p>
+        </div>
+        <p className="pt-2 text-xs text-muted-foreground">
+          This is the total outstanding balance based on all unsettled items
+          from all months.
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
