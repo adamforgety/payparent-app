@@ -157,18 +157,18 @@ export function SummaryDetailsCard({
       <CardContent className="space-y-4">
         <div className="space-y-2 rounded-md bg-muted/50 p-3">
           <h4 className="font-medium text-sm underline">This Month's Unsettled Balance</h4>
-          <div className="grid grid-cols-2 gap-x-4 text-sm">
+          <div className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
             <p className="text-muted-foreground">Your Share of Expenses</p>
             <p className="font-semibold text-right">-${parentExpenseShare.toFixed(2)}</p>
           </div>
-          <div className="grid grid-cols-2 gap-x-4 text-sm">
+          <div className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
             <p className="text-muted-foreground">Expenses You Paid</p>
             <p className="font-semibold text-green-600 text-right">
               +${unsettledPaidByParent.toFixed(2)}
             </p>
           </div>
           {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
-            <div className="grid grid-cols-2 gap-x-4 text-sm">
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
               <p className="text-muted-foreground">Child Support</p>
               <p className={cn('font-semibold text-right', childSupportBalance > 0 && 'text-green-600', childSupportBalance < 0 && 'text-destructive')}>
                 {childSupportBalance >= 0 ? `+$${childSupportBalance.toFixed(2)}` : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
@@ -176,7 +176,7 @@ export function SummaryDetailsCard({
             </div>
           )}
           <Separator />
-          <div className="grid grid-cols-2 gap-x-4 font-medium">
+          <div className="grid grid-cols-[auto_1fr] gap-x-4 font-medium">
             <p className="text-muted-foreground">Net for this Month</p>
             <p className={cn("text-right", currentMonthNetBalance > 0 && 'text-green-600', currentMonthNetBalance < 0 && 'text-destructive')}>
               {currentMonthNetBalance >= 0 ? `+$${currentMonthNetBalance.toFixed(2)}` : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
@@ -190,7 +190,7 @@ export function SummaryDetailsCard({
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="item-1" className="border-b-0">
                 <AccordionTrigger className="text-sm py-2 hover:no-underline">
-                  <div className="grid grid-cols-2 gap-x-4 w-full pr-4 font-medium">
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 w-full pr-4 font-medium">
                     <span className="text-muted-foreground text-left">Total from Past Months</span>
                     <span className={cn('font-semibold text-right', previousMonthsTotalBalance > 0 && 'text-green-600', previousMonthsTotalBalance < 0 && 'text-destructive')}>
                       {previousMonthsTotalBalance >= 0 ? `+$${previousMonthsTotalBalance.toFixed(2)}` : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
@@ -200,7 +200,7 @@ export function SummaryDetailsCard({
                 <AccordionContent>
                   <div className="space-y-1 pl-2 pr-1 pt-2 border-t mt-2">
                     {previousBalances.map(({ monthId, balance }) => (
-                      <div key={monthId} className="grid grid-cols-2 gap-x-4 text-xs">
+                      <div key={monthId} className="grid grid-cols-[auto_1fr] gap-x-4 text-xs">
                         <p className="text-muted-foreground text-left">
                           {format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}
                         </p>
