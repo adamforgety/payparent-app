@@ -113,6 +113,7 @@ export default function LoginPage() {
       if (!firestore) return null;
       try {
         const usersRef = collection(firestore, 'users');
+        // Correctly query the nested appData object
         const q = query(usersRef, where('appData.username', '==', username), limit(1));
         const querySnapshot = await getDocs(q);
 
@@ -142,7 +143,8 @@ export default function LoginPage() {
           if (foundEmail) {
             emailToLogin = foundEmail;
           } else {
-            // To avoid username enumeration, we give a generic error.
+            // If username is not found, we can give a specific error or the generic one.
+            // A generic error is better for security to avoid username enumeration.
             toast({
               variant: 'destructive',
               title: 'Login Failed',
@@ -431,3 +433,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
