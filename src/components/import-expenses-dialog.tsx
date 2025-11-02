@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload, Download, ArrowLeft, RefreshCw, Trash2 } from 'lucide-react';
+import { Upload, Download, ArrowLeft, Check, Trash2 } from 'lucide-react';
 
 import {
   Dialog,
@@ -132,6 +132,18 @@ function flexibleDateParse(dateString: string): Date | null {
   return null;
 }
 
+const ErrorDisplay = ({ error, value }: { error?: string; value: string }) => {
+    if (!error) return <>{value}</>;
+    return (
+        <div className="text-destructive">
+            <div>
+                <Badge variant="destructive">{error}</Badge>
+            </div>
+        </div>
+    );
+};
+
+
 export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
@@ -176,7 +188,8 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
 
   const validateRow = (rowData: RowData): { errors: RowErrors, parsedExpense: ParsedExpense | null } => {
     const errors: RowErrors = {};
-    const { date, description, amount, paidBy, category } = rowData;
+    const { date, description, paidBy, category } = rowData;
+    let amount = rowData.amount;
 
     let parsedDate: Date | null = null;
     if (!date) {
@@ -434,8 +447,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
            {step === 'upload' ? (
             <DialogDescription>
               Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". 
-              The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}".
-              Enter the total amount paid; the system will auto-calculate the percentage split.
+              The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Enter the total amount paid; the system will auto-calculate the percentage split.
             </DialogDescription>
           ) : (
             <DialogDescription>
@@ -647,7 +659,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                                                 disabled={Object.keys(fail.errors).length > 0}
                                                                 className="h-8 w-8"
                                                             >
-                                                                <RefreshCw className="h-4 w-4" />
+                                                                <Check className="h-4 w-4" />
                                                             </Button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
