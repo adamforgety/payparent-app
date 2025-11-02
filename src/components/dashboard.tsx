@@ -346,6 +346,7 @@ function DashboardComponent() {
                             onUpdateExpense={handleUpdateExpense}
                             onUpdateChildSupport={updateChildSupport}
                             onDeleteExpense={handleDeleteExpense}
+                            currentDate={currentDate}
                         />
                     </TabsContent>
                  </Tabs>

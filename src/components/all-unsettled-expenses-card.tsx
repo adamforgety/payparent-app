@@ -20,6 +20,7 @@ interface AllUnsettledExpensesCardProps {
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
+  currentDate: Date;
 }
 
 type UnsettledItem = {
@@ -44,7 +45,8 @@ export function AllUnsettledExpensesCard({
   appData,
   onUpdateExpense,
   onUpdateChildSupport,
-  onDeleteExpense
+  onDeleteExpense,
+  currentDate,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
   const [showPastDueOnly, setShowPastDueOnly] = useState(false);
@@ -54,17 +56,18 @@ export function AllUnsettledExpensesCard({
     if (!appData?.months) return items;
 
     const today = new Date();
-    const currentMonthId = format(today, 'yyyy-MM');
-    const todayStartOfMonth = startOfMonth(today);
+    const dashboardMonthId = format(currentDate, 'yyyy-MM');
 
     for (const monthId in appData.months) {
       // Filter out current month items if the switch is on
-      if (showPastDueOnly && monthId === currentMonthId) {
+      if (showPastDueOnly && monthId === dashboardMonthId) {
         continue;
       }
       
       const monthData = appData.months[monthId];
-      const monthDate = parse(monthId, 'yyyy-MM', new Date());
+      const localDate = new Date(monthData.year, monthData.month - 1, 1, 12); // Use noon to avoid TZ issues
+      const isFutureMonth = isAfter(localDate, startOfMonth(today));
+
 
       // Add unsettled expenses
       monthData.expenses
@@ -89,9 +92,7 @@ export function AllUnsettledExpensesCard({
         });
 
       // Add unsettled child support (if not in a future month)
-      if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isAfter(monthDate, todayStartOfMonth)) {
-        const localDate = parse(`${monthId}-01`, 'yyyy-MM-dd', new Date());
-        
+      if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isFutureMonth) {
         items.push({
           id: `cs-${monthId}`,
           monthId,
@@ -111,7 +112,7 @@ export function AllUnsettledExpensesCard({
 
     // Sort by date descending
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [appData.months, showPastDueOnly]);
+  }, [appData.months, showPastDueOnly, currentDate]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
