@@ -125,11 +125,11 @@ export function SummaryCard({
           !isFutureMonth
         ) {
           if (monthData.childSupport.paidBy === parent) {
-            // If I paid, it's a debit from my perspective for this calculation
-            childSupportBalance = monthData.childSupport.amount;
-          } else {
-             // If they paid, it's a credit to me
+            // If I paid, it's a debit (money I paid out).
             childSupportBalance = -monthData.childSupport.amount;
+          } else {
+             // If they paid, it's a credit to me.
+            childSupportBalance = monthData.childSupport.amount;
           }
         }
         
