@@ -2,7 +2,7 @@
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -24,6 +24,7 @@ import { useAppContext } from '@/context/app-context';
 import { ImportExpensesDialog } from './import-expenses-dialog';
 import { AccountSettingsCard } from './account-settings-card';
 import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
@@ -275,10 +276,23 @@ function DashboardComponent() {
               <TabsTrigger value="settings" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Settings</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
+               <div className="fixed bottom-8 right-8 z-50 no-print">
+                <TooltipProvider>
+                    <Tooltip>
+                    <TooltipTrigger asChild>
+                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
+                            <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
+                                <Plus className="h-6 w-6" />
+                            </Button>
+                         </AddExpenseDialog>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                        <p>Add New Expense</p>
+                    </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="mt-8">
-                <div className="mb-6 flex justify-end">
-                    <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
-                </div>
                 <Tabs defaultValue="parent-1" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>

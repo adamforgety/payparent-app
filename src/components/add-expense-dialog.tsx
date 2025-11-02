@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon, PlusCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -75,9 +75,10 @@ type FormValues = z.infer<typeof expenseSchema>;
 interface AddExpenseDialogProps {
   onAddExpense: (expense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   parentNames: ParentNames;
+  children?: ReactNode;
 }
 
-export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
@@ -144,10 +145,12 @@ export function AddExpenseDialog({ onAddExpense, parentNames }: AddExpenseDialog
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Expense
-        </Button>
+        {children ?? (
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Expense
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
