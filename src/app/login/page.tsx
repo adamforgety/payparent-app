@@ -3,11 +3,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
@@ -109,25 +109,24 @@ export default function LoginPage() {
     defaultValues: { email: '' },
   });
 
-  const findEmailByUsername = async (username: string): Promise<string | null> => {
-      if (!firestore) return null;
-      try {
-        const usersRef = collection(firestore, 'users');
-        // Correctly query the nested appData object
-        const q = query(usersRef, where('appData.username', '==', username), limit(1));
-        const querySnapshot = await getDocs(q);
+  const findEmailByUsername = useCallback(async (username: string): Promise<string | null> => {
+    if (!firestore) return null;
+    try {
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, where('appData.username', '==', username), limit(1));
+      const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-          return null;
-        }
-
-        const userDoc = querySnapshot.docs[0].data() as UserDoc;
-        return userDoc.email;
-      } catch (error) {
-        console.error("Client-side error finding user by username:", error);
+      if (querySnapshot.empty) {
         return null;
       }
-    };
+
+      const userDoc = querySnapshot.docs[0].data() as UserDoc;
+      return userDoc.email;
+    } catch (error) {
+      console.error("Client-side error finding user by username:", error);
+      return null;
+    }
+  }, [firestore]);
 
 
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
@@ -137,24 +136,19 @@ export default function LoginPage() {
       try {
         let emailToLogin = emailOrUsername;
         
-        // If the input doesn't look like an email, treat it as a username and find the real email.
         if (!emailOrUsername.includes('@')) {
           const foundEmail = await findEmailByUsername(emailOrUsername);
           if (foundEmail) {
             emailToLogin = foundEmail;
           } else {
-            // If username is not found, we can give a specific error or the generic one.
-            // A generic error is better for security to avoid username enumeration.
-            toast({
-              variant: 'destructive',
-              title: 'Login Failed',
-              description: 'Invalid credentials. Please try again.',
+            loginForm.setError('emailOrUsername', {
+              type: 'manual',
+              message: 'Username not found.',
             });
             return;
           }
         }
         
-        // Proceed with login using either the original email or the one found via username.
         await signInWithEmailAndPassword(auth, emailToLogin, password);
         toast({ title: 'Login Successful', description: 'Welcome back!' });
         router.push(next);
@@ -173,7 +167,6 @@ export default function LoginPage() {
   const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
     startTransition(async () => {
       try {
-        // First check if username is already taken
         const existingEmail = await findEmailByUsername(values.username);
         if (existingEmail) {
           signupForm.setError('username', {
@@ -228,6 +221,34 @@ export default function LoginPage() {
     });
   };
 
+  const handleLoginFieldBlur = async (event: React.FocusEvent<HTMLInputElement>) => {
+    const value = event.target.value.trim();
+    if (!value) return;
+
+    if (value.includes('@')) {
+      // It's an email, check if it exists
+      try {
+        const methods = await fetchSignInMethodsForEmail(auth, value);
+        if (methods.length === 0) {
+          loginForm.setError('emailOrUsername', { type: 'manual', message: 'Email address not found.' });
+        } else {
+          loginForm.clearErrors('emailOrUsername');
+        }
+      } catch (error) {
+        // Firebase might throw an error for invalid email format, let resolver handle it or clear
+        loginForm.clearErrors('emailOrUsername');
+      }
+    } else {
+      // It's a username, check if it exists
+      const email = await findEmailByUsername(value);
+      if (!email) {
+        loginForm.setError('emailOrUsername', { type: 'manual', message: 'Username not found.' });
+      } else {
+        loginForm.clearErrors('emailOrUsername');
+      }
+    }
+  };
+
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
@@ -255,7 +276,11 @@ export default function LoginPage() {
                       <FormItem>
                         <FormLabel>Email or Username</FormLabel>
                         <FormControl>
-                          <Input placeholder="you@example.com or your_username" {...field} />
+                          <Input 
+                            placeholder="you@example.com or your_username" 
+                            {...field}
+                            onBlur={handleLoginFieldBlur} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -433,5 +458,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
