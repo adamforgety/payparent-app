@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
-import { format, parse } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -94,6 +94,44 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Other',
 ];
 
+// More flexible date parsing
+function flexibleDateParse(dateString: string): Date | null {
+  if (!dateString || typeof dateString !== 'string') {
+    return null;
+  }
+
+  // Handle Excel date serial numbers
+  if (!isNaN(Number(dateString)) && Number(dateString) > 20000) {
+    // This is a basic way to handle Excel's epoch (days since 1900-01-01, with a bug for leap years).
+    // The `Date.UTC(0, 0, ...)` trick correctly converts the serial number.
+    return new Date(Date.UTC(0, 0, Number(dateString) - 1));
+  }
+
+  const formats = [
+    'yyyy-MM-dd',
+    'MM/dd/yyyy',
+    'M/d/yyyy',
+    'MM-dd-yyyy',
+    'M-d-yyyy',
+    'yyyy/MM/dd',
+  ];
+
+  for (const fmt of formats) {
+    const parsedDate = parse(dateString, fmt, new Date());
+    if (isValid(parsedDate)) {
+      return parsedDate;
+    }
+  }
+
+  // Final attempt with native Date constructor for formats like ISO 8601
+  const nativeParsed = new Date(dateString);
+  if (isValid(nativeParsed)) {
+      return nativeParsed;
+  }
+
+  return null;
+}
+
 export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
@@ -140,43 +178,41 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     const errors: RowErrors = {};
     const { date, description, amount, paidBy, category } = rowData;
 
-    if (!date) errors.date = 'Missing';
-    if (!description) errors.description = 'Missing';
-    if (!amount) errors.amount = 'Missing';
-    if (!paidBy) errors.paidBy = 'Missing';
-
-    let parsedDate = new Date(date);
-    if (date) {
-        if (!isNaN(Number(date)) && Number(date) > 20000) { // Likely an Excel date serial number
-            parsedDate = new Date(Date.UTC(0, 0, Number(date) - 1));
-        } else {
-            parsedDate = parse(date, 'yyyy-MM-dd', new Date());
-        }
-        if (isNaN(parsedDate.getTime())) {
-            errors.date = 'Invalid Date';
-        }
+    let parsedDate: Date | null = null;
+    if (!date) {
+      errors.date = 'Missing';
+    } else {
+      parsedDate = flexibleDateParse(date);
+      if (!parsedDate) {
+        errors.date = 'Invalid Date';
+      }
     }
 
+    if (!description) {
+        errors.description = 'Missing';
+    }
+    
     let amountAsString = String(amount || '').trim();
     if (amountAsString.startsWith('$')) {
-        amountAsString = amountAsString.substring(1).trim();
+      amountAsString = amountAsString.substring(1).trim();
     }
-    if (amount && !/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
+    if (!amount) {
+      errors.amount = 'Missing';
+    } else if (!/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
         errors.amount = 'Invalid Number';
     }
 
     let paidByParent: Parent | null = null;
-    if (paidBy) {
-        if (typeof paidBy === 'string') {
-            const paidByLower = paidBy.toLowerCase();
-            if (paidByLower === parentNames['Parent 1'].toLowerCase()) {
-                paidByParent = 'Parent 1';
-            } else if (paidByLower === parentNames['Parent 2'].toLowerCase()) {
-                paidByParent = 'Parent 2';
-            }
-        }
-        if (!paidByParent) {
-            errors.paidBy = 'Unrecognized Payer';
+    if (!paidBy) {
+        errors.paidBy = 'Missing';
+    } else if (typeof paidBy === 'string') {
+        const paidByLower = paidBy.toLowerCase();
+        if (paidByLower === parentNames['Parent 1'].toLowerCase()) {
+            paidByParent = 'Parent 1';
+        } else if (paidByLower === parentNames['Parent 2'].toLowerCase()) {
+            paidByParent = 'Parent 2';
+        } else {
+            errors.paidBy = 'Unrecognized';
         }
     }
 
@@ -194,7 +230,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
 
     const parsedAmount = parseFloat(amountAsString);
     const expenseObject: ParsedExpense = {
-        date: parsedDate.toISOString(),
+        date: parsedDate!.toISOString(),
         description: String(description),
         amount: parsedAmount,
         paidBy: paidByParent!,
@@ -233,7 +269,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
               date: normalizedRow.date,
               description: normalizedRow.description,
               category: normalizedRow.category,
-              paidby: normalizedRow.paidby,
+              paidBy: normalizedRow.paidby,
               amount: String(normalizedRow.amount),
             };
 
@@ -347,22 +383,23 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           <DialogTitle>
             {step === 'upload' ? 'Import Expenses from Excel' : 'Preview Import'}
           </DialogTitle>
-          {step === 'upload' && (
-             <DialogDescription className="space-y-1">
-                <span>Upload an Excel file with columns: <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Date</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Description</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Category</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</code>, and <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Amount</code>. The "Paid By" name must match either "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}".</span>
+           <DialogDescription>
+            {step === 'upload' ? (
+              <span>
+                Upload a file with columns: Date, Description, Category, Amount, and Paid By (must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}").
+              </span>
+            ) : (
+              'Review the expenses found in your file. Correct any errors and click "Confirm Import" to add them to your ledger.'
+            )}
+             {step === 'upload' && (
                 <div className="pt-2">
                     <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
                     <Download className="mr-2 h-4 w-4" />
                     Download Template
                     </Button>
                 </div>
-            </DialogDescription>
-          )}
-          {step === 'preview' && (
-             <DialogDescription>
-              Review the expenses found in your file. Correct any errors and click "Confirm Import" to add them to your ledger.
-            </DialogDescription>
-          )}
+            )}
+          </DialogDescription>
         </DialogHeader>
 
         {step === 'upload' && (
