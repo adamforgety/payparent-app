@@ -7,7 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +21,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
@@ -40,6 +50,11 @@ const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
+
+const passwordResetSchema = z.object({
+    email: z.string().email({ message: 'Please enter a valid email address.' }),
+});
+
 
 function getErrorMessage(error: any): string {
   if (typeof error === 'string') return error;
@@ -69,8 +84,10 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [isResetPending, startResetTransition] = useTransition();
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [isResetDialogOpen, setResetDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/';
   const { auth } = useFirebase();
@@ -84,6 +101,12 @@ export default function LoginPage() {
     resolver: zodResolver(signupSchema),
     defaultValues: { email: '', password: '', confirmPassword: '' },
   });
+
+  const passwordResetForm = useForm<z.infer<typeof passwordResetSchema>>({
+    resolver: zodResolver(passwordResetSchema),
+    defaultValues: { email: '' },
+  });
+
 
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
@@ -130,6 +153,27 @@ export default function LoginPage() {
     });
   };
 
+  const onPasswordResetSubmit = (values: z.infer<typeof passwordResetSchema>) => {
+    startResetTransition(async () => {
+        try {
+            await sendPasswordResetEmail(auth, values.email);
+            toast({
+                title: 'Password Reset Email Sent',
+                description: 'Check your inbox for a link to reset your password.',
+            });
+            setResetDialogOpen(false);
+            passwordResetForm.reset();
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Request Failed',
+                description: getErrorMessage(error),
+            });
+        }
+    });
+  };
+
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
        <Card className="w-full max-w-md">
@@ -167,7 +211,47 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <div className="flex items-center justify-between">
+                            <FormLabel>Password</FormLabel>
+                             <Dialog open={isResetDialogOpen} onOpenChange={setResetDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="link" type="button" className="p-0 h-auto text-xs">
+                                        Forgot password?
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Reset Password</DialogTitle>
+                                        <DialogDescription>
+                                            Enter your account's email address and we will send you a link to reset your password.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <Form {...passwordResetForm}>
+                                        <form onSubmit={passwordResetForm.handleSubmit(onPasswordResetSubmit)} className="space-y-4">
+                                            <FormField
+                                                control={passwordResetForm.control}
+                                                name="email"
+                                                render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Email</FormLabel>
+                                                    <FormControl>
+                                                    <Input placeholder="you@example.com" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                                )}
+                                            />
+                                            <DialogFooter>
+                                                <Button type="submit" disabled={isResetPending}>
+                                                    {isResetPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Send Reset Link
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </Form>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                         <FormControl>
                           <div className="relative">
                             <Input
@@ -294,3 +378,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
