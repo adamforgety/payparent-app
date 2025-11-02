@@ -488,6 +488,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
               </div>
           </TabsContent>
           <TabsContent value="summary" className="mt-6">
+            <p className="text-sm text-muted-foreground mb-4">
+                Note: This summary shows expenses by category and does not include child support payments.
+            </p>
             {periodData.length > 0 ? (
               <div className="space-y-8">
                 <div>
