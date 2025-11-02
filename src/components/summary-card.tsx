@@ -1,6 +1,7 @@
 'use client';
 
 import { HandCoins, Scale } from 'lucide-react';
+import { useMemo } from 'react';
 
 import {
   Card,
@@ -11,12 +12,26 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames, MedicalExpenseSplit, AppData } from '@/lib/types';
+import type {
+  ChildSupport,
+  Expense,
+  ExpenseSplit,
+  Parent,
+  ParentNames,
+  MedicalExpenseSplit,
+  AppData,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
 import { useAppContext } from '@/context/app-context';
-import { parse, isBefore, startOfDay } from 'date-fns';
+import { parse, isBefore, startOfDay, format } from 'date-fns';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from './ui/accordion';
 
 interface SummaryCardProps {
   parent: Parent;
@@ -36,7 +51,7 @@ const calculateShare = (
   p: Parent
 ): number => {
   let totalShare = 0;
-  
+
   for (const expense of expenses) {
     if (expense.category === 'Reimbursement') {
       if (expense.paidBy !== p) {
@@ -51,6 +66,11 @@ const calculateShare = (
     }
   }
   return totalShare;
+};
+
+type PreviousBalance = {
+  monthId: string;
+  balance: number;
 };
 
 export function SummaryCard({
@@ -68,76 +88,101 @@ export function SummaryCard({
   const otherParentName = parentNames[otherParent];
 
   // --- Calculate Balance from Previous Months ---
-  const previousMonthsBalance = Object.keys(appData.months)
-    .filter(monthId => {
-      const monthDate = parse(monthId, 'yyyy-MM', new Date());
-      const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
-      return isBefore(startOfDay(monthDate), startOfDay(currentDate));
-    })
-    .reduce((totalBalance, monthId) => {
-      const monthData = appData.months[monthId];
-      if (!monthData) return totalBalance;
-      
-      const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-      const unsettledPaidByParent = unsettledExpenses
-        .filter(exp => exp.paidBy === parent)
-        .reduce((sum, exp) => sum + exp.amount, 0);
+  const previousBalances = useMemo<PreviousBalance[]>(() => {
+    return Object.keys(appData.months)
+      .filter((monthId) => {
+        const monthDate = parse(monthId, 'yyyy-MM', new Date());
+        const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
+        return isBefore(startOfDay(monthDate), startOfDay(currentDate));
+      })
+      .map((monthId) => {
+        const monthData = appData.months[monthId];
+        if (!monthData) return { monthId, balance: 0 };
 
-      const parentExpenseShare = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
-      const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+        const unsettledExpenses = monthData.expenses.filter(
+          (e) => e.status === 'Unsettled'
+        );
+        const unsettledPaidByParent = unsettledExpenses
+          .filter((exp) => exp.paidBy === parent)
+          .reduce((sum, exp) => sum + exp.amount, 0);
 
-      let childSupportBalance = 0;
-      // Only factor in past child support if it's explicitly settled.
-      if (monthData.childSupport.status === 'Settled' && monthData.childSupport.paidBy !== 'None') {
-        if (monthData.childSupport.paidBy === parent) {
-          childSupportBalance = -monthData.childSupport.amount;
-        } else {
-          childSupportBalance = monthData.childSupport.amount;
+        const parentExpenseShare = calculateShare(
+          unsettledExpenses,
+          monthData.expenseSplit,
+          monthData.medicalExpenseSplit,
+          parent
+        );
+        const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+
+        let childSupportBalance = 0;
+        if (
+          monthData.childSupport.status === 'Unsettled' &&
+          monthData.childSupport.paidBy !== 'None'
+        ) {
+          if (monthData.childSupport.paidBy === parent) {
+            childSupportBalance = monthData.childSupport.amount;
+          } else {
+            childSupportBalance = -monthData.childSupport.amount;
+          }
         }
-      }
-      
-      return totalBalance + expenseBalance + childSupportBalance;
-    }, 0);
+        
+        return { monthId, balance: -1 * (expenseBalance + childSupportBalance) };
+      })
+      .filter((item) => item.balance !== 0);
+  }, [appData.months, currentMonthId, parent, expenseSplit, medicalExpenseSplit]);
 
+  const previousMonthsTotalBalance = previousBalances.reduce(
+    (acc, curr) => acc + curr.balance,
+    0
+  );
 
   // --- Calculate Current Month's Balance ---
-  const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
-  
+  const unsettledExpenses = expenses.filter((e) => e.status === 'Unsettled');
+
   const unsettledPaidByParent = unsettledExpenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-  
-  const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
-  
+
+  const parentExpenseShare = calculateShare(
+    unsettledExpenses,
+    expenseSplit,
+    medicalExpenseSplit,
+    parent
+  );
+
   const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
   let childSupportBalance = 0;
   if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None') {
-      if (childSupport.paidBy === parent) {
-        childSupportBalance = -childSupport.amount;
-      } else {
-        childSupportBalance = childSupport.amount;
-      }
-  }
-
-  const currentMonthNetBalance = expenseBalance + childSupportBalance;
-  
-  const totalNetBalance = previousMonthsBalance + currentMonthNetBalance;
-
-  const isSettled = totalNetBalance === 0;
-  
-  let transferDescription = 'All settled up';
-  if (!isSettled) {
-    if (totalNetBalance > 0) {
-        transferDescription = `${otherParentName} owes you`;
-    } else if (totalNetBalance < 0) {
-        transferDescription = `You owe ${otherParentName}`;
+    if (childSupport.paidBy === parent) {
+      childSupportBalance = childSupport.amount;
+    } else {
+      childSupportBalance = -childSupport.amount;
     }
   }
-  
+
+  const currentMonthNetBalance = -1 * (expenseBalance + childSupportBalance);
+
+  const totalNetBalance = previousMonthsTotalBalance + currentMonthNetBalance;
+
+  const isSettled = totalNetBalance === 0;
+
+  let transferDescription = 'All settled up';
+  if (!isSettled) {
+    if (totalNetBalance < 0) {
+      transferDescription = `${otherParentName} owes you`;
+    } else if (totalNetBalance > 0) {
+      transferDescription = `You owe ${otherParentName}`;
+    }
+  }
+
   const isButtonDisabled = !(
-      Object.values(appData.months).some(m => m.expenses.some(e => e.status === 'Unsettled')) ||
-      Object.values(appData.months).some(m => m.childSupport.amount > 0 && m.childSupport.status === 'Unsettled')
+    Object.values(appData.months).some((m) =>
+      m.expenses.some((e) => e.status === 'Unsettled')
+    ) ||
+    Object.values(appData.months).some(
+      (m) => m.childSupport.amount > 0 && m.childSupport.status === 'Unsettled'
+    )
   );
 
   return (
@@ -154,53 +199,116 @@ export function SummaryCard({
         </div>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
-        
-        <div className='space-y-2 rounded-md bg-muted/30 p-3'>
-            <h4 className="font-medium text-sm">This Month's Balance</h4>
+        <div className="space-y-2 rounded-md bg-muted/30 p-3">
+          <h4 className="font-medium text-sm">This Month's Balance</h4>
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">Your Share</p>
+            <p className="font-semibold">${parentExpenseShare.toFixed(2)}</p>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">You Paid (unsettled items)</p>
+            <p className="font-semibold text-green-600">
+              +${unsettledPaidByParent.toFixed(2)}
+            </p>
+          </div>
+          {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
             <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">
-                    Your Share
-                </p>
-                <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
+              <p className="text-muted-foreground">Child Support</p>
+              <p
+                className={cn(
+                  'font-semibold',
+                  childSupportBalance > 0 && 'text-green-600',
+                  childSupportBalance < 0 && 'text-destructive'
+                )}
+              >
+                {childSupportBalance >= 0
+                  ? `+$${childSupportBalance.toFixed(2)}`
+                  : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
+              </p>
             </div>
-            <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">You Paid (unsettled items)</p>
-                <p className="font-semibold text-green-600">+${unsettledPaidByParent.toFixed(2)}</p>
-            </div>
-             {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
-                <div className="flex items-center justify-between text-sm">
-                    <p className="text-muted-foreground">
-                        Child Support
-                    </p>
-                    <p className={cn("font-semibold", childSupportBalance > 0 && 'text-green-600', childSupportBalance < 0 && 'text-destructive')}>
-                        {childSupportBalance >= 0 ? `$${childSupportBalance.toFixed(2)}` : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
-                    </p>
-                </div>
-             )}
-             <Separator/>
-             <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">Current Month Net</p>
-                <p className={cn("font-semibold", currentMonthNetBalance > 0 && "text-green-600", currentMonthNetBalance < 0 && "text-destructive")}>
-                    {currentMonthNetBalance >= 0 ? `$${currentMonthNetBalance.toFixed(2)}` : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
-                </p>
-            </div>
+          )}
+          <Separator />
+          <div className="flex items-center justify-between text-sm">
+            <p className="text-muted-foreground">Net Owed by You</p>
+            <p
+              className={cn(
+                'font-semibold',
+                currentMonthNetBalance > 0 && 'text-destructive',
+                currentMonthNetBalance < 0 && 'text-green-600'
+              )}
+            >
+              {currentMonthNetBalance > 0
+                ? `$${currentMonthNetBalance.toFixed(2)}`
+                : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
+            </p>
+          </div>
         </div>
 
+        {previousBalances.length > 0 && (
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="item-1">
+              <AccordionTrigger className="text-sm py-2">
+                <div className="flex justify-between w-full pr-4">
+                  <span>Balance from Previous Months</span>
+                  <span
+                    className={cn(
+                      'font-semibold',
+                      previousMonthsTotalBalance > 0 && 'text-destructive',
+                      previousMonthsTotalBalance < 0 && 'text-green-600'
+                    )}
+                  >
+                    {previousMonthsTotalBalance > 0
+                      ? `$${previousMonthsTotalBalance.toFixed(2)}`
+                      : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-1 pl-2 pr-1 pt-1 border-t">
+                  {previousBalances.map(({ monthId, balance }) => (
+                    <div
+                      key={monthId}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <p className="text-muted-foreground">
+                        {format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}
+                      </p>
+                      <p
+                        className={cn(
+                          'font-medium',
+                          balance > 0 && 'text-destructive',
+                          balance < 0 && 'text-green-600'
+                        )}
+                      >
+                        {balance > 0
+                          ? `$${balance.toFixed(2)}`
+                          : `-$${Math.abs(balance).toFixed(2)}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
+
         <Separator />
-        
+
         <div className="space-y-2 text-sm">
-           <div className="flex items-center justify-between">
-              <p className="text-muted-foreground">Balance from Previous Months</p>
-              <p className={cn("font-semibold", previousMonthsBalance > 0 && "text-green-600", previousMonthsBalance < 0 && "text-destructive")}>
-                {previousMonthsBalance >= 0 ? `$${previousMonthsBalance.toFixed(2)}` : `-$${Math.abs(previousMonthsBalance).toFixed(2)}`}
-              </p>
-           </div>
-           <div className="flex items-center justify-between text-base">
-              <p className="font-semibold">Total Net Balance</p>
-               <p className={cn("font-bold", !isSettled && totalNetBalance > 0 && "text-green-600", !isSettled && totalNetBalance < 0 && "text-destructive")}>
-                {totalNetBalance >= 0 ? `$${totalNetBalance.toFixed(2)}` : `-$${Math.abs(totalNetBalance).toFixed(2)}`}
-              </p>
-           </div>
+          <div className="flex items-center justify-between text-base">
+            <p className="font-semibold">Total Net Owed by You</p>
+            <p
+              className={cn(
+                'font-bold',
+                !isSettled && totalNetBalance > 0 && 'text-destructive',
+                !isSettled && totalNetBalance < 0 && 'text-green-600'
+              )}
+            >
+              {totalNetBalance > 0
+                ? `$${totalNetBalance.toFixed(2)}`
+                : `-$${Math.abs(totalNetBalance).toFixed(2)}`}
+            </p>
+          </div>
         </div>
 
         <div className="rounded-lg bg-secondary/50 p-4 text-center">
@@ -210,19 +318,20 @@ export function SummaryCard({
           <p
             className={cn(
               'text-2xl font-bold',
-               !isSettled && totalNetBalance < 0 && 'text-destructive',
-               !isSettled && totalNetBalance > 0 && 'text-green-600'
+              !isSettled && totalNetBalance > 0 && 'text-green-600',
+              !isSettled && totalNetBalance < 0 && 'text-destructive'
             )}
           >
             ${Math.abs(totalNetBalance).toFixed(2)}
           </p>
         </div>
         <p className="pt-2 text-xs text-muted-foreground">
-          This is the total outstanding balance based on all unsettled items from all months.
+          This is the total outstanding balance based on all unsettled items
+          from all months.
         </p>
       </CardContent>
       <CardFooter>
-         <SettleBalanceDialog
+        <SettleBalanceDialog
           parent={parent}
           otherParent={otherParent}
           expenses={expenses}
