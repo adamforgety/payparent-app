@@ -182,6 +182,12 @@ export function SummaryCard({
       transferDescription = `You owe ${otherParentName}`;
     }
   }
+  
+  const totalBalanceLabel = useMemo(() => {
+    if (totalNetBalance > 0) return 'Total Net Owed by You';
+    if (totalNetBalance < 0) return 'Total Net Owed to You';
+    return 'Total Net Balance';
+  }, [totalNetBalance]);
 
   const isButtonDisabled = !(
     Object.values(appData.months).some((m) =>
@@ -307,7 +313,7 @@ export function SummaryCard({
 
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between text-base">
-            <p className="font-semibold">Total Net Owed by You</p>
+            <p className="font-semibold">{totalBalanceLabel}</p>
             <p
               className={cn(
                 'font-bold',
