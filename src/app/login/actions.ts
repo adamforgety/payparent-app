@@ -1,6 +1,6 @@
 'use server';
 
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
 import type { AppData, UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
@@ -43,15 +43,21 @@ export async function handleNewUser(userId: string, email: string | null, userna
     try {
         const { firestore } = initializeFirebase();
         
-        // Deep copy initial data and set the user-specific ID and username
+        // Deep copy initial data and set the user-specific ID.
         const initialAppData: AppData = JSON.parse(JSON.stringify(initialData));
         initialAppData.id = userId;
-        if (username) {
-          initialAppData.username = username;
-        }
+        initialAppData.username = username;
 
-        // Use the centralized saveUserData function to ensure correct document structure
-        await saveUserData(firestore, userId, initialAppData, email);
+        // Create the full UserDoc payload, ensuring the top-level username is set
+        const userDocPayload: UserDoc = {
+          id: userId,
+          email: email,
+          username: username,
+          appData: initialAppData,
+        };
+
+        const userDocRef = doc(firestore, 'users', userId);
+        await setDoc(userDocRef, userDocPayload);
 
         return { success: true, userId: userId };
     } catch (error: any) {

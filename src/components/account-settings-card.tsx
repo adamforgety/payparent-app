@@ -109,9 +109,16 @@ export function AccountSettingsCard() {
 
   const onUsernameSubmit = (values: z.infer<typeof usernameSchema>) => {
     startUsernameTransition(async () => {
+      if (values.username === appData?.username) {
+        toast({
+          title: 'No Change',
+          description: 'The new username is the same as the current one.',
+        });
+        return;
+      }
       // Check if username is already taken
       const existingEmail = await findEmailByUsername(values.username);
-      if (existingEmail && existingEmail !== user?.email) {
+      if (existingEmail) {
           usernameForm.setError('username', {
               type: 'manual',
               message: 'This username is already taken. Please choose another one.'
