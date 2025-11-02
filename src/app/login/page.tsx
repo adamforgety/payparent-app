@@ -221,34 +221,6 @@ export default function LoginPage() {
     });
   };
 
-  const handleLoginFieldBlur = async (event: React.FocusEvent<HTMLInputElement>) => {
-    const value = event.target.value.trim();
-    if (!value) return;
-
-    if (value.includes('@')) {
-      // It's an email, check if it exists
-      try {
-        const methods = await fetchSignInMethodsForEmail(auth, value);
-        if (methods.length === 0) {
-          loginForm.setError('emailOrUsername', { type: 'manual', message: 'Email address not found.' });
-        } else {
-          loginForm.clearErrors('emailOrUsername');
-        }
-      } catch (error) {
-        // Firebase might throw an error for invalid email format, let resolver handle it or clear
-        loginForm.clearErrors('emailOrUsername');
-      }
-    } else {
-      // It's a username, check if it exists
-      const email = await findEmailByUsername(value);
-      if (!email) {
-        loginForm.setError('emailOrUsername', { type: 'manual', message: 'Username not found.' });
-      } else {
-        loginForm.clearErrors('emailOrUsername');
-      }
-    }
-  };
-
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
@@ -279,7 +251,6 @@ export default function LoginPage() {
                           <Input 
                             placeholder="you@example.com or your_username" 
                             {...field}
-                            onBlur={handleLoginFieldBlur} 
                           />
                         </FormControl>
                         <FormMessage />
