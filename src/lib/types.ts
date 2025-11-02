@@ -36,6 +36,7 @@ export interface ChildSupport {
   amount: number;
   paidBy: Parent | 'None';
   status: PaymentStatus;
+  ignored?: boolean;
 }
 
 export interface ExpenseSplit {

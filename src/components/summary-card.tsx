@@ -87,9 +87,8 @@ export function SummaryCard({
       const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
       let childSupportBalance = 0;
-      // Only factor in past child support if it's explicitly settled.
-      // This allows ignoring pre-divorce or irrelevant past support payments.
-      if (monthData.childSupport.status === 'Settled' && monthData.childSupport.paidBy !== 'None') {
+      // Only factor in past child support if it's explicitly settled AND not ignored.
+      if (monthData.childSupport.status === 'Settled' && !monthData.childSupport.ignored && monthData.childSupport.paidBy !== 'None') {
         if (monthData.childSupport.paidBy === parent) {
           childSupportBalance = -monthData.childSupport.amount;
         } else {
@@ -113,7 +112,7 @@ export function SummaryCard({
   const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
   let childSupportBalance = 0;
-  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None') {
+  if (childSupport.status === 'Unsettled' && !childSupport.ignored && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
         childSupportBalance = -childSupport.amount;
       } else {
@@ -168,7 +167,7 @@ export function SummaryCard({
                 <p className="text-muted-foreground">You Paid (unsettled items)</p>
                 <p className="font-semibold text-green-600">+${unsettledPaidByParent.toFixed(2)}</p>
             </div>
-             {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
+             {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !childSupport.ignored && (
                 <div className="flex items-center justify-between text-sm">
                     <p className="text-muted-foreground">
                         Child Support

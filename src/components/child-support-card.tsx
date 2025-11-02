@@ -1,12 +1,13 @@
 'use client';
 
-import { Landmark } from 'lucide-react';
+import { Landmark, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -21,6 +22,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { ChildSupport, Parent, ParentNames } from '@/lib/types';
+import { Switch } from './ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface ChildSupportCardProps {
   childSupport: ChildSupport;
@@ -57,6 +60,10 @@ export function ChildSupportCard({
 
   const handlePayerChange = (value: Parent | 'None') => {
     onUpdate({ ...childSupport, paidBy: value });
+  };
+  
+  const handleIgnoreChange = (checked: boolean) => {
+    onUpdate({ ...childSupport, ignored: checked });
   };
 
   const requiresPayer =
@@ -111,6 +118,28 @@ export function ChildSupportCard({
           </Select>
         </div>
       </CardContent>
+       <CardFooter className="flex items-center justify-between bg-secondary/30 p-3 rounded-b-lg border-t">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="ignore-from-total"
+            checked={childSupport.ignored}
+            onCheckedChange={handleIgnoreChange}
+          />
+          <Label htmlFor="ignore-from-total" className="text-sm">
+            Ignore from totals
+          </Label>
+        </div>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>If checked, this month's child support will be<br/> excluded from all balance calculations.</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+      </CardFooter>
     </Card>
   );
 }
