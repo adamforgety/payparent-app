@@ -61,6 +61,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Hide the Vercel development logo */
+  body > svg[aria-label="Vercel logomark"] {
+    display: none;
+  }
 }
 
 @media print {
