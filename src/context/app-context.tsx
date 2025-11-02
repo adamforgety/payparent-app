@@ -191,8 +191,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       
       const childSupportSettings: ChildSupport = {
         amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
-        paidBy: 'None',
-        status: 'Unsettled'
+        paidBy: 'None', 
+        status: 'Unsettled' 
       };
 
       targetMonthData = {
