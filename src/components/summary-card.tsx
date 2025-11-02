@@ -174,6 +174,12 @@ export function SummaryCard({
 
   const isSettled = totalNetBalance === 0;
 
+  const totalBalanceLabel = useMemo(() => {
+    if (totalNetBalance > 0) return `You Owe ${otherParentName}`;
+    if (totalNetBalance < 0) return `${otherParentName} Owes You`;
+    return 'Total Net Balance';
+  }, [totalNetBalance, otherParentName]);
+  
   let transferDescription = 'All settled up';
   if (!isSettled) {
     if (totalNetBalance < 0) {
@@ -182,12 +188,6 @@ export function SummaryCard({
       transferDescription = `You owe ${otherParentName}`;
     }
   }
-  
-  const totalBalanceLabel = useMemo(() => {
-    if (totalNetBalance > 0) return 'Total Net Owed by You';
-    if (totalNetBalance < 0) return 'Total Net Owed to You';
-    return 'Total Net Balance';
-  }, [totalNetBalance]);
 
   const isButtonDisabled = !(
     Object.values(appData.months).some((m) =>
