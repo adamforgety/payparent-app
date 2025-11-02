@@ -7,7 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,10 +21,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { login, signup, handleGoogleSignIn } from './actions';
+import { handleGoogleSignIn, handleNewUser, getErrorMessage } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
-import { Separator } from '@/components/ui/separator';
 
 const signupSchema = z
   .object({
@@ -73,34 +72,45 @@ export default function LoginPage() {
 
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
-      const result = await login(values);
-      if (result.error) {
+      try {
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        toast({ title: 'Login Successful', description: 'Welcome back!' });
+        router.push(next);
+        router.refresh(); 
+      } catch (error) {
         toast({
           variant: 'destructive',
           title: 'Login Failed',
-          description: result.error,
+          description: getErrorMessage(error),
         });
-      } else {
-        toast({ title: 'Login Successful', description: 'Welcome back!' });
-        router.push(next);
-        router.refresh(); // Refresh to ensure user state is picked up
       }
     });
   };
 
   const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
     startTransition(async () => {
-      const result = await signup(values);
-      if (result.error) {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email);
+        
+        if (actionResult.error) {
+           toast({
+            variant: 'destructive',
+            title: 'Sign-up Failed',
+            description: actionResult.error,
+          });
+        } else {
+            toast({ title: 'Sign-up Successful', description: 'Welcome! You are now logged in.' });
+            router.push(next);
+            router.refresh();
+        }
+
+      } catch (error) {
         toast({
           variant: 'destructive',
           title: 'Sign-up Failed',
-          description: result.error,
+          description: getErrorMessage(error),
         });
-      } else {
-        toast({ title: 'Sign-up Successful', description: 'Welcome! You are now logged in.' });
-        router.push(next);
-        router.refresh(); // Refresh to ensure user state is picked up
       }
     });
   };
@@ -110,7 +120,7 @@ export default function LoginPage() {
         const provider = new GoogleAuthProvider();
         try {
             const result = await signInWithPopup(auth, provider);
-            const actionResult = await handleGoogleSignIn(result.user);
+            const actionResult = await handleGoogleSignIn(result.user.uid, result.user.email);
             if(actionResult.success) {
                  toast({ title: 'Sign-in Successful', description: 'Welcome!' });
                  router.push(next);
@@ -126,7 +136,7 @@ export default function LoginPage() {
              toast({
                 variant: 'destructive',
                 title: 'Sign-in Failed',
-                description: 'Could not sign in with Google. Please try again.',
+                description: getErrorMessage(error),
             });
         }
     });
@@ -303,7 +313,7 @@ export default function LoginPage() {
         
           <Button variant="outline" className="w-full" onClick={onGoogleSignIn} disabled={isPending}>
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon/>}
-            Google
+            <span className='ml-2'>Google</span>
           </Button>
 
         </CardContent>

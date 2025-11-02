@@ -1,23 +1,12 @@
 'use server';
 
-import { z } from 'zod';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes, type User } from 'firebase/auth';
+import { AuthErrorCodes } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { initializeFirebase } from '@/firebase/server';
 import type { AppData, UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
-const signupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-function getErrorMessage(error: any): string {
+export function getErrorMessage(error: any): string {
     if (typeof error === 'string') return error;
     if (error && typeof error.code === 'string') {
         switch (error.code) {
@@ -42,50 +31,41 @@ function getErrorMessage(error: any): string {
 }
 
 
-async function createNewUserDocument(firestore: any, userId: string): Promise<void> {
+async function createNewUserDocument(firestore: any, userId: string, email: string | null): Promise<void> {
     const userDocRef = doc(firestore, 'users', userId);
     const initialAppData: AppData = { ...initialData, id: userId };
-    const userDocPayload: UserDoc = { id: userId, appData: initialAppData };
+    const userDocPayload: UserDoc = { id: userId, email: email, appData: initialAppData };
     await setDoc(userDocRef, userDocPayload);
 }
 
-export async function login(values: z.infer<typeof loginSchema>) {
-  try {
-    const { auth } = initializeFirebase();
-    const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-    return { success: true, userId: userCredential.user.uid };
-  } catch (error) {
-    return { success: false, error: getErrorMessage(error) };
-  }
-}
-
-export async function signup(values: z.infer<typeof signupSchema>) {
-  try {
-    const { auth, firestore } = initializeFirebase();
-    const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-    // Create a new document in Firestore for the new user
-    await createNewUserDocument(firestore, userCredential.user.uid);
-    return { success: true, userId: userCredential.user.uid };
-  } catch (error) {
-    return { success: false, error: getErrorMessage(error) };
-  }
-}
-
-export async function handleGoogleSignIn(user: User) {
-    if (!user) {
+export async function handleNewUser(userId: string, email: string | null) {
+     if (!userId) {
         return { success: false, error: 'User not found.' };
     }
     try {
         const { firestore } = initializeFirebase();
-        const userDocRef = doc(firestore, 'users', user.uid);
+        await createNewUserDocument(firestore, userId, email);
+        return { success: true, userId: userId };
+    } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+    }
+}
+
+
+export async function handleGoogleSignIn(userId: string, email: string | null) {
+    if (!userId) {
+        return { success: false, error: 'User not found.' };
+    }
+    try {
+        const { firestore } = initializeFirebase();
+        const userDocRef = doc(firestore, 'users', userId);
         const docSnap = await getDoc(userDocRef);
 
-        // If the user doesn't have a document in Firestore, create one.
         if (!docSnap.exists()) {
-            await createNewUserDocument(firestore, user.uid);
+            await createNewUserDocument(firestore, userId, email);
         }
 
-        return { success: true, userId: user.uid };
+        return { success: true, userId: userId };
 
     } catch (error) {
         return { success: false, error: getErrorMessage(error) };

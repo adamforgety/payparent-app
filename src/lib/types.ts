@@ -69,5 +69,6 @@ export interface AppData {
 // Add this to your types
 export interface UserDoc {
   id: string;
+  email: string | null;
   appData: AppData;
 }
