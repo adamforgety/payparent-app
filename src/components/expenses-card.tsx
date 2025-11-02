@@ -221,6 +221,7 @@ export function ExpensesCard({
             <TableHeader>
               <TableRow>
                 <TableHead>Description</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Paid By</TableHead>
                 <TableHead className="w-[120px]">Reimbursement</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -272,7 +273,9 @@ export function ExpensesCard({
                       <TableCell className="font-medium">
                         {item.description}
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'} className="mt-1">{item.category}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
@@ -353,7 +356,7 @@ export function ExpensesCard({
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     No {statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.
                   </TableCell>
                 </TableRow>

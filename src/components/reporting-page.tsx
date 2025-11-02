@@ -399,6 +399,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead>Paid By</TableHead>
                       <TableHead className="text-right">Total Amount</TableHead>
                       <TableHead className="text-right">{parentNamesForPeriod['Parent 1']}'s Share</TableHead>
@@ -434,7 +435,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         <TableCell>{format(new Date(transaction.date), 'MMM d, yyyy')}</TableCell>
                         <TableCell className="font-medium">
                           {transaction.description}
-                          <div className='text-xs text-muted-foreground'>{transaction.category}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={transaction.category === 'Child Support' ? 'default' : 'outline'}>
+                            {transaction.category}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                             {transaction.paidBy && transaction.paidBy !== 'None' &&
@@ -449,7 +454,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       </TableRow>
                     )}) : (
                        <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center">
+                          <TableCell colSpan={7} className="h-24 text-center">
                             {searchTerm ? `No transactions found for "${searchTerm}".` : "No transactions in this period."}
                           </TableCell>
                         </TableRow>
