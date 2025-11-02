@@ -225,7 +225,7 @@ export function ExpensesCard({
                 <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Paid By</TableHead>
-                <TableHead className="w-[120px]">Reimbursement</TableHead>
+                <TableHead className="w-[120px]">Settlement Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">{parentNames['Parent 1']}'s Share</TableHead>
                 <TableHead className="text-right">{parentNames['Parent 2']}'s Share</TableHead>
