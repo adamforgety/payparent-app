@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { getYear, format, parse } from 'date-fns';
-import { BarChart, ReceiptText, Search } from 'lucide-react';
+import { BarChart, ReceiptText, Search, ArrowUpDown } from 'lucide-react';
 import {
   Bar,
   CartesianGrid,
@@ -42,6 +42,7 @@ import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
 import { ReportingExportButton } from './reporting-export-button';
+import { Button } from './ui/button';
 
 interface ReportingPageProps {
   appData: AppData | null;
@@ -65,6 +66,13 @@ type EnrichedChildSupport = ChildSupport & {
 
 type Transaction = EnrichedExpense | EnrichedChildSupport;
 
+type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount' | 'parent1Share' | 'parent2Share';
+
+type SortConfig = {
+  key: SortKey;
+  direction: 'ascending' | 'descending';
+} | null;
+
 
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
@@ -83,6 +91,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   );
   const [selectedMonth, setSelectedMonth] = useState<string>('all'); // 'all' or 'yyyy-MM'
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
 
   const {
     availableYears,
@@ -146,7 +155,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     medicalExpenseSplit: monthData.medicalExpenseSplit,
                 });
             });
-            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None') {
+            if (monthData.childSupport.amount > 0) {
                 allTransactionsForPeriod.push({
                     ...monthData.childSupport,
                     id: `cs-${monthId}`,
@@ -196,10 +205,22 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     };
   }, [appData, selectedYear, selectedMonth]);
   
-  // Reset month selection when year changes
   useEffect(() => {
     setSelectedMonth('all');
   }, [selectedYear]);
+  
+  const getShare = (transaction: Transaction, parent: Parent) => {
+    if (transaction.category === 'Reimbursement') {
+        const expense = transaction as EnrichedExpense;
+        return expense.paidBy !== parent ? expense.amount : 0;
+    } else if (transaction.category !== 'Child Support') {
+        const expense = transaction as EnrichedExpense;
+        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
+        return expense.amount * (split[parent] / 100);
+    } else { // Child Support
+        return transaction.paidBy === parent ? transaction.amount : 0;
+    }
+  };
 
   const filteredTransactions = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
@@ -214,26 +235,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       
       const description = transaction.description.toLowerCase();
       const category = transaction.category.toLowerCase();
-
-      let parent1Share = 0;
-      let parent2Share = 0;
-      if(transaction.category === 'Reimbursement') {
-          const expense = transaction as EnrichedExpense;
-          if (expense.paidBy === 'Parent 1') {
-            parent2Share = expense.amount;
-          } else {
-            parent1Share = expense.amount;
-          }
-      } else if(transaction.category !== 'Child Support') {
-        const expense = transaction as EnrichedExpense;
-        parent1Share = expense.amount * (expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] / 100 : expense.expenseSplit['Parent 1'] / 100);
-        parent2Share = expense.amount * (expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] / 100 : expense.expenseSplit['Parent 2'] / 100);
-      } else {
-        const cs = transaction as EnrichedChildSupport;
-        if (cs.paidBy === 'Parent 1') parent1Share = cs.amount;
-        if (cs.paidBy === 'Parent 2') parent2Share = cs.amount;
-      }
-
+      
+      const parent1Share = getShare(transaction, 'Parent 1');
+      const parent2Share = getShare(transaction, 'Parent 2');
 
       return paidByName.includes(lowercasedFilter) ||
              description.includes(lowercasedFilter) ||
@@ -243,39 +247,76 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     });
   }, [allTransactions, searchTerm]);
 
-  const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
-    return filteredTransactions.reduce(
-      (totals, transaction) => {
-        let parent1Share = 0;
-        let parent2Share = 0;
+  const sortedTransactions = useMemo(() => {
+    let sortableItems = [...filteredTransactions];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
 
-        if (transaction.category === 'Reimbursement') {
-            const expense = transaction as EnrichedExpense;
-            if (expense.paidBy === 'Parent 1') {
-              parent2Share = expense.amount;
-            } else {
-              parent1Share = expense.amount;
-            }
-        } else if(transaction.category !== 'Child Support') {
-          const expense = transaction as EnrichedExpense;
-          const parent1Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
-          const parent2Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
-          parent1Share = expense.amount * (parent1Split / 100);
-          parent2Share = expense.amount * (parent2Split / 100);
+        if (sortConfig.key === 'parent1Share') {
+          aValue = getShare(a, 'Parent 1');
+          bValue = getShare(b, 'Parent 1');
+        } else if (sortConfig.key === 'parent2Share') {
+          aValue = getShare(a, 'Parent 2');
+          bValue = getShare(b, 'Parent 2');
+        } else if (sortConfig.key === 'paidBy') {
+            aValue = a.paidBy === 'None' ? '' : a.parentNames[a.paidBy];
+            bValue = b.paidBy === 'None' ? '' : b.parentNames[b.paidBy];
         } else {
-          if (transaction.paidBy === 'Parent 1') parent1Share = transaction.amount;
-          if (transaction.paidBy === 'Parent 2') parent2Share = transaction.amount;
+            aValue = a[sortConfig.key];
+            bValue = b[sortConfig.key];
         }
 
-        totals.totalAmount += transaction.amount;
-        totals.totalParent1Share += parent1Share;
-        totals.totalParent2Share += parent2Share;
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        } else if (sortConfig.key === 'date') {
+          const dateA = new Date(aValue).getTime();
+          const dateB = new Date(bValue).getTime();
+          if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return sortConfig.direction === 'ascending'
+                ? aValue.localeCompare(bValue)
+                : bValue.localeCompare(aValue);
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredTransactions, sortConfig]);
 
+  const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
+    return sortedTransactions.reduce(
+      (totals, transaction) => {
+        totals.totalAmount += transaction.amount;
+        totals.totalParent1Share += getShare(transaction, 'Parent 1');
+        totals.totalParent2Share += getShare(transaction, 'Parent 2');
         return totals;
       },
       { totalAmount: 0, totalParent1Share: 0, totalParent2Share: 0 }
     );
-  }, [filteredTransactions]);
+  }, [sortedTransactions]);
+  
+  const requestSort = (key: SortKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />; // Or a dedicated up arrow
+    }
+    return <ArrowUpDown className="ml-2 h-4 w-4" />; // Or a dedicated down arrow
+  };
+
 
   const chartConfig = useMemo(() => {
     const config: any = {
@@ -292,6 +333,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     });
     return config;
   }, [periodData]);
+
+  const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
+        {children}
+        {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3" />}
+      </Button>
+    </TableHead>
+  );
 
   return (
     <Card>
@@ -432,38 +482,19 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Paid By</TableHead>
-                      <TableHead className="text-right">Total Amount</TableHead>
-                      <TableHead className="text-right">{parentNamesForPeriod['Parent 1']}'s Share</TableHead>
-                      <TableHead className="text-right">{parentNamesForPeriod['Parent 2']}'s Share</TableHead>
+                      <SortableHeader sortKey="date">Date</SortableHeader>
+                      <SortableHeader sortKey="description">Description</SortableHeader>
+                      <SortableHeader sortKey="category">Category</SortableHeader>
+                      <SortableHeader sortKey="paidBy">Paid By</SortableHeader>
+                      <SortableHeader sortKey="amount" className="text-right">Total Amount</SortableHeader>
+                      <SortableHeader sortKey="parent1Share" className="text-right">{parentNamesForPeriod['Parent 1']}'s Share</SortableHeader>
+                      <SortableHeader sortKey="parent2Share" className="text-right">{parentNamesForPeriod['Parent 2']}'s Share</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTransactions.length > 0 ? filteredTransactions.map((transaction) => {
-                      
-                      let parent1Share = 0;
-                      let parent2Share = 0;
-
-                      if (transaction.category === 'Reimbursement') {
-                          const expense = transaction as EnrichedExpense;
-                          if (expense.paidBy === 'Parent 1') {
-                            parent2Share = expense.amount;
-                          } else {
-                            parent1Share = expense.amount;
-                          }
-                      } else if(transaction.category !== 'Child Support') {
-                        const expense = transaction as EnrichedExpense;
-                        const parent1Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
-                        const parent2Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
-                        parent1Share = expense.amount * (parent1Split / 100);
-                        parent2Share = expense.amount * (parent2Split / 100);
-                      } else {
-                        if (transaction.paidBy === 'Parent 1') parent1Share = transaction.amount;
-                        if (transaction.paidBy === 'Parent 2') parent2Share = transaction.amount;
-                      }
+                    {sortedTransactions.length > 0 ? sortedTransactions.map((transaction) => {
+                      const parent1Share = getShare(transaction, 'Parent 1');
+                      const parent2Share = getShare(transaction, 'Parent 2');
 
                       return (
                       <TableRow key={transaction.id}>
