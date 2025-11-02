@@ -22,6 +22,7 @@ import { DashboardProvider } from './dashboard-provider';
 import { MedicalSplitCard } from './medical-split-card';
 import { useAppContext } from '@/context/app-context';
 import { ImportExpensesDialog } from './import-expenses-dialog';
+import { AccountSettingsCard } from './account-settings-card';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
@@ -333,6 +334,7 @@ function DashboardComponent() {
             </TabsContent>
             <TabsContent value="settings">
               <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                <AccountSettingsCard />
                 <ParentNamesCard
                     parentNames={appData.months[Object.keys(appData.months)[0]].parentNames}
                     onUpdate={handleUpdateParentNames}
