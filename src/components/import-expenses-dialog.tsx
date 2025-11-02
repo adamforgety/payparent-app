@@ -168,7 +168,14 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 return;
             }
 
-            const parsedAmount = parseFloat(amount);
+            // Stricter amount validation
+            const amountAsString = String(amount).trim();
+            if (!/^[0-9]+(\.[0-9]{1,2})?$/.test(amountAsString)) {
+              failures.push({ row, reason: 'Invalid Amount' });
+              return;
+            }
+
+            const parsedAmount = parseFloat(amountAsString);
             if (isNaN(parsedAmount) || parsedAmount <= 0) {
               failures.push({ row, reason: 'Invalid Amount' });
               return;
@@ -378,7 +385,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                             <TableBody>
                                 {failedImports.map((fail, i) => (
                                     <TableRow key={i}>
-                                        <TableCell className="text-sm">{Object.values(fail.row).join(', ')}</TableCell>
+                                        <TableCell className="text-sm font-mono">{Object.values(fail.row).join(', ')}</TableCell>
                                         <TableCell><Badge variant="destructive">{fail.reason}</Badge></TableCell>
                                     </TableRow>
                                 ))}
