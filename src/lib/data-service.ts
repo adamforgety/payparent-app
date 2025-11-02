@@ -71,10 +71,11 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
   
   const userDocPayload: UserDoc = { 
     id: userId, 
-    appData: appData,
     // Use provided email, fallback to current email, then to null
     email: email !== undefined ? email : currentEmail, 
+    // Ensure the top-level username is always in sync with appData
     username: appData.username,
+    appData: appData,
   };
   
   // Create a deep copy to avoid Firestore read-only errors in dev
