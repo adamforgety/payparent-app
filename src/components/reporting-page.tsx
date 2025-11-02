@@ -366,77 +366,77 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           <TabsTrigger value="transactions">All Transactions</TabsTrigger>
           <TabsTrigger value="summary">Summary</TabsTrigger>
         </TabsList>
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                  <BarChart className="h-5 w-5 text-secondary-foreground" />
-                </span>
-                <div>
-                  <CardTitle>{reportTitle}</CardTitle>
-                  <CardDescription>{reportDescription}</CardDescription>
+        <TabsContent value="transactions" className="mt-6">
+          <Card>
+            <CardHeader>
+               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                      <BarChart className="h-5 w-5 text-secondary-foreground" />
+                    </span>
+                    <div>
+                      <CardTitle>{reportTitle}</CardTitle>
+                      <CardDescription>{reportDescription}</CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-full sm:w-32">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableYears.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={selectedMonth}
+                      onValueChange={setSelectedMonth}
+                      disabled={availableMonths.length === 0}
+                    >
+                      <SelectTrigger className="w-full sm:w-40">
+                        <SelectValue placeholder="Select month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Months</SelectItem>
+                        {availableMonths.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <ReportingExportButton
+                      transactions={allTransactions}
+                      periodLabel={
+                        selectedMonth === 'all'
+                          ? selectedYear
+                          : format(
+                              parse(selectedMonth, 'yyyy-MM', new Date()),
+                              'MMMM-yyyy'
+                            )
+                      }
+                      parentNames={parentNamesForPeriod}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="w-full sm:w-32">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableYears.map((year) => (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={selectedMonth}
-                  onValueChange={setSelectedMonth}
-                  disabled={availableMonths.length === 0}
-                >
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Months</SelectItem>
-                    {availableMonths.map((month) => (
-                      <SelectItem key={month.value} value={month.value}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <ReportingExportButton
-                  transactions={allTransactions}
-                  periodLabel={
-                    selectedMonth === 'all'
-                      ? selectedYear
-                      : format(
-                          parse(selectedMonth, 'yyyy-MM', new Date()),
-                          'MMMM-yyyy'
-                        )
-                  }
-                  parentNames={parentNamesForPeriod}
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TabsContent value="transactions" className="mt-0">
-              <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search by description, category, or parent..."
-                    className="pl-8 w-full"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                 <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Search by description, category, or parent..."
+                      className="pl-8 w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
+            </CardHeader>
+            <CardContent>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -545,12 +545,60 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   )}
                 </Table>
               </div>
-            </TabsContent>
-            <TabsContent value="summary" className="mt-0">
-              <p className="text-sm text-muted-foreground mb-4">
-                Note: This summary shows expenses by category and does not
-                include child support payments.
-              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="summary" className="mt-6">
+          <Card>
+             <CardHeader>
+               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                      <BarChart className="h-5 w-5 text-secondary-foreground" />
+                    </span>
+                    <div>
+                      <CardTitle>Expense Summary</CardTitle>
+                      <CardDescription>A summary of expenses by category.</CardDescription>
+                    </div>
+                  </div>
+                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-full sm:w-32">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableYears.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={selectedMonth}
+                      onValueChange={setSelectedMonth}
+                      disabled={availableMonths.length === 0}
+                    >
+                      <SelectTrigger className="w-full sm:w-40">
+                        <SelectValue placeholder="Select month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Months</SelectItem>
+                        {availableMonths.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                 <p className="text-sm text-muted-foreground mt-4">
+                    Note: This summary shows expenses by category and does not
+                    include child support payments.
+                </p>
+             </CardHeader>
+            <CardContent>
               {periodData.length > 0 ? (
                 <div className="space-y-8">
                   <div>
@@ -628,10 +676,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   </p>
                 </div>
               )}
-            </TabsContent>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+    
