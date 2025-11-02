@@ -1,6 +1,6 @@
 'use server';
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
 import type { AppData, UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
@@ -40,31 +40,5 @@ export async function handleNewUser(userId: string, email: string | null) {
     } catch (error: any) {
         console.error("Error in handleNewUser:", error);
         return { success: false, error: error.message || 'An unknown error occurred during user creation.' };
-    }
-}
-
-/**
- * Handles Google Sign-In. It checks if a user document exists.
- * If not, it creates one. This handles both new and returning Google users.
- */
-export async function handleGoogleSignIn(userId: string, email: string | null) {
-    if (!userId) {
-        return { success: false, error: 'User not found.' };
-    }
-    try {
-        const { firestore } = initializeFirebase();
-        const userDocRef = doc(firestore, 'users', userId);
-        const docSnap = await getDoc(userDocRef);
-
-        if (!docSnap.exists()) {
-            // If the document doesn't exist, create it for the new Google user.
-            await createNewUserDocument(firestore, userId, email);
-        }
-
-        return { success: true, userId: userId };
-
-    } catch (error: any) {
-        console.error("Error in handleGoogleSignIn:", error);
-        return { success: false, error: error.message || 'An unknown error occurred during Google sign-in.' };
     }
 }
