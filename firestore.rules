@@ -12,9 +12,9 @@
  *
  * Key Security Decisions:
  * - A user must be authenticated to access any data.
- * - A user can read/write their own `/users/{userId}` document.
- * - A user can read their co-parent's profile to facilitate UI features.
- * - A user cannot write to their co-parent's profile (e.g., change their co-parent's email or link).
+ * - A user can write to their own `/users/{userId}` document.
+ * - Any authenticated user can read any other user's profile to verify existence before linking. This does not expose sub-collections.
+ * - A user can write to another user's `coParentId` field ONLY to set it to their own ID, enabling the linking handshake.
  *
  * Denormalization for Authorization:
  * The `coParentId` is stored directly in the user's document. This requires one `get()` call to check for the relationship, but avoids complex hierarchical rules.
@@ -37,18 +37,38 @@ service cloud.firestore {
     function isCoParent(ownerId) {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coParentId == ownerId;
     }
+    
+    /**
+     * @description Helper function to check if the write operation is only an attempt to link accounts.
+     * It ensures that a user can only write their own UID to another user's `coParentId` field.
+     * It also allows a user to set their own `coParentId` to null (unlinking).
+     */
+    function isLinkingOperation(userId) {
+      // The incoming data must have a coParentId field.
+      // The value of that coParentId must be the requesting user's UID.
+      // The write must only affect the coParentId field.
+      let isLinkingAnother = request.resource.data.keys().hasOnly(['coParentId']) &&
+                             request.resource.data.coParentId == request.auth.uid;
+                             
+      // Allows a user to unlink themselves.
+      let isUnlinkingSelf = isOwner(userId) &&
+                            (request.resource.data.coParentId == null ||
+                            (resource.data.coParentId != null && request.resource.data.coParentId != resource.data.coParentId));
+
+
+      return isLinkingAnother || isUnlinkingSelf;
+    }
+
 
     /**
      * @description Rules for the user's own profile document.
      * - A user can write to their own profile.
-     * - Any authenticated user can read any other user's profile to verify existence before linking. This does not expose sub-collections.
+     * - Any authenticated user can read any other user's profile to verify existence before linking.
+     * - A user can write to another user's `coParentId` to link accounts.
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow write: if isOwner(userId);
-      // Allow any authenticated user to read the top-level user doc.
-      // This is needed to verify a co-parent's existence before linking accounts.
-      // This rule does NOT grant access to any sub-collections.
+      allow write: if isOwner(userId) || isLinkingOperation(userId);
       allow get: if request.auth != null;
     }
     
