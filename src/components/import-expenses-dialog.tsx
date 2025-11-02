@@ -384,22 +384,20 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             {step === 'upload' ? 'Import Expenses from Excel' : 'Preview Import'}
           </DialogTitle>
            <DialogDescription>
-            {step === 'upload' ? (
-              <span>
-                Upload a file with columns: Date, Description, Category, Amount, and Paid By (must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}").
-              </span>
-            ) : (
+            {step === 'upload' ? 
+              `Upload a file with columns for Date, Description, Category, Amount, and Paid By (name must match "${parentNames['Parent 1']}" or "${parentNames['Parent 2']}").`
+             : 
               'Review the expenses found in your file. Correct any errors and click "Confirm Import" to add them to your ledger.'
-            )}
+            }
+          </DialogDescription>
              {step === 'upload' && (
                 <div className="pt-2">
-                    <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
+                    <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal text-sm">
                     <Download className="mr-2 h-4 w-4" />
                     Download Template
                     </Button>
                 </div>
             )}
-          </DialogDescription>
         </DialogHeader>
 
         {step === 'upload' && (
@@ -482,7 +480,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             <Input
                                                 value={fail.data.date}
                                                 onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
-                                                className={cn(fail.errors.date && "border-destructive focus-visible:ring-destructive")}
+                                                className={cn("h-8", fail.errors.date && "border-destructive focus-visible:ring-destructive")}
                                             />
                                             {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
                                         </TableCell>
@@ -490,7 +488,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             <Input
                                                 value={fail.data.description}
                                                 onChange={(e) => handleFailedRowChange(i, 'description', e.target.value)}
-                                                className={cn(fail.errors.description && "border-destructive focus-visible:ring-destructive")}
+                                                className={cn("h-8", fail.errors.description && "border-destructive focus-visible:ring-destructive")}
                                             />
                                             {fail.errors.description && <div className="text-xs text-destructive mt-1">{fail.errors.description}</div>}
                                         </TableCell>
@@ -499,7 +497,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                                 value={fail.data.category}
                                                 onValueChange={(value) => handleFailedRowChange(i, 'category', value)}
                                             >
-                                                <SelectTrigger className={cn(fail.errors.category && "border-destructive focus-visible:ring-destructive")}>
+                                                <SelectTrigger className={cn("h-8", fail.errors.category && "border-destructive focus-visible:ring-destructive")}>
                                                     <SelectValue placeholder="Select category" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -512,7 +510,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                                 value={fail.data.paidBy}
                                                 onValueChange={(value) => handleFailedRowChange(i, 'paidBy', value)}
                                             >
-                                                <SelectTrigger className={cn(fail.errors.paidBy && "border-destructive focus-visible:ring-destructive")}>
+                                                <SelectTrigger className={cn("h-8", fail.errors.paidBy && "border-destructive focus-visible:ring-destructive")}>
                                                     <SelectValue placeholder="Select parent" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -526,7 +524,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             <Input
                                                 value={fail.data.amount}
                                                 onChange={(e) => handleFailedRowChange(i, 'amount', e.target.value)}
-                                                className={cn("text-right", fail.errors.amount && "border-destructive focus-visible:ring-destructive")}
+                                                className={cn("h-8 text-right", fail.errors.amount && "border-destructive focus-visible:ring-destructive")}
                                             />
                                             {fail.errors.amount && <div className="text-xs text-destructive mt-1">{fail.errors.amount}</div>}
                                         </TableCell>
@@ -539,6 +537,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                                             size="icon"
                                                             onClick={() => handleRetryFailedRow(i)}
                                                             disabled={Object.keys(fail.errors).length > 0}
+                                                            className="h-8 w-8"
                                                         >
                                                             <RefreshCw className="h-4 w-4" />
                                                         </Button>
