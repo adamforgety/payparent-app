@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload, Download, ArrowLeft } from 'lucide-react';
+import { Upload, Download, ArrowLeft, RefreshCw } from 'lucide-react';
 
 import {
   Dialog,
@@ -28,10 +28,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -57,23 +59,27 @@ interface ImportExpensesDialogProps {
 
 type ParsedExpense = Omit<Expense, 'id' | 'year' | 'month'>;
 
+type RowData = {
+  date: string;
+  description: string;
+  category: string;
+  paidBy: string;
+  amount: string;
+};
+
+type RowErrors = {
+    date?: string;
+    description?: string;
+    category?: string;
+    paidBy?: string;
+    amount?: string;
+    general?: string;
+};
+
 type FailedImport = {
     rowNumber: number;
-    data: {
-        date: string;
-        description: string;
-        category: string;
-        paidBy: string;
-        amount: string;
-    };
-    errors: {
-        date?: string;
-        description?: string;
-        category?: string;
-        paidBy?: string;
-        amount?: string;
-        general?: string;
-    };
+    data: RowData;
+    errors: RowErrors;
 };
 
 
@@ -130,6 +136,77 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     XLSX.writeFile(workbook, 'Expense_Import_Template.xlsx');
   };
 
+  const validateRow = (rowData: RowData, parentNames: ParentNames): { errors: RowErrors, parsedExpense: ParsedExpense | null } => {
+    const errors: RowErrors = {};
+    const { date, description, amount, paidBy, category } = rowData;
+
+    if (!date) errors.date = 'Missing';
+    if (!description) errors.description = 'Missing';
+    if (!amount) errors.amount = 'Missing';
+    if (!paidBy) errors.paidBy = 'Missing';
+
+    let parsedDate = new Date(date);
+    if (date) {
+        if (!isNaN(Number(date)) && Number(date) > 20000) { // Likely an Excel date serial number
+            parsedDate = new Date(Date.UTC(0, 0, Number(date) - 1));
+        } else {
+            parsedDate = parse(date, 'yyyy-MM-dd', new Date());
+        }
+        if (isNaN(parsedDate.getTime())) {
+            errors.date = 'Invalid Date';
+        }
+    }
+
+    let amountAsString = String(amount || '').trim();
+    if (amountAsString.startsWith('$')) {
+        amountAsString = amountAsString.substring(1).trim();
+    }
+    if (amount && !/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
+        errors.amount = 'Invalid Number';
+    }
+
+    let paidByParent: Parent | null = null;
+    if (paidBy) {
+        if (typeof paidBy === 'string') {
+            const paidByLower = paidBy.toLowerCase();
+            if (paidByLower === parentNames['Parent 1'].toLowerCase()) {
+                paidByParent = 'Parent 1';
+            } else if (paidByLower === parentNames['Parent 2'].toLowerCase()) {
+                paidByParent = 'Parent 2';
+            }
+        }
+        if (!paidByParent) {
+            errors.paidBy = 'Unrecognized Payer';
+        }
+    }
+
+    let expenseCategory: ExpenseCategory = 'Other';
+    if (category) {
+        const matchedCategory = ALL_CATEGORIES.find(c => c.toLowerCase() === String(category).toLowerCase());
+        if (matchedCategory) {
+            expenseCategory = matchedCategory;
+        }
+    }
+
+    if (Object.keys(errors).length > 0) {
+        return { errors, parsedExpense: null };
+    }
+
+    const parsedAmount = parseFloat(amountAsString);
+    const expenseObject: ParsedExpense = {
+        date: parsedDate.toISOString(),
+        description: String(description),
+        amount: parsedAmount,
+        paidBy: paidByParent!,
+        category: expenseCategory,
+        status: 'Unsettled',
+        receiptUrl: null,
+        receiptFilename: null,
+    };
+
+    return { errors: {}, parsedExpense: expenseObject };
+  }
+
   const onFileParse = async (values: FormValues) => {
     const file = values.file[0];
     const reader = new FileReader();
@@ -140,15 +217,11 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: '' });
 
-        const parent1NameLower = parentNames['Parent 1'].toLowerCase();
-        const parent2NameLower = parentNames['Parent 2'].toLowerCase();
-        
         const successes: ParsedExpense[] = [];
         const failures: FailedImport[] = [];
         const seen = new Set<string>();
-
 
         jsonData.forEach((row, index) => {
             const normalizedRow: {[key: string]: any} = {};
@@ -156,102 +229,29 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
               normalizedRow[key.toLowerCase().replace(/[^a-z0-9]/gi, '')] = row[key];
             }
 
-            const { date, description, category, paidby, amount } = normalizedRow;
-            const errors: FailedImport['errors'] = {};
-
-            // --- Data Validation ---
-            if (!date) errors.date = 'Missing';
-            if (!description) errors.description = 'Missing';
-            if (!amount) errors.amount = 'Missing';
-            if (!paidby) errors.paidBy = 'Missing';
-            
-            let parsedDate = new Date(date);
-            if (date) {
-                if (typeof date === 'number') {
-                    // Excel date serial number
-                    parsedDate = new Date(Date.UTC(0, 0, date - 1));
-                }
-                if (isNaN(parsedDate.getTime())) {
-                    errors.date = 'Invalid Date';
-                }
-            }
-
-            let amountAsString = String(amount || '').trim();
-            if (amountAsString.startsWith('$')) {
-              amountAsString = amountAsString.substring(1).trim();
-            }
-            if (amount && !/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
-               errors.amount = 'Invalid Number';
-            }
-            
-            let paidByParent: Parent | null = null;
-            if (paidby) {
-                if (typeof paidby === 'string') {
-                    const paidByLower = paidby.toLowerCase();
-                    if (paidByLower === parent1NameLower) {
-                        paidByParent = 'Parent 1';
-                    } else if (paidByLower === parent2NameLower) {
-                        paidByParent = 'Parent 2';
-                    }
-                }
-                if (!paidByParent) {
-                    errors.paidBy = 'Unrecognized Payer';
-                }
-            }
-            
-            if (Object.keys(errors).length > 0) {
-              failures.push({
-                rowNumber: index + 2,
-                data: {
-                  date: date ?? '',
-                  description: description ?? '',
-                  category: category ?? '',
-                  paidBy: paidby ?? '',
-                  amount: String(amount ?? ''),
-                },
-                errors,
-              });
-              return;
-            }
-            
-            const parsedAmount = parseFloat(amountAsString);
-            let expenseCategory: ExpenseCategory = 'Other';
-            if (category) {
-              const matchedCategory = ALL_CATEGORIES.find(c => c.toLowerCase() === String(category).toLowerCase());
-              if (matchedCategory) {
-                expenseCategory = matchedCategory;
-              }
-            }
-
-            const expenseObject: ParsedExpense = {
-              date: parsedDate.toISOString(),
-              description: String(description),
-              amount: parsedAmount,
-              paidBy: paidByParent!,
-              category: expenseCategory,
-              status: 'Unsettled',
-              receiptUrl: null,
-              receiptFilename: null,
+            const rowData: RowData = {
+              date: normalizedRow.date,
+              description: normalizedRow.description,
+              category: normalizedRow.category,
+              paidby: normalizedRow.paidby,
+              amount: String(normalizedRow.amount),
             };
 
-            const uniqueKey = `${expenseObject.date}-${expenseObject.description}-${expenseObject.amount}-${expenseObject.paidBy}`;
-            if (seen.has(uniqueKey)) {
-                 failures.push({
-                    rowNumber: index + 2,
-                    data: {
-                        date: date,
-                        description: description,
-                        category: category,
-                        paidBy: paidby,
-                        amount: String(amount),
-                    },
-                    errors: { general: 'Duplicate row in file' },
+            const { errors, parsedExpense } = validateRow(rowData, parentNames);
+            
+            if (parsedExpense) {
+              const uniqueKey = `${parsedExpense.date}-${parsedExpense.description}-${parsedExpense.amount}-${parsedExpense.paidBy}`;
+              if (seen.has(uniqueKey)) {
+                failures.push({
+                    rowNumber: index + 2, data: rowData, errors: { general: 'Duplicate in file' },
                 });
                 return;
+              }
+              seen.add(uniqueKey);
+              successes.push(parsedExpense);
+            } else {
+              failures.push({ rowNumber: index + 2, data: rowData, errors });
             }
-
-            seen.add(uniqueKey);
-            successes.push(expenseObject);
           });
           
         setSuccessfulImports(successes);
@@ -282,13 +282,17 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         toast({
           variant: successfulImports.length > 0 ? 'default' : 'destructive',
           title: `Import Complete: ${successfulImports.length} added, ${totalFailed} failed.`,
-          description: `Review the skipped rows in the preview.`,
+          description: `Skipped rows can be corrected and re-tried.`,
         });
+        if(successfulImports.length > 0) {
+          handleOpenChange(false);
+        }
       } else if (successfulImports.length > 0) {
          toast({
           title: 'Import Successful',
           description: `${successfulImports.length} expenses were added.`,
         });
+         handleOpenChange(false);
       } else {
           toast({
             variant: 'destructive',
@@ -296,20 +300,38 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             description: 'No valid expenses found in the file. Please check the format and data.',
           });
       }
-    
-    handleOpenChange(false);
   }
-  
-  const ErrorDisplay = ({ error, value }: { error?: string; value: string }) => {
-    if (!error) return <div>{value}</div>;
-    return (
-      <div className="text-destructive font-medium">
-        <div className="line-through text-muted-foreground">{value || '""'}</div>
-        <div>
-          <Badge variant="destructive">{error}</Badge>
-        </div>
-      </div>
-    );
+
+  const handleFailedRowChange = (index: number, field: keyof RowData, value: string) => {
+    const updatedFailedImports = [...failedImports];
+    updatedFailedImports[index].data[field] = value;
+
+    // Live re-validation
+    const { errors } = validateRow(updatedFailedImports[index].data, parentNames);
+    updatedFailedImports[index].errors = errors;
+    
+    setFailedImports(updatedFailedImports);
+  };
+
+  const handleRetryFailedRow = (index: number) => {
+    const rowToRetry = failedImports[index];
+    const { errors, parsedExpense } = validateRow(rowToRetry.data, parentNames);
+
+    if (parsedExpense) {
+      // Move from failed to successful
+      setSuccessfulImports(prev => [...prev, parsedExpense]);
+      setFailedImports(prev => prev.filter((_, i) => i !== index));
+    } else {
+      // Update errors
+      const updatedFailedImports = [...failedImports];
+      updatedFailedImports[index].errors = errors;
+      setFailedImports(updatedFailedImports);
+      toast({
+        variant: 'destructive',
+        title: 'Validation Failed',
+        description: 'Please fix the errors before retrying.',
+      });
+    }
   };
 
   return (
@@ -326,23 +348,19 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             {step === 'upload' ? 'Import Expenses from Excel' : 'Preview Import'}
           </DialogTitle>
           {step === 'upload' && (
-            <>
-              <DialogDescription className="space-y-1">
-                <span>Upload an Excel file with columns for: <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Date</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Description</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Category</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</code>, and <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Amount</code>.</span>
-                <span>The <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</code> name must match either "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}".</span>
-                <span>The system calculates each parent's share automatically.</span>
-              </DialogDescription>
-              <div className="pt-2">
-                <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Template
-                </Button>
-              </div>
-            </>
+             <DialogDescription className="space-y-1">
+                <span>Upload an Excel file with columns: <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Date</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Description</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Category</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</code>, and <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Amount</code>. The "Paid By" name must match either "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}".</span>
+                <div className="pt-2">
+                    <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Template
+                    </Button>
+                </div>
+            </DialogDescription>
           )}
           {step === 'preview' && (
              <DialogDescription>
-              Review the expenses found in your file. Click "Confirm Import" to add them to your ledger.
+              Review the expenses found in your file. Correct any errors and click "Confirm Import" to add them to your ledger.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -412,37 +430,87 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Row</TableHead>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead className="w-[150px]">Date</TableHead>
                                     <TableHead>Description</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead>Paid By</TableHead>
-                                    <TableHead>Amount</TableHead>
+                                    <TableHead className="w-[150px]">Category</TableHead>
+                                    <TableHead className="w-[180px]">Paid By</TableHead>
+                                    <TableHead className="w-[130px]">Amount</TableHead>
+                                    <TableHead className="w-[50px] text-right">Retry</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {failedImports.map((fail, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell className="font-mono">
-                                            {fail.rowNumber}
-                                            {fail.errors.general && (
-                                                <div className='mt-1'><Badge variant="destructive">{fail.errors.general}</Badge></div>
-                                            )}
+                                    <TableRow key={fail.rowNumber}>
+                                        <TableCell>
+                                            <Input
+                                                value={fail.data.date}
+                                                onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
+                                                className={cn(fail.errors.date && "border-destructive focus-visible:ring-destructive")}
+                                            />
+                                            {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.date} value={String(fail.data.date)} />
+                                            <Input
+                                                value={fail.data.description}
+                                                onChange={(e) => handleFailedRowChange(i, 'description', e.target.value)}
+                                                className={cn(fail.errors.description && "border-destructive focus-visible:ring-destructive")}
+                                            />
+                                            {fail.errors.description && <div className="text-xs text-destructive mt-1">{fail.errors.description}</div>}
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.description} value={String(fail.data.description)} />
+                                            <Select
+                                                value={fail.data.category}
+                                                onValueChange={(value) => handleFailedRowChange(i, 'category', value)}
+                                            >
+                                                <SelectTrigger className={cn(fail.errors.category && "border-destructive focus-visible:ring-destructive")}>
+                                                    <SelectValue placeholder="Select category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.category} value={String(fail.data.category)} />
+                                            <Select
+                                                value={fail.data.paidBy}
+                                                onValueChange={(value) => handleFailedRowChange(i, 'paidBy', value)}
+                                            >
+                                                <SelectTrigger className={cn(fail.errors.paidBy && "border-destructive focus-visible:ring-destructive")}>
+                                                    <SelectValue placeholder="Select parent" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value={parentNames['Parent 1']}>{parentNames['Parent 1']}</SelectItem>
+                                                    <SelectItem value={parentNames['Parent 2']}>{parentNames['Parent 2']}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {fail.errors.paidBy && <div className="text-xs text-destructive mt-1">{fail.errors.paidBy}</div>}
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.paidBy} value={String(fail.data.paidBy)} />
+                                            <Input
+                                                value={fail.data.amount}
+                                                onChange={(e) => handleFailedRowChange(i, 'amount', e.target.value)}
+                                                className={cn("text-right", fail.errors.amount && "border-destructive focus-visible:ring-destructive")}
+                                            />
+                                            {fail.errors.amount && <div className="text-xs text-destructive mt-1">{fail.errors.amount}</div>}
                                         </TableCell>
-                                        <TableCell>
-                                            <ErrorDisplay error={fail.errors.amount} value={String(fail.data.amount)} />
+                                        <TableCell className="text-right">
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                         <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleRetryFailedRow(i)}
+                                                            disabled={Object.keys(fail.errors).length > 0}
+                                                        >
+                                                            <RefreshCw className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Retry Import for this Row</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -455,7 +523,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 <Button variant="outline" onClick={() => setStep('upload')}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
                 </Button>
-                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0}>
+                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && failedImports.length > 0}>
                   Confirm Import ({successfulImports.length})
                 </Button>
             </DialogFooter>
