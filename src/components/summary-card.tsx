@@ -262,51 +262,54 @@ export function SummaryCard({
         </div>
 
         {previousBalances.length > 0 && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="text-sm py-2">
-                <div className="flex justify-between w-full pr-4">
-                  <span className="font-medium">Balance from Previous Months</span>
-                  <span
-                    className={cn(
-                      'font-semibold',
-                      previousMonthsTotalBalance > 0 && 'text-green-600',
-                      previousMonthsTotalBalance < 0 && 'text-destructive'
-                    )}
-                  >
-                    {previousMonthsTotalBalance >= 0
-                      ? `+$${previousMonthsTotalBalance.toFixed(2)}`
-                      : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-1 pl-2 pr-1 pt-1 border-t">
-                  {previousBalances.map(({ monthId, balance }) => (
-                    <div
-                      key={monthId}
-                      className="flex items-center justify-between text-xs"
+          <div className="space-y-2 rounded-md bg-muted/30 p-3">
+            <h4 className="font-medium text-sm underline">Balance from Previous Months</h4>
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1" className="border-b-0">
+                <AccordionTrigger className="text-sm py-0 pt-2 hover:no-underline">
+                  <div className="flex justify-between w-full pr-4">
+                    <span className="text-muted-foreground">Total from Past Months</span>
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        previousMonthsTotalBalance > 0 && 'text-green-600',
+                        previousMonthsTotalBalance < 0 && 'text-destructive'
+                      )}
                     >
-                      <p className="text-muted-foreground">
-                        {format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}
-                      </p>
-                      <p
-                        className={cn(
-                          'font-medium',
-                          balance > 0 && 'text-green-600',
-                          balance < 0 && 'text-destructive'
-                        )}
+                      {previousMonthsTotalBalance >= 0
+                        ? `+$${previousMonthsTotalBalance.toFixed(2)}`
+                        : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-1 pl-2 pr-1 pt-2 border-t mt-2">
+                    {previousBalances.map(({ monthId, balance }) => (
+                      <div
+                        key={monthId}
+                        className="flex items-center justify-between text-xs"
                       >
-                        {balance >= 0
-                          ? `+$${balance.toFixed(2)}`
-                          : `-$${Math.abs(balance).toFixed(2)}`}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+                        <p className="text-muted-foreground">
+                          {format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}
+                        </p>
+                        <p
+                          className={cn(
+                            'font-medium',
+                            balance > 0 && 'text-green-600',
+                            balance < 0 && 'text-destructive'
+                          )}
+                        >
+                          {balance >= 0
+                            ? `+$${balance.toFixed(2)}`
+                            : `-$${Math.abs(balance).toFixed(2)}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
         )}
 
         <Separator />
