@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Link2, Copy, UserCheck, UserX } from 'lucide-react';
-import { doc, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -78,50 +78,36 @@ export function CoParentLinkCard() {
       const coParentDocRef = doc(firestore, 'users', coParentId);
       const currentUserDocRef = doc(firestore, 'users', user.uid);
       
-      // Step 1: Verify co-parent exists
-      getDoc(coParentDocRef)
-        .then((coParentDoc) => {
-          if (!coParentDoc.exists()) {
-            toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
-            return; // Stop execution
-          }
-  
-          // Step 2: If co-parent exists, create and commit the batch write
-          const batch = writeBatch(firestore);
-          
-          // Link current user to co-parent
-          batch.update(currentUserDocRef, { coParentId: coParentId });
-          
-          // Link co-parent to current user
-          batch.update(coParentDocRef, { coParentId: user.uid });
-          
-          batch.commit()
-            .then(() => {
-              toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
-              form.reset();
-            })
-            .catch((batchError) => {
-              // This will catch permission errors on the BATCH write (update operations)
-              const permissionError = new FirestorePermissionError({
-                path: 'batch-write', // Indicate this was a batch operation
-                operation: 'write',
-                requestResourceData: [
-                  { path: currentUserDocRef.path, data: { coParentId: coParentId } },
-                  { path: coParentDocRef.path, data: { coParentId: user.uid } }
-                ]
-              });
-              errorEmitter.emit('permission-error', permissionError);
-            });
-  
-        })
-        .catch((getError) => {
-          // This will catch permission errors on the initial GET operation
-          const permissionError = new FirestorePermissionError({
-            path: coParentDocRef.path,
-            operation: 'get',
-          });
-          errorEmitter.emit('permission-error', permissionError);
+      try {
+        // Step 1: Verify co-parent exists
+        const coParentDoc = await getDoc(coParentDocRef);
+        if (!coParentDoc.exists()) {
+          toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
+          return;
+        }
+
+        // Step 2: Link current user to co-parent
+        await updateDoc(currentUserDocRef, { coParentId: coParentId });
+        
+        // Step 3: Link co-parent to current user
+        await updateDoc(coParentDocRef, { coParentId: user.uid });
+
+        toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
+        form.reset();
+
+      } catch (error) {
+        // This will catch permission errors on either the get() or one of the update() calls
+        const permissionError = new FirestorePermissionError({
+            path: 'linking-process',
+            operation: 'write', 
+            requestResourceData: {
+                step: 'get or update',
+                currentUser: user.uid,
+                targetCoParent: coParentId
+            }
         });
+        errorEmitter.emit('permission-error', permissionError);
+      }
     });
   };
 
@@ -254,3 +240,5 @@ export function CoParentLinkCard() {
     </Card>
   );
 }
+
+    

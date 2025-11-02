@@ -47,10 +47,10 @@ service cloud.firestore {
      */
     match /users/{userId} {
       // Allow write if you own the document OR if you are only modifying the coParentId field
-      // for the linking process. This is secure because the linking action is a batch write
-      // that includes updating the requester's own document, which they are allowed to do.
-      // If they can write to their own, they can complete the handshake.
-      allow write: if isOwner(userId) || (request.resource.data.keys().hasOnly(['coParentId', 'appData', 'email', 'id']) && request.resource.data.coParentId == request.auth.uid);
+      // of another user to set it to your own ID. This is the linking handshake.
+      allow write: if isOwner(userId) || 
+                      (request.resource.data.keys().hasOnly(['coParentId']) && 
+                       request.resource.data.coParentId == request.auth.uid);
       allow get: if request.auth != null;
     }
     
@@ -65,3 +65,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
