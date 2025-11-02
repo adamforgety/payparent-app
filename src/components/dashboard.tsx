@@ -1,6 +1,6 @@
 'use client';
 
-import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isBefore, isEqual } from 'date-fns';
+import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
@@ -9,7 +9,7 @@ import { ChildSupportCard } from '@/components/child-support-card';
 import { ExpensesCard } from '@/components/expenses-card';
 import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
-import { SummaryCard } from '@/components/summary-card';
+import { SettleBalanceCard } from '@/components/settle-balance-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppData, ChildSupport, Expense, MonthData, ParentNames, ExpenseSplit, MedicalExpenseSplit } from '@/lib/types';
 import { Logo } from './logo';
@@ -25,6 +25,7 @@ import { ImportExpensesDialog } from './import-expenses-dialog';
 import { AccountSettingsCard } from './account-settings-card';
 import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { SummaryDetailsCard } from './summary-details-card';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
@@ -272,32 +273,60 @@ function DashboardComponent() {
                     <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
                     <TabsTrigger value="parent-2">{currentMonthData.parentNames['Parent 2']}</TabsTrigger>
                   </TabsList>
-                  <TabsContent value="parent-1">
-                    <div className="mt-6">
-                      <SummaryCard
-                        parent="Parent 1"
-                        expenses={expenses}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                        childSupport={currentMonthData.childSupport}
-                        parentNames={currentMonthData.parentNames}
-                        appData={appData}
-                        currentMonthId={monthId}
-                      />
+                   <TabsContent value="parent-1" className="mt-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+                      <div className="lg:col-span-1">
+                        <SettleBalanceCard
+                            parent="Parent 1"
+                            expenses={expenses}
+                            expenseSplit={currentMonthData.expenseSplit}
+                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                            childSupport={currentMonthData.childSupport}
+                            parentNames={currentMonthData.parentNames}
+                            appData={appData}
+                            currentMonthId={monthId}
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <SummaryDetailsCard
+                            parent="Parent 1"
+                            expenses={expenses}
+                            expenseSplit={currentMonthData.expenseSplit}
+                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                            childSupport={currentMonthData.childSupport}
+                            parentNames={currentMonthData.parentNames}
+                            appData={appData}
+                            currentMonthId={monthId}
+                        />
+                      </div>
                     </div>
                   </TabsContent>
-                  <TabsContent value="parent-2">
-                    <div className="mt-6">
-                      <SummaryCard
-                        parent="Parent 2"
-                        expenses={expenses}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                        childSupport={currentMonthData.childSupport}
-                        parentNames={currentMonthData.parentNames}
-                        appData={appData}
-                        currentMonthId={monthId}
-                      />
+                  <TabsContent value="parent-2" className="mt-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+                      <div className="lg:col-span-1">
+                        <SettleBalanceCard
+                            parent="Parent 2"
+                            expenses={expenses}
+                            expenseSplit={currentMonthData.expenseSplit}
+                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                            childSupport={currentMonthData.childSupport}
+                            parentNames={currentMonthData.parentNames}
+                            appData={appData}
+                            currentMonthId={monthId}
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <SummaryDetailsCard
+                            parent="Parent 2"
+                            expenses={expenses}
+                            expenseSplit={currentMonthData.expenseSplit}
+                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                            childSupport={currentMonthData.childSupport}
+                            parentNames={currentMonthData.parentNames}
+                            appData={appData}
+                            currentMonthId={monthId}
+                        />
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
