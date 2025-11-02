@@ -20,7 +20,6 @@ export async function handleNewUser(userId: string, email: string | null, userna
     
     // Deep copy initial data and set the user-specific ID and username.
     const appData = JSON.parse(JSON.stringify(initialData));
-    appData.id = userId;
     if (username) {
         appData.username = username;
     }

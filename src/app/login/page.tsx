@@ -110,6 +110,7 @@ export default function LoginPage() {
   });
 
   const findEmailByUsername = async (username: string): Promise<string | null> => {
+      if (!firestore) return null;
       try {
         const usersRef = collection(firestore, 'users');
         const q = query(usersRef, where('appData.username', '==', username), limit(1));
@@ -131,16 +132,17 @@ export default function LoginPage() {
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
       const { emailOrUsername, password } = values;
-      let emailToLogin = emailOrUsername;
       
       try {
+        let emailToLogin = emailOrUsername;
+        
         // If the input doesn't look like an email, treat it as a username and find the real email.
         if (!emailOrUsername.includes('@')) {
           const foundEmail = await findEmailByUsername(emailOrUsername);
           if (foundEmail) {
             emailToLogin = foundEmail;
           } else {
-            // If username is not found, we can fail early.
+            // To avoid username enumeration, we give a generic error.
             toast({
               variant: 'destructive',
               title: 'Login Failed',
@@ -157,7 +159,6 @@ export default function LoginPage() {
         router.refresh();
 
       } catch (error: any) {
-        // Catch any other auth errors (like wrong password).
         toast({
           variant: 'destructive',
           title: 'Login Failed',
