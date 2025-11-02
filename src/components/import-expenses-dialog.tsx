@@ -52,6 +52,11 @@ interface ImportExpensesDialogProps {
   parentNames: ParentNames;
 }
 
+type FailedImport = {
+  row: any;
+  reason: string;
+};
+
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
   'Education',
@@ -98,14 +103,16 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false });
 
         const parent1NameLower = parentNames['Parent 1'].toLowerCase();
         const parent2NameLower = parentNames['Parent 2'].toLowerCase();
+        
+        const successfulImports: Omit<Expense, 'id' | 'year' | 'month'>[] = [];
+        const failedImports: FailedImport[] = [];
 
-        const importedExpenses: Omit<Expense, 'id' | 'year' | 'month'>[] = jsonData
-          .map((row) => {
-            // Normalize header keys (lowercase and remove special characters)
+
+        jsonData.forEach((row) => {
             const normalizedRow: {[key: string]: any} = {};
             for (const key in row) {
               normalizedRow[key.toLowerCase().replace(/[^a-z0-9]/gi, '')] = row[key];
@@ -114,19 +121,36 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             const { date, description, category, paidby, amount } = normalizedRow;
 
             // --- Data Validation ---
-            if (!date || !description || !amount) {
-              return null; // Skip row if essential data is missing
+            if (!date) {
+              failedImports.push({ row, reason: 'Missing Date' });
+              return;
+            }
+            if (!description) {
+              failedImports.push({ row, reason: 'Missing Description' });
+              return;
+            }
+             if (!amount) {
+              failedImports.push({ row, reason: 'Missing Amount' });
+              return;
+            }
+            if (!paidby) {
+              failedImports.push({row, reason: 'Missing Payer'})
             }
 
             let parsedDate = new Date(date);
-            // XLSX can parse dates as numbers (days since 1900), convert if needed
             if (typeof date === 'number') {
                 parsedDate = new Date(Date.UTC(0, 0, date - 1));
             }
-            if (isNaN(parsedDate.getTime())) return null;
+             if (isNaN(parsedDate.getTime())) {
+                failedImports.push({ row, reason: `Invalid Date: "${date}"` });
+                return;
+            }
 
             const parsedAmount = parseFloat(amount);
-            if (isNaN(parsedAmount) || parsedAmount <= 0) return null;
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+              failedImports.push({ row, reason: 'Invalid Amount' });
+              return;
+            }
 
             let paidByParent: Parent | null = null;
             if (typeof paidby === 'string') {
@@ -137,14 +161,17 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 paidByParent = 'Parent 2';
               }
             }
-            if (!paidByParent) return null; // Skip if payer doesn't match
+            if (!paidByParent) {
+              failedImports.push({ row, reason: `Unrecognized Payer: "${paidby}"` });
+              return;
+            }
 
             let expenseCategory: ExpenseCategory = 'Other';
             if (category && ALL_CATEGORIES.some(c => c.toLowerCase() === category.toLowerCase())) {
                 expenseCategory = ALL_CATEGORIES.find(c => c.toLowerCase() === category.toLowerCase())!;
             }
             
-            return {
+            successfulImports.push({
               date: parsedDate.toISOString(),
               description: String(description),
               amount: parsedAmount,
@@ -153,19 +180,40 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
               status: 'Unsettled',
               receiptUrl: null,
               receiptFilename: null,
-            };
-          })
-          .filter((exp): exp is Omit<Expense, 'id'|'year'|'month'> => exp !== null);
+            });
+          });
           
-        if (importedExpenses.length > 0) {
-            onImport(importedExpenses);
+        if (successfulImports.length > 0) {
+            onImport(successfulImports);
+        }
+        
+        // --- Show Detailed Toast ---
+        if (failedImports.length > 0) {
+          const reasons = failedImports.map(f => f.reason).reduce((acc, reason) => {
+            acc[reason] = (acc[reason] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+
+          const reasonSummary = Object.entries(reasons).map(([reason, count]) => `${count}x ${reason}`).join(', ');
+
+          toast({
+            variant: 'destructive',
+            title: `Import Complete: ${successfulImports.length} added, ${failedImports.length} failed.`,
+            description: `Failure reasons: ${reasonSummary}`,
+          });
+        } else if (successfulImports.length > 0) {
+           toast({
+            title: 'Import Successful',
+            description: `${successfulImports.length} expenses were added.`,
+          });
         } else {
             toast({
-                variant: 'destructive',
-                title: 'Import Failed',
-                description: 'No valid expenses found in the file. Please check the format and data.',
+              variant: 'destructive',
+              title: 'Import Failed',
+              description: 'No valid expenses found in the file. Please check the format and data.',
             });
         }
+
 
         form.reset();
         setIsOpen(false);
