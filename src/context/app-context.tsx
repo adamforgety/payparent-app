@@ -14,7 +14,8 @@ import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
 import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
-import { doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, FirestoreError } from 'firebase/firestore';
+import { errorEmitter, FirestorePermissionError } from '@/firebase';
 
 interface AppContextType {
   appData: AppData | null;
@@ -69,28 +70,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     
     // 1. Listener for the current user's document (for coParentId changes)
     const userDocRef = doc(firestore, 'users', user.uid);
-    const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      const userDoc = docSnap.data() as UserDoc;
-      // If coParentId changes, refetch all data.
-      // This is a simple way to handle linking/unlinking.
-      if (userDoc?.coParentId !== (coParentData?.id || null)) {
-         getUserData(firestore, user.uid).then(setAppData);
-      }
+    const userUnsubscribe = onSnapshot(userDocRef, 
+      (docSnap) => {
+        const userDoc = docSnap.data() as UserDoc;
+        // If coParentId changes, refetch all data.
+        // This is a simple way to handle linking/unlinking.
+        if (userDoc?.coParentId !== (coParentData?.id || null)) {
+          getUserData(firestore, user.uid).then(setAppData);
+        }
 
-      // If a co-parent is linked, also fetch their user data to display their email.
-      if (userDoc?.coParentId) {
-        const coParentDocRef = doc(firestore, 'users', userDoc.coParentId);
-        getDoc(coParentDocRef).then(coParentSnap => {
-          if (coParentSnap.exists()) {
-            setCoParentData(coParentSnap.data() as UserDoc);
-          } else {
-             setCoParentData(null);
-          }
-        });
-      } else {
-        setCoParentData(null);
+        // If a co-parent is linked, also fetch their user data to display their email.
+        if (userDoc?.coParentId) {
+          const coParentDocRef = doc(firestore, 'users', userDoc.coParentId);
+          getDoc(coParentDocRef).then(coParentSnap => {
+            if (coParentSnap.exists()) {
+              setCoParentData(coParentSnap.data() as UserDoc);
+            } else {
+              setCoParentData(null);
+            }
+          });
+        } else {
+          setCoParentData(null);
+        }
+      },
+      (error: FirestoreError) => {
+        const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
+        console.error("Permission error on user doc snapshot:", contextualError);
+        errorEmitter.emit('permission-error', contextualError);
       }
-    });
+    );
 
     // 2. Listener for the actual app data (which might be the co-parent's data)
     let dataUnsubscribe: () => void = () => {};
@@ -99,12 +107,21 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const targetId = currentUserDoc?.coParentId || user.uid;
         const dataDocRef = doc(firestore, 'users', targetId);
 
-        dataUnsubscribe = onSnapshot(dataDocRef, (docSnap) => {
+        dataUnsubscribe = onSnapshot(dataDocRef, 
+          (docSnap) => {
             if (docSnap.exists()) {
                 const docData = docSnap.data() as UserDoc;
                 setAppData(docData.appData);
             }
-        });
+          },
+          (error: FirestoreError) => {
+            const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
+            console.error("Permission error on main data snapshot:", contextualError);
+            errorEmitter.emit('permission-error', contextualError);
+            setAppData(null);
+            setIsLoading(false);
+          }
+        );
     }
     
     setDataListener();
