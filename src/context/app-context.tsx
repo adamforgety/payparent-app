@@ -25,7 +25,7 @@ interface AppContextType {
   ) => void;
   deleteExpense: (expenseId: string, monthId: string) => void;
   updateExpense: (updatedExpense: Expense, originalMonthId: string) => void;
-  updateChildSupport: (updatedChildSupport: ChildSupport) => void;
+  updateChildSupport: (updatedChildSupport: ChildSupport, monthId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -105,13 +105,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     [user, firestore]
   );
   
-  const updateChildSupport = (updatedChildSupport: ChildSupport) => {
+  const updateChildSupport = (updatedChildSupport: ChildSupport, monthId: string) => {
     if (!appData) return;
-    const currentMonthId = format(new Date(), 'yyyy-MM');
-    const monthData = appData.months[currentMonthId];
+    const monthData = appData.months[monthId];
     if (monthData) {
       const updatedMonthData = { ...monthData, childSupport: updatedChildSupport };
-      updateAppData({ months: { ...appData.months, [currentMonthId]: updatedMonthData } });
+      updateAppData({ months: { ...appData.months, [monthId]: updatedMonthData } });
     }
   };
 
@@ -360,5 +359,3 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
-
-    

@@ -69,7 +69,7 @@ export function SettleBalanceDialog({
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const { updateExpense, updateChildSupport } = useAppContext();
+  const { updateExpense, updateChildSupport, updateAppData } = useAppContext();
   
   const allUnsettledItems = useMemo<ItemToSettle[]>(() => {
     let items: ItemToSettle[] = [];
@@ -82,10 +82,13 @@ export function SettleBalanceDialog({
                 .forEach(exp => {
                     let split = 0;
                     if (exp.category === 'Reimbursement') {
+                        // The full amount is owed by the non-paying parent
                         split = 1;
                     } else if (exp.category === 'Medical' || exp.category === 'Child Care') {
+                        // The share owed by the non-paying parent
                         split = monthData.medicalExpenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
                     } else {
+                        // The share owed by the non-paying parent
                         split = monthData.expenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
                     }
 
@@ -120,33 +123,49 @@ export function SettleBalanceDialog({
   }, [appData.months, parent, otherParent]);
 
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
-    return allUnsettledItems.filter(item => item.originalPayer === parent || item.originalPayer === otherParent && item.type === 'child_support');
+    // Other parent owes me for:
+    // 1. Expenses I paid (they owe their share)
+    // 2. Child support they paid to me (I receive this)
+    return allUnsettledItems.filter(item => {
+      if (item.type === 'expense') {
+        return item.originalPayer === parent;
+      }
+      if (item.type === 'child_support') {
+        return item.originalPayer === otherParent; // They paid me
+      }
+      return false;
+    });
   }, [allUnsettledItems, parent, otherParent]);
   
   const itemsOwedByMe = useMemo<ItemToSettle[]>(() => {
-    return allUnsettledItems.filter(item => item.originalPayer === otherParent || item.originalPayer === parent && item.type === 'child_support');
+    // I owe other parent for:
+    // 1. Expenses they paid (I owe my share)
+    // 2. Child support I paid to them (They receive this)
+     return allUnsettledItems.filter(item => {
+      if (item.type === 'expense') {
+        return item.originalPayer === otherParent;
+      }
+      if (item.type === 'child_support') {
+        return item.originalPayer === parent; // I paid them
+      }
+      return false;
+    });
   }, [allUnsettledItems, parent, otherParent]);
 
 
   const handleMarkAsSettled = (item: ItemToSettle) => {
+    const targetMonth = appData.months[item.monthId];
+    if (!targetMonth) return;
+
     if (item.type === 'expense') {
-      const originalExpense = appData.months[item.monthId]?.expenses.find(exp => exp.id === item.id);
+      const originalExpense = targetMonth.expenses.find(exp => exp.id === item.id);
       if(originalExpense) {
         updateExpense({ ...originalExpense, status: 'Settled' }, item.monthId);
       }
     } else { // child_support
-      const originalChildSupport = appData.months[item.monthId]?.childSupport;
-       if(originalChildSupport) {
-         const updatedChildSupport = { ...originalChildSupport, status: 'Settled' };
-         // A bit of a workaround: updateAppData is better for cross-month updates
-         const updatedMonths = { ...appData.months, [item.monthId]: { ...appData.months[item.monthId], childSupport: updatedChildSupport }};
-         // This needs a direct call if updateChildSupport is month-specific
-         // For now, let's assume we need a more general update function
-         // A proper implementation would call a context function like:
-         // updateChildSupportForMonth(item.monthId, { status: 'Settled' });
-         // Let's call the existing updateChildSupport and see if it's been adapted
-         updateChildSupport(updatedChildSupport);
-      }
+      const updatedChildSupport = { ...targetMonth.childSupport, status: 'Settled' };
+      const updatedMonths = { ...appData.months, [item.monthId]: { ...targetMonth, childSupport: updatedChildSupport }};
+      updateAppData({ months: updatedMonths });
     }
     toast({
       title: 'Payment Marked as Settled',
@@ -166,13 +185,8 @@ export function SettleBalanceDialog({
     });
   };
 
-  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => {
-    return acc + (item.originalPayer === parent ? item.owedAmount : (item.originalPayer === otherParent && item.type === 'child_support' ? item.owedAmount : 0));
-  }, 0);
-  
-  const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => {
-    return acc + (item.originalPayer === otherParent ? item.owedAmount : (item.originalPayer === parent && item.type === 'child_support' ? item.owedAmount : 0));
-  }, 0);
+  const totalOwedToMe = itemsOwedToMe.reduce((acc, item) => acc + item.owedAmount, 0);
+  const totalOwedByMe = itemsOwedByMe.reduce((acc, item) => acc + item.owedAmount, 0);
 
   const otherParentName = parentNames[otherParent];
   const finalNetBalance = totalOwedToMe - totalOwedByMe;
