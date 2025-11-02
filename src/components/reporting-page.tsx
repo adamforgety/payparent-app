@@ -36,6 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from './ui/table';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -241,6 +242,40 @@ export function ReportingPage({ appData }: ReportingPageProps) {
              parent2Share.toFixed(2).includes(lowercasedFilter);
     });
   }, [allTransactions, searchTerm]);
+
+  const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
+    return filteredTransactions.reduce(
+      (totals, transaction) => {
+        let parent1Share = 0;
+        let parent2Share = 0;
+
+        if (transaction.category === 'Reimbursement') {
+            const expense = transaction as EnrichedExpense;
+            if (expense.paidBy === 'Parent 1') {
+              parent2Share = expense.amount;
+            } else {
+              parent1Share = expense.amount;
+            }
+        } else if(transaction.category !== 'Child Support') {
+          const expense = transaction as EnrichedExpense;
+          const parent1Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 1'] : expense.expenseSplit['Parent 1'];
+          const parent2Split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit['Parent 2'] : expense.expenseSplit['Parent 2'];
+          parent1Share = expense.amount * (parent1Split / 100);
+          parent2Share = expense.amount * (parent2Split / 100);
+        } else {
+          if (transaction.paidBy === 'Parent 1') parent1Share = transaction.amount;
+          if (transaction.paidBy === 'Parent 2') parent2Share = transaction.amount;
+        }
+
+        totals.totalAmount += transaction.amount;
+        totals.totalParent1Share += parent1Share;
+        totals.totalParent2Share += parent2Share;
+
+        return totals;
+      },
+      { totalAmount: 0, totalParent1Share: 0, totalParent2Share: 0 }
+    );
+  }, [filteredTransactions]);
 
   const chartConfig = useMemo(() => {
     const config: any = {
@@ -460,6 +495,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         </TableRow>
                     )}
                   </TableBody>
+                  <TableFooter>
+                    <TableRow className="bg-secondary/50 font-bold">
+                      <TableCell colSpan={4}>Grand Totals</TableCell>
+                      <TableCell className="text-right">${totalAmount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${totalParent1Share.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${totalParent2Share.toFixed(2)}</TableCell>
+                    </TableRow>
+                  </TableFooter>
                 </Table>
               </div>
           </TabsContent>
