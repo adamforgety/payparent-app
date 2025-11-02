@@ -90,6 +90,7 @@ export function SummaryCard({
   // --- Calculate Balance from Previous Months ---
   const previousBalances = useMemo<PreviousBalance[]>(() => {
     return Object.keys(appData.months)
+      .sort()
       .filter((monthId) => {
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
         const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
