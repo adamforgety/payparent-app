@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useState, useTransition, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, KeyRound, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, KeyRound } from 'lucide-react';
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -13,7 +13,6 @@ import {
   updatePassword,
   AuthErrorCodes,
 } from 'firebase/auth';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -35,12 +34,6 @@ import {
 import { useFirebase } from '@/firebase';
 import { Separator } from './ui/separator';
 import { useAppContext } from '@/context/app-context';
-import type { UserDoc } from '@/lib/types';
-
-
-const usernameSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters.').max(20, 'Username must be 20 characters or less.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
-});
 
 const emailSchema = z.object({
   newEmail: z.string().email({ message: 'Please enter a valid new email address.' }),
@@ -80,18 +73,12 @@ function getFirebaseAuthErrorMessage(error: any): string {
 }
 
 export function AccountSettingsCard() {
-  const { auth, user, firestore } = useFirebase();
+  const { auth, user } = useFirebase();
   const { appData, updateAppData } = useAppContext();
   const { toast } = useToast();
-  const [isUsernamePending, startUsernameTransition] = useTransition();
   const [isEmailPending, startEmailTransition] = useTransition();
   const [isPasswordPending, startPasswordTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
-
-  const usernameForm = useForm<z.infer<typeof usernameSchema>>({
-    resolver: zodResolver(usernameSchema),
-    defaultValues: { username: appData?.username || '' },
-  });
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
@@ -102,59 +89,6 @@ export function AccountSettingsCard() {
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   });
-
-  useEffect(() => {
-    if (appData?.username) {
-      usernameForm.setValue('username', appData.username);
-    }
-  }, [appData?.username, usernameForm]);
-
-  const findEmailByUsername = async (username: string): Promise<string | null> => {
-      if (!firestore) return null;
-      try {
-        const usersRef = collection(firestore, 'users');
-        const q = query(usersRef, where('appData.username', '==', username), limit(1));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-          return null;
-        }
-        
-        const userDoc = querySnapshot.docs[0].data() as UserDoc;
-        return userDoc.email;
-      } catch (error) {
-        console.error("Client-side error finding user by username:", error);
-        return null;
-      }
-    };
-
-
-  const onUsernameSubmit = (values: z.infer<typeof usernameSchema>) => {
-    startUsernameTransition(async () => {
-      if (values.username === appData?.username) {
-        toast({
-          title: 'No Change',
-          description: 'The new username is the same as the current one.',
-        });
-        return;
-      }
-      // Check if username is already taken by another user
-      const existingEmail = await findEmailByUsername(values.username);
-      if (existingEmail && existingEmail !== user?.email) {
-          usernameForm.setError('username', {
-              type: 'manual',
-              message: 'This username is already taken. Please choose another one.'
-          });
-          return;
-      }
-      
-      updateAppData({ username: values.username });
-      toast({
-        title: 'Username Updated',
-        description: `Your username has been set to ${values.username}.`,
-      });
-    });
-  };
 
   const onEmailSubmit = (values: z.infer<typeof emailSchema>) => {
     startEmailTransition(async () => {
@@ -173,7 +107,10 @@ export function AccountSettingsCard() {
         await updateEmail(user, values.newEmail);
         
         // Also update the email in the Firestore document
-        updateAppData({ email: values.newEmail });
+        if (appData) {
+            updateAppData({ months: appData.months });
+        }
+
 
         toast({
           title: 'Email Updated',
@@ -235,35 +172,6 @@ export function AccountSettingsCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Change Username Form */}
-        <Form {...usernameForm}>
-          <form onSubmit={usernameForm.handleSubmit(onUsernameSubmit)} className="space-y-4">
-             <h3 className="font-medium">Username</h3>
-            <FormField
-              control={usernameForm.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Set or Update Username</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="your_username" className="pl-9" {...field} />
-                    </div>
-                  </FormControl>
-                   <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isUsernamePending}>
-              {isUsernamePending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Username
-            </Button>
-          </form>
-        </Form>
-        
-        <Separator />
-
         {/* Change Email Form */}
         <Form {...emailForm}>
           <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">

@@ -8,7 +8,7 @@ import { initialData } from '@/lib/data';
 /**
  * Handles the creation of a new user document in Firestore after sign-up.
  */
-export async function handleNewUser(userId: string, email: string | null, username: string) {
+export async function handleNewUser(userId: string, email: string | null) {
     if (!userId || !email) {
         return { success: false, error: 'User ID or email not provided.' };
     }
@@ -18,7 +18,6 @@ export async function handleNewUser(userId: string, email: string | null, userna
     // Create a fresh copy of the initial app data structure
     const appData: AppData = {
         ...JSON.parse(JSON.stringify(initialData)),
-        username: username, // Set the user-specific username
     };
     
     // Create the full UserDoc payload with the correct nested structure.

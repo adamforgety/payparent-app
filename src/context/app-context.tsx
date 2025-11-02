@@ -9,7 +9,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import type { AppData, ChildSupport, Expense, ParentNames } from '@/lib/types';
+import type { AppData, ChildSupport, Expense } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';

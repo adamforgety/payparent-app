@@ -3,12 +3,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { useState, useTransition, useCallback } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -34,11 +33,9 @@ import {
 import { handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
-import type { UserDoc } from '@/lib/types';
 
 const signupSchema = z
   .object({
-    username: z.string().min(3, 'Username must be at least 3 characters.').max(20, 'Username must be 20 characters or less.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
     email: z.string().email({ message: 'Please enter a valid email address.' }),
     password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
     confirmPassword: z.string(),
@@ -49,7 +46,7 @@ const signupSchema = z
   });
 
 const loginSchema = z.object({
-  emailOrUsername: z.string().min(1, { message: 'Email or username is required.' }),
+  email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
 
@@ -93,16 +90,16 @@ export default function LoginPage() {
   const [isResetDialogOpen, setResetDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/';
-  const { auth, firestore } = useFirebase();
+  const { auth } = useFirebase();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { emailOrUsername: '', password: '' },
+    defaultValues: { email: '', password: '' },
   });
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '' },
   });
 
   const passwordResetForm = useForm<z.infer<typeof passwordResetSchema>>({
@@ -110,52 +107,12 @@ export default function LoginPage() {
     defaultValues: { email: '' },
   });
 
-  const findEmailByUsername = useCallback(async (username: string): Promise<string | null> => {
-    if (!firestore) return null;
-    try {
-      const usersRef = collection(firestore, 'users');
-      // Note the query path 'appData.username' to match the nested structure
-      const q = query(usersRef, where('appData.username', '==', username), limit(1));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        return null;
-      }
-
-      const userDoc = querySnapshot.docs[0].data() as UserDoc;
-      return userDoc.email;
-    } catch (error) {
-      console.error("Client-side error finding user by username:", error);
-      // Let's not show a toast here to avoid spamming errors, but log it.
-      return null;
-    }
-  }, [firestore]);
-
-
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
-      const { emailOrUsername, password } = values;
+      const { email, password } = values;
       
       try {
-        let emailToLogin = emailOrUsername;
-        
-        // If it doesn't look like an email, treat it as a username
-        if (!emailOrUsername.includes('@')) {
-          const foundEmail = await findEmailByUsername(emailOrUsername);
-          if (foundEmail) {
-            emailToLogin = foundEmail;
-          } else {
-            // If username is not found, we can show a specific error
-            toast({
-              variant: 'destructive',
-              title: 'Login Failed',
-              description: 'Invalid credentials. Please try again.',
-            });
-            return;
-          }
-        }
-        
-        await signInWithEmailAndPassword(auth, emailToLogin, password);
+        await signInWithEmailAndPassword(auth, email, password);
         toast({ title: 'Login Successful', description: 'Welcome back!' });
         router.push(next);
         router.refresh();
@@ -173,21 +130,11 @@ export default function LoginPage() {
   const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
     startTransition(async () => {
       try {
-        // 1. Check if the username is already taken before creating the user
-        const usernameExists = await findEmailByUsername(values.username);
-        if (usernameExists) {
-          signupForm.setError('username', { 
-            type: 'manual', 
-            message: 'This username is already taken. Please choose another.' 
-          });
-          return;
-        }
-
-        // 2. Create the user with email and password
+        // 1. Create the user with email and password
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
         
-        // 3. Create the user document in Firestore with the username
-        const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email, values.username);
+        // 2. Create the user document in Firestore
+        const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email);
         
         if (actionResult.success) {
             toast({ title: 'Sign-up Successful', description: 'Welcome! You are now logged in.' });
@@ -255,13 +202,13 @@ export default function LoginPage() {
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 mt-4">
                   <FormField
                     control={loginForm.control}
-                    name="emailOrUsername"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email or Username</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <FormControl>
                           <Input 
-                            placeholder="you@example.com or your_username" 
+                            placeholder="you@example.com" 
                             {...field}
                           />
                         </FormControl>
@@ -351,19 +298,6 @@ export default function LoginPage() {
             <TabsContent value="signup">
               <Form {...signupForm}>
                 <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4 mt-4">
-                   <FormField
-                    control={signupForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="your_username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <FormField
                     control={signupForm.control}
                     name="email"

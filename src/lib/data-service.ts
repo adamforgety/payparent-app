@@ -31,15 +31,12 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       
       const auth = getAuth();
       const email = auth.currentUser?.email || null;
-      // Generate a default username from the email if possible
-      const username = email ? email.split('@')[0] : `user_${userId.substring(0, 5)}`; 
 
-      await handleNewUser(userId, email, username);
+      await handleNewUser(userId, email);
       
       // Return a local copy of the initial data for the current session.
       const newInitialData: AppData = {
           ...JSON.parse(JSON.stringify(initialData)),
-          username: username
       }
       return newInitialData;
     }
@@ -48,10 +45,7 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
     // In case of error, fall back to a local version of initial data.
     const fallbackData: AppData = {
         ...JSON.parse(JSON.stringify(initialData)),
-        username: ''
     };
-    const email = getAuth().currentUser?.email;
-    fallbackData.username = email ? email.split('@')[0] : `user_${userId.substring(0, 5)}`;
     return fallbackData;
   }
 }
