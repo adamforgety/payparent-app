@@ -61,11 +61,6 @@
   body {
     @apply bg-background text-foreground;
   }
-
-  /* Hide the Vercel development logo */
-  body > svg:last-of-type {
-    display: none !important;
-  }
 }
 
 @media print {
@@ -105,4 +100,9 @@
     font-size: 1.125rem;
     line-height: 1.75rem;
   }
+}
+
+/* Hide the Vercel development logo */
+body > svg:last-of-type {
+  display: none !important;
 }
