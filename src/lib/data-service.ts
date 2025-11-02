@@ -30,7 +30,7 @@ async function getDocWithHandling<T>(docRef: any): Promise<T | null> {
 
 /**
  * Fetches the application data for the logged-in user.
- * It intelligently fetches data from the co-parent's document if a link is established.
+ * It intelligently fetches data from the document specified by `dataOwnerId`.
  * @param firestore - The Firestore instance.
  * @param userId - The ID of the currently logged-in user.
  * @returns A promise that resolves to the AppData.
@@ -40,39 +40,41 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
   
   const currentUserDoc = await getDocWithHandling<UserDoc>(currentUserDocRef);
 
-  // If the current user has a coParentId, fetch the co-parent's data instead.
-  if (currentUserDoc?.coParentId) {
-    const coParentDocRef = doc(firestore, 'users', currentUserDoc.coParentId);
-    const coParentDoc = await getDocWithHandling<UserDoc>(coParentDocRef);
-    if (coParentDoc) {
-      return coParentDoc.appData;
-    } else {
-      // The co-parent document was not found or accessible, which could be a data integrity issue.
-      // Unlink the co-parent on the current user's doc and fall back to their own data.
-      await updateDoc(currentUserDocRef, { coParentId: null });
-      return currentUserDoc.appData || JSON.parse(JSON.stringify(initialData));
-    }
-  }
-
-  // If no coParentId, use the current user's data.
-  if (currentUserDoc) {
-    return currentUserDoc.appData;
-  } else {
-    // This is a fallback for a rare case where the user document doesn't exist
-    // after the login flow should have created it.
+  if (!currentUserDoc) {
     console.log('No user document found. Creating one with initial data.');
     const auth = getAuth();
     const email = auth.currentUser?.email || null;
     await handleNewUser(userId, email);
-    return JSON.parse(JSON.stringify(initialData));
+    // After creating, fetch again to ensure consistency.
+    const newUserDoc = await getDocWithHandling<UserDoc>(currentUserDocRef);
+    return newUserDoc?.appData || JSON.parse(JSON.stringify(initialData));
+  }
+
+  const dataOwnerId = currentUserDoc.dataOwnerId || userId;
+
+  if (dataOwnerId === userId) {
+    return currentUserDoc.appData;
+  }
+
+  // Fetch data from the data owner's document
+  const dataOwnerDocRef = doc(firestore, 'users', dataOwnerId);
+  const dataOwnerDoc = await getDocWithHandling<UserDoc>(dataOwnerDocRef);
+
+  if (dataOwnerDoc) {
+    return dataOwnerDoc.appData;
+  } else {
+    // This indicates a data integrity issue, where the dataOwnerId points to a non-existent document.
+    // As a fallback, revert the current user to be their own data owner.
+    await updateDoc(currentUserDocRef, { dataOwnerId: userId, coParentId: null });
+    return currentUserDoc.appData;
   }
 }
 
 /**
  * Saves the user's application data to Firestore.
- * This intelligently saves data to the correct document (the user's or their co-parent's).
+ * This intelligently saves data to the correct document (the one specified by `dataOwnerId`).
  * @param firestore - The Firestore instance.
- * @param userId - The ID of the currently logged-in user.
+ * @param userId - The ID of the currently logged-in user making the change.
  * @param appData - The application data to save.
  */
 export async function saveUserData(firestore: Firestore, userId: string, appData: AppData): Promise<void> {
@@ -81,18 +83,25 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
     return;
   }
   
+  // First, get the current user's document to find out who the data owner is.
   const currentUserDocRef = doc(firestore, 'users', userId);
   const currentUserDocSnap = await getDoc(currentUserDocRef);
+  
+  if (!currentUserDocSnap.exists()) {
+    console.error("Current user document not found. Cannot determine data owner.");
+    return;
+  }
+
   const currentUserDoc = currentUserDocSnap.data() as UserDoc;
   
-  // Determine the correct document to write to. If there's a co-parent, write to their document.
-  const targetUserId = currentUserDoc?.coParentId || userId;
+  // Determine the correct document to write to.
+  const targetUserId = currentUserDoc.dataOwnerId || userId;
   const targetDocRef = doc(firestore, 'users', targetUserId);
   
   const payload = { appData };
 
   try {
-    // Use set with merge to update just the appData field.
+    // Use set with merge to update just the appData field on the owner's document.
     await setDoc(targetDocRef, payload, { merge: true });
   } catch (error) {
      errorEmitter.emit(

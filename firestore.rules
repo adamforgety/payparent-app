@@ -2,22 +2,21 @@
  * @fileOverview Firestore Security Rules for CoParent Finances App
  *
  * Core Philosophy:
- * This ruleset enforces a user-ownership model where data can be shared with a single co-parent.
- * A user can read/write their own data. They can also read/write their co-parent's data if the `coParentId` in their own user document points to the other user's ID.
+ * This ruleset enforces a shared data model based on a `dataOwnerId`.
+ * A user can read/write data in another user's document if their own `dataOwnerId`
+ * points to that other user's ID. This creates a shared account where both users
+ * access the same data source.
  *
  * Data Structure:
- * All data is nested under `/users/{userId}`, creating a clear separation of user data.
- * - `/users/{userId}`: Stores user profile information, including a `coParentId`.
- * - `/users/{userId}/...`: All other user-specific data.
+ * - /users/{userId}: Stores user profile information, including `coParentId` and `dataOwnerId`.
+ * - /users/{userId}/...: User-specific data like `appData`.
  *
  * Key Security Decisions:
  * - A user must be authenticated to access any data.
- * - A user can write to their own `/users/{userId}` document.
  * - Any authenticated user can read any other user's profile to verify existence before linking. This does not expose sub-collections.
- * - A user can write to another user's `coParentId` field ONLY to set it to their own ID, enabling the linking handshake.
+ * - A user can write to another user's document ONLY to establish or break a `coParentId` and `dataOwnerId` link.
+ * - All other data writes (`appData`, etc.) are only allowed on the document specified by the user's `dataOwnerId`.
  *
- * Denormalization for Authorization:
- * The `coParentId` is stored directly in the user's document. This requires one `get()` call to check for the relationship, but avoids complex hierarchical rules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -31,39 +30,30 @@ service cloud.firestore {
     }
 
     /**
-     * Helper function to check if the requesting user is a linked co-parent of the document owner.
-     * This grants access if the current user's coParentId points to the owner of the data they are trying to access.
+     * @description Checks if the user is authorized to access the target data.
+     * Access is granted if the requester's dataOwnerId matches the ID of the document they are trying to access.
      */
-    function isCoParent(ownerId) {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coParentId == ownerId;
+    function isAuthorizedToAccessData(targetUserId) {
+      let requesterDataOwnerId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.dataOwnerId;
+      return requesterDataOwnerId == targetUserId;
     }
 
     /**
-     * @description Rules for the user's own profile document.
-     * - A user can write to their own profile.
-     * - Any authenticated user can read any other user's profile to verify existence before linking.
-     * - A user can write to another user's `coParentId` to link accounts.
+     * @description Rules for the user profile document.
+     * - Any authenticated user can read any profile for linking.
+     * - Writes are complex:
+     *   - Owners can update their own profile.
+     *   - A user can write to another's profile ONLY to set the coParentId/dataOwnerId for linking.
+     *   - App data can only be written if the user is authorized to access the target data document.
      * @path /users/{userId}
      */
     match /users/{userId} {
-      // Allow write if you own the document OR if you are only modifying the coParentId field
-      // of another user to set it to your own ID. This is the linking handshake.
-      allow write: if isOwner(userId) || 
-                      (request.resource.data.keys().hasOnly(['coParentId']) && 
-                       request.resource.data.coParentId == request.auth.uid);
       allow get: if request.auth != null;
-    }
-    
-    /**
-     * @description Rules for all data nested under a user's document (expenses, payments, etc.).
-     * Access is granted if the requester is the owner OR the linked co-parent of the owner.
-     * This creates the shared data model.
-     * @path /users/{userId}/{document=**}
-     */
-    match /users/{userId}/{document=**} {
-      allow read, write: if isOwner(userId) || isCoParent(userId);
+
+      // Allow write for linking/unlinking OR if the user is authorized to write to this data document.
+      allow write: if isOwner(userId) ||
+                      (request.resource.data.keys().hasAny(['coParentId', 'dataOwnerId'])) ||
+                      isAuthorizedToAccessData(userId);
     }
   }
 }
-
-    

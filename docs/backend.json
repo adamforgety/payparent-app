@@ -169,11 +169,20 @@
         "username": {
           "type": "string",
           "description": "The user's unique username, used as a login alias."
+        },
+        "coParentId": {
+          "type": "string",
+          "description": "The ID of the linked co-parent user."
+        },
+        "dataOwnerId": {
+          "type": "string",
+          "description": "The ID of the user who owns the shared data. If this matches the user's own ID, they are the data owner."
         }
       },
       "required": [
         "id",
-        "email"
+        "email",
+        "dataOwnerId"
       ]
     }
   },

@@ -79,32 +79,39 @@ export function CoParentLinkCard() {
       const currentUserDocRef = doc(firestore, 'users', user.uid);
       
       try {
-        // Step 1: Verify co-parent exists
         const coParentDoc = await getDoc(coParentDocRef);
         if (!coParentDoc.exists()) {
           toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
           return;
         }
 
-        // Step 2: Link current user to co-parent
-        await updateDoc(currentUserDocRef, { coParentId: coParentId });
+        const batch = writeBatch(firestore);
+
+        // Current user gives up data ownership and links to co-parent.
+        batch.update(currentUserDocRef, { 
+          coParentId: coParentId,
+          dataOwnerId: coParentId // Point to co-parent's data
+        });
         
-        // Step 3: Link co-parent to current user
-        await updateDoc(coParentDocRef, { coParentId: user.uid });
+        // Co-parent keeps data ownership and links back to current user.
+        batch.update(coParentDocRef, { 
+          coParentId: user.uid,
+          dataOwnerId: coParentId // They own their (and now your) data
+        });
+        
+        await batch.commit();
 
         toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
         form.reset();
 
       } catch (error) {
-        // This will catch permission errors on either the get() or one of the update() calls
         const permissionError = new FirestorePermissionError({
-            path: 'linking-process',
+            path: 'batch-write',
             operation: 'write', 
-            requestResourceData: {
-                step: 'get or update',
-                currentUser: user.uid,
-                targetCoParent: coParentId
-            }
+            requestResourceData: [
+              { path: currentUserDocRef.path, data: { coParentId: coParentId, dataOwnerId: coParentId } },
+              { path: coParentDocRef.path, data: { coParentId: user.uid, dataOwnerId: coParentId } }
+            ]
         });
         errorEmitter.emit('permission-error', permissionError);
       }
@@ -121,11 +128,17 @@ export function CoParentLinkCard() {
 
       const batch = writeBatch(firestore);
       
-      // Unlink current user
-      batch.update(currentUserDocRef, { coParentId: null });
+      // Reset current user to be their own data owner and remove link
+      batch.update(currentUserDocRef, { 
+        coParentId: null,
+        dataOwnerId: user.uid
+      });
       
-      // Unlink co-parent
-      batch.update(coParentDocRef, { coParentId: null });
+      // Reset co-parent to be their own data owner and remove link
+      batch.update(coParentDocRef, { 
+        coParentId: null,
+        dataOwnerId: coParentId
+       });
       
       batch.commit()
         .then(() => {
@@ -136,8 +149,8 @@ export function CoParentLinkCard() {
             path: 'batch-write',
             operation: 'write',
             requestResourceData: [
-              { path: currentUserDocRef.path, data: { coParentId: null } },
-              { path: coParentDocRef.path, data: { coParentId: null } }
+              { path: currentUserDocRef.path, data: { coParentId: null, dataOwnerId: user.uid } },
+              { path: coParentDocRef.path, data: { coParentId: null, dataOwnerId: coParentId } }
             ]
           });
           errorEmitter.emit('permission-error', permissionError);
@@ -240,5 +253,3 @@ export function CoParentLinkCard() {
     </Card>
   );
 }
-
-    

@@ -26,6 +26,7 @@ export async function handleNewUser(userId: string, email: string | null) {
       email: email,
       appData: appData,
       coParentId: null,
+      dataOwnerId: userId, // Initially, the user owns their own data.
     };
 
     const userDocRef = doc(firestore, 'users', userId);

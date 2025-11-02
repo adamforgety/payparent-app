@@ -60,85 +60,76 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
     setIsLoading(true);
 
-    // Initial fetch of user data
-    getUserData(firestore, user.uid)
-      .then((data) => {
-        setAppData(data);
-      })
-      .catch((error) => {
-        console.error('Failed to load user data:', error);
-        setAppData(null);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-
     // --- Set up real-time listeners ---
     
-    // 1. Listener for the current user's document (for coParentId changes)
-    const userDocRef = doc(firestore, 'users', user.uid);
-    const userUnsubscribe = onSnapshot(userDocRef, 
-      (docSnap) => {
-        const userDoc = docSnap.data() as UserDoc;
-        // If coParentId changes, refetch all data.
-        // This is a simple way to handle linking/unlinking.
-        if (userDoc?.coParentId !== (coParentData?.id || null)) {
-          getUserData(firestore, user.uid).then(setAppData);
-        }
+    let userUnsubscribe = () => {};
+    let dataUnsubscribe: () => void = () => {};
 
-        // If a co-parent is linked, also fetch their user data to display their email.
-        if (userDoc?.coParentId) {
-          const coParentDocRef = doc(firestore, 'users', userDoc.coParentId);
-          getDoc(coParentDocRef).then(coParentSnap => {
+    // This async function sets up all listeners. It's called inside the effect.
+    const setupListeners = async () => {
+      if (!user || !firestore) return;
+
+      const userDocRef = doc(firestore, 'users', user.uid);
+
+      // 1. Listener for the current user's document to get coParent and dataOwner info
+      userUnsubscribe = onSnapshot(userDocRef, 
+        async (userDocSnap) => {
+          if (!userDocSnap.exists()) {
+            setIsLoading(false);
+            return;
+          }
+
+          const userDocData = userDocSnap.data() as UserDoc;
+          
+          // Determine the target document for app data
+          const dataOwnerId = userDocData.dataOwnerId || user.uid;
+          const dataDocRef = doc(firestore, 'users', dataOwnerId);
+          
+          // Set up or update the listener for the shared appData
+          if (dataUnsubscribe) dataUnsubscribe(); // Detach old listener if any
+          dataUnsubscribe = onSnapshot(dataDocRef, 
+            (dataDocSnap) => {
+              if (dataDocSnap.exists()) {
+                const dataDoc = dataDocSnap.data() as UserDoc;
+                setAppData(dataDoc.appData);
+              }
+              setIsLoading(false);
+            },
+            (error: FirestoreError) => {
+              const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
+              errorEmitter.emit('permission-error', contextualError);
+              setAppData(null);
+              setIsLoading(false);
+            }
+          );
+          
+          // Fetch co-parent's profile info if they are linked
+          if (userDocData.coParentId) {
+            const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
+            const coParentSnap = await getDoc(coParentDocRef);
             if (coParentSnap.exists()) {
               setCoParentData(coParentSnap.data() as UserDoc);
             } else {
               setCoParentData(null);
             }
-          });
-        } else {
-          setCoParentData(null);
-        }
-      },
-      (error: FirestoreError) => {
-        const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
-        errorEmitter.emit('permission-error', contextualError);
-      }
-    );
-
-    // 2. Listener for the actual app data (which might be the co-parent's data)
-    let dataUnsubscribe: () => void = () => {};
-    const setDataListener = async () => {
-        if (!user || !firestore) return; // Guard against running before auth is ready
-
-        const currentUserDoc = (await getDoc(userDocRef)).data() as UserDoc | undefined;
-        const targetId = currentUserDoc?.coParentId || user.uid;
-        const dataDocRef = doc(firestore, 'users', targetId);
-
-        dataUnsubscribe = onSnapshot(dataDocRef, 
-          (docSnap) => {
-            if (docSnap.exists()) {
-                const docData = docSnap.data() as UserDoc;
-                setAppData(docData.appData);
-            }
-          },
-          (error: FirestoreError) => {
-            const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
-            errorEmitter.emit('permission-error', contextualError);
-            setAppData(null);
-            setIsLoading(false);
+          } else {
+            setCoParentData(null);
           }
-        );
-    }
-    
-    setDataListener();
+        },
+        (error: FirestoreError) => {
+          const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
+          errorEmitter.emit('permission-error', contextualError);
+          setIsLoading(false);
+        }
+      );
+    };
 
+    setupListeners();
 
     return () => {
       userUnsubscribe();
       dataUnsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, firestore, isUserLoading]);
 
   const updateAppData = useCallback(
@@ -148,7 +139,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const newMonths = { ...appData.months, ...newData.months };
       const updatedData = { ...appData, ...newData, months: newMonths };
       
-      // The saveUserData function already contains the logic to save to the correct (co-parent's) document
       saveUserData(firestore, user.uid, updatedData).catch(console.error);
     },
     [user, firestore, appData]
