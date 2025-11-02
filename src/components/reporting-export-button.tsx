@@ -36,41 +36,49 @@ export function ReportingExportButton({
   parentNames
 }: ReportingExportButtonProps) {
   const handleExport = () => {
-    const dataToExport = transactions.map((item) => {
-      let parent1Share = 0;
-      let parent2Share = 0;
-
-      if (item.category === 'Child Support') {
-        if (item.paidBy === 'Parent 1') {
-          parent1Share = item.amount;
-        } else if (item.paidBy === 'Parent 2') {
-          parent2Share = item.amount;
+    const dataToExport = transactions
+      .filter(item => {
+        // Exclude ignored child support payments
+        if (item.category === 'Child Support') {
+          return !item.ignored;
         }
-      } else {
-        const expense = item as EnrichedExpense;
-        if (expense.category === 'Reimbursement') {
-          if (expense.paidBy === 'Parent 1') {
-            parent2Share = expense.amount;
-          } else {
-            parent1Share = expense.amount;
+        return true;
+      })
+      .map((item) => {
+        let parent1Share = 0;
+        let parent2Share = 0;
+
+        if (item.category === 'Child Support') {
+          if (item.paidBy === 'Parent 1') {
+            parent1Share = item.amount;
+          } else if (item.paidBy === 'Parent 2') {
+            parent2Share = item.amount;
           }
         } else {
-          const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-          parent1Share = expense.amount * (split['Parent 1'] / 100);
-          parent2Share = expense.amount * (split['Parent 2'] / 100);
+          const expense = item as EnrichedExpense;
+          if (expense.category === 'Reimbursement') {
+            if (expense.paidBy === 'Parent 1') {
+              parent2Share = expense.amount;
+            } else {
+              parent1Share = expense.amount;
+            }
+          } else {
+            const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
+            parent1Share = expense.amount * (split['Parent 1'] / 100);
+            parent2Share = expense.amount * (split['Parent 2'] / 100);
+          }
         }
-      }
 
-      return {
-        Date: format(new Date(item.date), 'yyyy-MM-dd'),
-        Description: item.description,
-        Category: item.category,
-        'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
-        Amount: item.amount,
-        [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
-        [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
-      };
-    });
+        return {
+          Date: format(new Date(item.date), 'yyyy-MM-dd'),
+          Description: item.description,
+          Category: item.category,
+          'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
+          Amount: item.amount,
+          [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
+          [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
+        };
+      });
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();

@@ -89,7 +89,7 @@ export function ExpensesCard({
   
   const allItems = useMemo<DisplayItem[]>(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
-    if (childSupport.amount > 0 && childSupport.paidBy !== 'None') {
+    if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && !childSupport.ignored) {
         const childSupportItem: DisplayItem = {
             id: 'child-support',
             date: startOfMonth(currentDate).toISOString(),
@@ -135,7 +135,7 @@ export function ExpensesCard({
       }
     }
     
-    if (childSupport.paidBy === parent) {
+    if (childSupport.paidBy === parent && !childSupport.ignored) {
       totalShare += childSupport.amount;
     }
     
@@ -372,7 +372,7 @@ export function ExpensesCard({
             ${totalExpenses.toFixed(2)}
           </span>
         </div>
-        {childSupport.amount > 0 && (
+        {childSupport.amount > 0 && !childSupport.ignored && (
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Child Support:</span>
             <span className="font-medium">

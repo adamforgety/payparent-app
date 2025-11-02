@@ -30,7 +30,7 @@ export function ExportButton({
 }: ExportButtonProps) {
   const handleExport = () => {
     const childSupportItem =
-      childSupport.amount > 0 && childSupport.paidBy !== 'None'
+      childSupport.amount > 0 && childSupport.paidBy !== 'None' && !childSupport.ignored
         ? {
             id: 'child-support',
             date: startOfMonth(currentDate).toISOString(),
@@ -91,7 +91,7 @@ export function ExportButton({
     );
   };
 
-  const isDisabled = expenses.length === 0 && childSupport.amount === 0;
+  const isDisabled = expenses.length === 0 && (childSupport.amount === 0 || childSupport.ignored);
 
   if (asChild) {
     return (
