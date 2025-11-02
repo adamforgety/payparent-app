@@ -176,8 +176,11 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 }
             }
 
-            const amountAsString = String(amount || '').trim();
-             if (amount && !/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
+            let amountAsString = String(amount || '').trim();
+            if (amountAsString.startsWith('$')) {
+              amountAsString = amountAsString.substring(1).trim();
+            }
+            if (amount && !/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
                errors.amount = 'Invalid Number';
             }
             
@@ -204,7 +207,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                   description: description ?? '',
                   category: category ?? '',
                   paidBy: paidby ?? '',
-                  amount: amount ?? '',
+                  amount: String(amount ?? ''),
                 },
                 errors,
               });
@@ -432,19 +435,19 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.date} value={fail.data.date} />
+                                            <ErrorDisplay error={fail.errors.date} value={String(fail.data.date)} />
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.description} value={fail.data.description} />
+                                            <ErrorDisplay error={fail.errors.description} value={String(fail.data.description)} />
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.category} value={fail.data.category} />
+                                            <ErrorDisplay error={fail.errors.category} value={String(fail.data.category)} />
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.paidBy} value={fail.data.paidBy} />
+                                            <ErrorDisplay error={fail.errors.paidBy} value={String(fail.data.paidBy)} />
                                         </TableCell>
                                         <TableCell>
-                                            <ErrorDisplay error={fail.errors.amount} value={fail.data.amount} />
+                                            <ErrorDisplay error={fail.errors.amount} value={String(fail.data.amount)} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -467,3 +470,5 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     </Dialog>
   );
 }
+
+    
