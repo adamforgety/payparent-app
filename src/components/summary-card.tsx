@@ -11,11 +11,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames, MedicalExpenseSplit } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames, MedicalExpenseSplit, AppData } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
 import { useAppContext } from '@/context/app-context';
+import { parse, isBefore, startOfDay } from 'date-fns';
 
 interface SummaryCardProps {
   parent: Parent;
@@ -24,7 +25,33 @@ interface SummaryCardProps {
   medicalExpenseSplit: MedicalExpenseSplit;
   childSupport: ChildSupport;
   parentNames: ParentNames;
+  appData: AppData;
+  currentMonthId: string;
 }
+
+const calculateShare = (
+  expenses: Expense[],
+  split: ExpenseSplit,
+  medicalSplit: MedicalExpenseSplit,
+  p: Parent
+): number => {
+  let totalShare = 0;
+  
+  for (const expense of expenses) {
+    if (expense.category === 'Reimbursement') {
+      if (expense.paidBy !== p) {
+        totalShare += expense.amount;
+      }
+    } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+      const medicalParentSplitPercent = medicalSplit[p] / 100;
+      totalShare += expense.amount * medicalParentSplitPercent;
+    } else {
+      const parentSplitPercent = split[p] / 100;
+      totalShare += expense.amount * parentSplitPercent;
+    }
+  }
+  return totalShare;
+};
 
 export function SummaryCard({
   parent,
@@ -33,75 +60,83 @@ export function SummaryCard({
   medicalExpenseSplit,
   childSupport,
   parentNames,
+  appData,
+  currentMonthId,
 }: SummaryCardProps) {
   const { updateExpense, updateChildSupport } = useAppContext();
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 
+  // --- Calculate Balance from Previous Months ---
+  const previousMonthsBalance = Object.keys(appData.months)
+    .filter(monthId => {
+      const monthDate = parse(monthId, 'yyyy-MM', new Date());
+      const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
+      return isBefore(startOfDay(monthDate), startOfDay(currentDate));
+    })
+    .reduce((totalBalance, monthId) => {
+      const monthData = appData.months[monthId];
+      if (!monthData) return totalBalance;
+      
+      const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
+      const unsettledPaidByParent = unsettledExpenses
+        .filter(exp => exp.paidBy === parent)
+        .reduce((sum, exp) => sum + exp.amount, 0);
+
+      const parentExpenseShare = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
+      const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+
+      let childSupportBalance = 0;
+      if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None') {
+        if (monthData.childSupport.paidBy === parent) {
+          childSupportBalance = -monthData.childSupport.amount;
+        } else {
+          childSupportBalance = monthData.childSupport.amount;
+        }
+      }
+      
+      return totalBalance + expenseBalance + childSupportBalance;
+    }, 0);
+
+
+  // --- Calculate Current Month's Balance ---
   const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
   
   const unsettledPaidByParent = unsettledExpenses
     .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const calculateShare = (
-    expenses: Expense[],
-    split: ExpenseSplit,
-    medicalSplit: MedicalExpenseSplit,
-    p: Parent
-  ): number => {
-    let totalShare = 0;
-    
-    for (const expense of expenses) {
-      if (expense.category === 'Reimbursement') {
-        // If the other parent paid, this parent owes the full amount.
-        if (expense.paidBy !== p) {
-          totalShare += expense.amount;
-        }
-      } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-        const medicalParentSplitPercent = medicalSplit[p] / 100;
-        totalShare += expense.amount * medicalParentSplitPercent;
-      } else {
-        const parentSplitPercent = split[p] / 100;
-        totalShare += expense.amount * parentSplitPercent;
-      }
-    }
-    return totalShare;
-  };
-    
+  
   const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
   
-  // This is the balance from shared expenses only.
-  // Positive means you are owed money, negative means you owe money for expenses.
   const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
   let childSupportBalance = 0;
   if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None') {
       if (childSupport.paidBy === parent) {
-        // You are the payer. This amount is owed by you.
         childSupportBalance = -childSupport.amount;
       } else {
-        // You are the receiver. This amount is owed to you.
         childSupportBalance = childSupport.amount;
       }
   }
 
-  const netBalance = expenseBalance + childSupportBalance;
+  const currentMonthNetBalance = expenseBalance + childSupportBalance;
   
-  const isSettled = netBalance === 0 && unsettledExpenses.length === 0 && (childSupport.status === 'Settled' || childSupport.amount === 0);
+  const totalNetBalance = previousMonthsBalance + currentMonthNetBalance;
+
+  const isSettled = totalNetBalance === 0;
   
   let transferDescription = 'All settled up';
   if (!isSettled) {
-    if (netBalance > 0) {
+    if (totalNetBalance > 0) {
         transferDescription = `${otherParentName} owes you`;
-    } else if (netBalance < 0) {
+    } else if (totalNetBalance < 0) {
         transferDescription = `You owe ${otherParentName}`;
     }
   }
   
   const isButtonDisabled = !(
-      expenses.some(e => e.status === 'Unsettled') ||
-      (childSupport.amount > 0 && childSupport.status === 'Unsettled')
+      Object.values(appData.months).some(m => m.expenses.some(e => e.status === 'Unsettled')) ||
+      Object.values(appData.months).some(m => m.childSupport.amount > 0 && m.childSupport.status === 'Unsettled')
   );
 
   return (
@@ -120,7 +155,7 @@ export function SummaryCard({
       <CardContent className="flex-grow space-y-4">
         
         <div className='space-y-2 rounded-md bg-muted/30 p-3'>
-            <h4 className="font-medium text-sm">Shared Expense Balance</h4>
+            <h4 className="font-medium text-sm">This Month's Balance</h4>
             <div className="flex items-center justify-between text-sm">
                 <p className="text-muted-foreground">
                     Your Share
@@ -131,30 +166,42 @@ export function SummaryCard({
                 <p className="text-muted-foreground">You Paid (unsettled items)</p>
                 <p className="font-semibold text-green-600">+${unsettledPaidByParent.toFixed(2)}</p>
             </div>
-             <Separator/>
-             <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">Expense Balance</p>
-                <p className={cn("font-semibold", expenseBalance > 0 && "text-green-600", expenseBalance < 0 && "text-destructive")}>
-                    {expenseBalance >= 0 ? `$${expenseBalance.toFixed(2)}` : `-$${Math.abs(expenseBalance).toFixed(2)}`}
-                </p>
-            </div>
-        </div>
-
-        {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
-            <div className='space-y-2 rounded-md bg-muted/30 p-3'>
-                 <h4 className="font-medium text-sm">Child Support</h4>
-                 <div className="flex items-center justify-between text-sm">
+             {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
+                <div className="flex items-center justify-between text-sm">
                     <p className="text-muted-foreground">
-                        {childSupport.paidBy === parent ? 'You owe' : `${otherParentName} owes you`}
+                        Child Support
                     </p>
                     <p className={cn("font-semibold", childSupportBalance > 0 && 'text-green-600', childSupportBalance < 0 && 'text-destructive')}>
                         {childSupportBalance >= 0 ? `$${childSupportBalance.toFixed(2)}` : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
                     </p>
                 </div>
+             )}
+             <Separator/>
+             <div className="flex items-center justify-between text-sm">
+                <p className="text-muted-foreground">Current Month Net</p>
+                <p className={cn("font-semibold", currentMonthNetBalance > 0 && "text-green-600", currentMonthNetBalance < 0 && "text-destructive")}>
+                    {currentMonthNetBalance >= 0 ? `$${currentMonthNetBalance.toFixed(2)}` : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
+                </p>
             </div>
-        )}
-       
+        </div>
+
         <Separator />
+        
+        <div className="space-y-2 text-sm">
+           <div className="flex items-center justify-between">
+              <p className="text-muted-foreground">Balance from Previous Months</p>
+              <p className={cn("font-semibold", previousMonthsBalance > 0 && "text-green-600", previousMonthsBalance < 0 && "text-destructive")}>
+                {previousMonthsBalance >= 0 ? `$${previousMonthsBalance.toFixed(2)}` : `-$${Math.abs(previousMonthsBalance).toFixed(2)}`}
+              </p>
+           </div>
+           <div className="flex items-center justify-between text-base">
+              <p className="font-semibold">Total Net Balance</p>
+               <p className={cn("font-bold", !isSettled && totalNetBalance > 0 && "text-green-600", !isSettled && totalNetBalance < 0 && "text-destructive")}>
+                {totalNetBalance >= 0 ? `$${totalNetBalance.toFixed(2)}` : `-$${Math.abs(totalNetBalance).toFixed(2)}`}
+              </p>
+           </div>
+        </div>
+
         <div className="rounded-lg bg-secondary/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">
             {transferDescription}
@@ -162,15 +209,15 @@ export function SummaryCard({
           <p
             className={cn(
               'text-2xl font-bold',
-               !isSettled && netBalance < 0 && 'text-destructive',
-               !isSettled && netBalance > 0 && 'text-green-600'
+               !isSettled && totalNetBalance < 0 && 'text-destructive',
+               !isSettled && totalNetBalance > 0 && 'text-green-600'
             )}
           >
-            ${Math.abs(netBalance).toFixed(2)}
+            ${Math.abs(totalNetBalance).toFixed(2)}
           </p>
         </div>
         <p className="pt-2 text-xs text-muted-foreground">
-          This is the outstanding balance for the month based on unsettled items.
+          This is the total outstanding balance based on all unsettled items from all months.
         </p>
       </CardContent>
       <CardFooter>
@@ -181,7 +228,7 @@ export function SummaryCard({
           expenseSplit={expenseSplit}
           medicalExpenseSplit={medicalExpenseSplit}
           childSupport={childSupport}
-          netBalance={netBalance}
+          netBalance={currentMonthNetBalance}
           parentNames={parentNames}
         >
           <Button className="w-full" disabled={isButtonDisabled}>

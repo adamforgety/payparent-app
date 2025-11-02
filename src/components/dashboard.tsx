@@ -255,6 +255,8 @@ function DashboardComponent() {
                         medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                        currentMonthId={monthId}
                       />
                     </div>
                   </TabsContent>
@@ -267,6 +269,8 @@ function DashboardComponent() {
                         medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                        currentMonthId={monthId}
                       />
                     </div>
                   </TabsContent>
