@@ -327,7 +327,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 )}
               />
               <DialogFooter>
-                <Button type="submit">Parse File</Button>
+                <Button type="submit">Preview Import</Button>
               </DialogFooter>
             </form>
           </Form>
