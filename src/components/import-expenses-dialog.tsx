@@ -327,17 +327,12 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           </DialogTitle>
           {step === 'upload' && (
             <>
-              <DialogDescription>
-                Upload an Excel file (.xlsx or .xls). The file must have columns for:
-                <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Date</span>,
-                <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Description</span>,
-                <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Category</span>,
-                <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span>, and
-                <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Amount</span>.
+              <DialogDescription className="space-y-1">
+                <span>Upload an Excel file with columns for: <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Date</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Description</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Category</code>, <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</code>, and <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Amount</code>.</span>
+                <span>The <code className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</code> name must match either "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}".</span>
+                <span>The system calculates each parent's share automatically.</span>
               </DialogDescription>
-              <div className="text-sm text-muted-foreground pt-2">
-                <p className='mb-2'>The <span className="font-mono text-foreground bg-muted p-1 rounded-sm text-xs mx-1">Paid By</span> column must match one of the current parent names: "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Invalid rows will be skipped.</p>
-                <p className="mb-2">You only need to add the total amount paid; the system will automatically calculate the appropriate percentage distribution based on your settings.</p>
+              <div className="pt-2">
                 <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto font-normal">
                   <Download className="mr-2 h-4 w-4" />
                   Download Template
@@ -470,5 +465,3 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     </Dialog>
   );
 }
-
-    
