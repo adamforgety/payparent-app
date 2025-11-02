@@ -26,7 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useFirebase } from '@/firebase';
+import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Separator } from './ui/separator';
 import { useAppContext } from '@/context/app-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -67,9 +67,9 @@ export function CoParentLinkCard() {
   const onLinkSubmit = (values: z.infer<typeof linkSchema>) => {
     startLinking(async () => {
       if (!user || !firestore) return;
-
+  
       const coParentId = values.coParentCode;
-
+  
       if (coParentId === user.uid) {
         toast({ variant: 'destructive', title: 'Error', description: 'You cannot link to your own account.' });
         return;
@@ -78,30 +78,50 @@ export function CoParentLinkCard() {
       const coParentDocRef = doc(firestore, 'users', coParentId);
       const currentUserDocRef = doc(firestore, 'users', user.uid);
       
-      try {
-        const coParentDoc = await getDoc(coParentDocRef);
-        if (!coParentDoc.exists()) {
-          toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
-          return;
-        }
-
-        const batch = writeBatch(firestore);
-        
-        // Link current user to co-parent
-        batch.update(currentUserDocRef, { coParentId: coParentId });
-        
-        // Link co-parent to current user
-        batch.update(coParentDocRef, { coParentId: user.uid });
-        
-        await batch.commit();
-
-        toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
-        form.reset();
-
-      } catch (error) {
-        console.error("Linking error:", error);
-        toast({ variant: 'destructive', title: 'Linking Failed', description: 'An unexpected error occurred. Please try again.' });
-      }
+      // Step 1: Verify co-parent exists
+      getDoc(coParentDocRef)
+        .then((coParentDoc) => {
+          if (!coParentDoc.exists()) {
+            toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
+            return; // Stop execution
+          }
+  
+          // Step 2: If co-parent exists, create and commit the batch write
+          const batch = writeBatch(firestore);
+          
+          // Link current user to co-parent
+          batch.update(currentUserDocRef, { coParentId: coParentId });
+          
+          // Link co-parent to current user
+          batch.update(coParentDocRef, { coParentId: user.uid });
+          
+          batch.commit()
+            .then(() => {
+              toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
+              form.reset();
+            })
+            .catch((batchError) => {
+              // This will catch permission errors on the BATCH write (update operations)
+              const permissionError = new FirestorePermissionError({
+                path: 'batch-write', // Indicate this was a batch operation
+                operation: 'write',
+                requestResourceData: [
+                  { path: currentUserDocRef.path, data: { coParentId: coParentId } },
+                  { path: coParentDocRef.path, data: { coParentId: user.uid } }
+                ]
+              });
+              errorEmitter.emit('permission-error', permissionError);
+            });
+  
+        })
+        .catch((getError) => {
+          // This will catch permission errors on the initial GET operation
+          const permissionError = new FirestorePermissionError({
+            path: coParentDocRef.path,
+            operation: 'get',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
     });
   };
 
@@ -113,22 +133,29 @@ export function CoParentLinkCard() {
       const coParentDocRef = doc(firestore, 'users', coParentId);
       const currentUserDocRef = doc(firestore, 'users', user.uid);
 
-      try {
-        const batch = writeBatch(firestore);
-        
-        // Unlink current user
-        batch.update(currentUserDocRef, { coParentId: null });
-        
-        // Unlink co-parent
-        batch.update(coParentDocRef, { coParentId: null });
-        
-        await batch.commit();
-        toast({ title: 'Unlinked Successfully', description: 'Your accounts are no longer connected.' });
-
-      } catch (error) {
-        console.error("Unlinking error:", error);
-        toast({ variant: 'destructive', title: 'Unlinking Failed', description: 'Could not unlink accounts. Please try again.' });
-      }
+      const batch = writeBatch(firestore);
+      
+      // Unlink current user
+      batch.update(currentUserDocRef, { coParentId: null });
+      
+      // Unlink co-parent
+      batch.update(coParentDocRef, { coParentId: null });
+      
+      batch.commit()
+        .then(() => {
+          toast({ title: 'Unlinked Successfully', description: 'Your accounts are no longer connected.' });
+        })
+        .catch((error) => {
+          const permissionError = new FirestorePermissionError({
+            path: 'batch-write',
+            operation: 'write',
+            requestResourceData: [
+              { path: currentUserDocRef.path, data: { coParentId: null } },
+              { path: coParentDocRef.path, data: { coParentId: null } }
+            ]
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
     });
   };
 
