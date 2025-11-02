@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Upload } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
 
@@ -45,7 +45,7 @@ interface ExpensesCardProps {
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
   onDelete: (expenseId: string) => void;
-  onUpdateExpense: (expense: Expense) => void;
+  onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
   onMarkAllAsSettled: () => void;
   onMarkAllAsUnsettled: () => void;
@@ -84,6 +84,7 @@ export function ExpensesCard({
 }: ExpensesCardProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const { toast } = useToast();
+  const monthId = format(currentDate, 'yyyy-MM');
   
   const allItems = useMemo<DisplayItem[]>(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
@@ -152,7 +153,7 @@ export function ExpensesCard({
     if (item.type === 'expense') {
         const originalExpense = expenses.find(e => e.id === item.id);
         if (originalExpense) {
-            onUpdateExpense({ ...originalExpense, status: newStatus });
+            onUpdateExpense({ ...originalExpense, status: newStatus }, monthId);
         }
     } else {
         onUpdateChildSupport({ ...childSupport, status: newStatus });
@@ -176,7 +177,7 @@ export function ExpensesCard({
             <div>
               <CardTitle>Monthly Ledger</CardTitle>
               <CardDescription>
-                All expenses and child support for the current month.
+                All expenses and child support for {format(currentDate, 'MMMM yyyy')}.
               </CardDescription>
             </div>
           </div>
@@ -332,7 +333,7 @@ export function ExpensesCard({
                         <div className="flex justify-end gap-1 h-8 w-full">
                           {item.type === 'expense' && (
                             <>
-                                <EditExpenseDialog expense={item as Expense} onUpdateExpense={onUpdateExpense} parentNames={parentNames} />
+                                <EditExpenseDialog expense={item as Expense} onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)} parentNames={parentNames} />
                                 <TooltipProvider>
                                     <Tooltip>
                                     <TooltipTrigger asChild>

@@ -66,11 +66,12 @@ type FormValues = z.infer<typeof expenseSchema>;
 
 interface EditExpenseDialogProps {
   expense: Expense;
-  onUpdateExpense: (expense: Expense) => void;
+  onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   parentNames: ParentNames;
+  monthId: string;
 }
 
-export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: EditExpenseDialogProps) {
+export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, monthId }: EditExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [hasExistingReceipt, setHasExistingReceipt] = useState(!!expense.receiptUrl);
@@ -133,7 +134,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames }: Edi
       date: values.date.toISOString(),
       receiptUrl: receiptData.receiptUrl,
       receiptFilename: receiptData.receiptFilename,
-    });
+    }, monthId);
     toast({
       title: 'Expense Updated',
       description: `"${values.description}" has been updated.`,

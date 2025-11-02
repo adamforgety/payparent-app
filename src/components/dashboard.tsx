@@ -23,6 +23,7 @@ import { MedicalSplitCard } from './medical-split-card';
 import { useAppContext } from '@/context/app-context';
 import { ImportExpensesDialog } from './import-expenses-dialog';
 import { AccountSettingsCard } from './account-settings-card';
+import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
@@ -121,16 +122,21 @@ function DashboardComponent() {
     setActiveTab(value);
   };
 
-  const handleDeleteExpense = (expenseId: string) => {
-    deleteExpense(expenseId, monthId);
+  const handleDeleteExpense = (expenseId: string, expenseMonthId: string) => {
+    deleteExpense(expenseId, expenseMonthId);
   };
   
-  const handleUpdateExpense = (updatedExpense: Expense) => {
-    contextUpdateExpense(updatedExpense, monthId);
+  const handleUpdateExpense = (updatedExpense: Expense, originalMonthId: string) => {
+    contextUpdateExpense(updatedExpense, originalMonthId);
   };
 
-  const updateChildSupport = (updatedChildSupport: ChildSupport) => {
-    updateCurrentMonthData({ childSupport: updatedChildSupport });
+  const updateChildSupport = (updatedChildSupport: ChildSupport, csMonthId: string) => {
+    if (!appData) return;
+    const monthData = appData.months[csMonthId];
+    if (monthData) {
+        const updatedMonthData = { ...monthData, childSupport: updatedChildSupport };
+        updateAppData({ months: { ...appData.months, [csMonthId]: updatedMonthData } });
+    }
   };
   
   const handleUpdateParentNames = (parentNames: ParentNames) => {
@@ -310,23 +316,39 @@ function DashboardComponent() {
               </div>
             </TabsContent>
             <TabsContent value="expenses">
-              <div className="mt-6">
-                  <ExpensesCard
-                    expenses={expenses}
-                    childSupport={currentMonthData.childSupport}
-                    expenseSplit={currentMonthData.expenseSplit}
-                    medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                    onDelete={handleDeleteExpense}
-                    onUpdateExpense={handleUpdateExpense}
-                    onUpdateChildSupport={updateChildSupport}
-                    onMarkAllAsSettled={handleMarkAllAsSettled}
-                    onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
-                    currentDate={currentDate}
-                    parentNames={currentMonthData.parentNames}
-                  >
-                    <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
-                    <ImportExpensesDialog onImport={addImportedExpenses} parentNames={currentMonthData.parentNames} />
-                  </ExpensesCard>
+               <div className="mt-6">
+                 <Tabs defaultValue="monthly" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="monthly">Monthly Ledger</TabsTrigger>
+                      <TabsTrigger value="unsettled">All Unsettled</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="monthly" className="mt-6">
+                      <ExpensesCard
+                        expenses={expenses}
+                        childSupport={currentMonthData.childSupport}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
+                        onUpdateExpense={handleUpdateExpense}
+                        onUpdateChildSupport={(cs) => updateChildSupport(cs, monthId)}
+                        onMarkAllAsSettled={handleMarkAllAsSettled}
+                        onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
+                        currentDate={currentDate}
+                        parentNames={currentMonthData.parentNames}
+                      >
+                        <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
+                        <ImportExpensesDialog onImport={addImportedExpenses} parentNames={currentMonthData.parentNames} />
+                      </ExpensesCard>
+                    </TabsContent>
+                    <TabsContent value="unsettled" className="mt-6">
+                        <AllUnsettledExpensesCard 
+                            appData={appData}
+                            onUpdateExpense={handleUpdateExpense}
+                            onUpdateChildSupport={updateChildSupport}
+                            onDeleteExpense={handleDeleteExpense}
+                        />
+                    </TabsContent>
+                 </Tabs>
                 </div>
             </TabsContent>
             <TabsContent value="reporting">
@@ -349,7 +371,7 @@ function DashboardComponent() {
                       />
                       <ChildSupportCard
                         childSupport={currentMonthData.childSupport}
-                        onUpdate={updateChildSupport}
+                        onUpdate={(cs) => updateChildSupport(cs, monthId)}
                         parentNames={currentMonthData.parentNames}
                       />
                       <ParentSplitCard
@@ -399,5 +421,3 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
-
-    
