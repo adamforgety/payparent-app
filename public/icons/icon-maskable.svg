@@ -1,9 +1,9 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" fill="#A8D0E6"/>
-<g transform="translate(128, 128) scale(0.5)">
-<path d="M160 256.667C195.345 256.667 224 228.012 224 192.667C224 157.321 195.345 128.667 160 128.667C124.655 128.667 96 157.321 96 192.667C96 228.012 124.655 256.667 160 256.667Z" stroke="#E77143" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M256 384.667V342.04C256 324.965 249.208 308.599 237.113 296.504C225.018 284.409 208.652 277.617 191.577 277.617H128.423C111.348 277.617 94.9818 284.409 82.8871 296.504C70.7924 308.599 64 324.965 64 342.04V384.667" stroke="#E77143" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M364.383 384.667V342.04C364.383 317.032 354.512 293.003 337.074 275.565" stroke="#E77143" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M306.776 129.28C324.71 138.835 338.835 154.96 346.383 174.96C353.931 194.96 354.493 217.202 347.935 238.162" stroke="#E77143" stroke-width="25.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect width="512" height="512" fill="#F1EBFB"/>
+<g transform="translate(128, 128) scale(10.66)">
+<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="#8E4BFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="9" cy="7" r="4" stroke="#8E4BFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="#8E4BFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="#8E4BFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg>
