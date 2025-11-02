@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +34,7 @@ import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { Textarea } from './ui/textarea';
 
 const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -132,15 +133,16 @@ function flexibleDateParse(dateString: string): Date | null {
   return null;
 }
 
-const ErrorDisplay = ({ error, value }: { error?: string; value: string }) => {
-    if (!error) return <>{value}</>;
-    return (
-        <div className="text-destructive">
-            <div>
-                <Badge variant="destructive">{error}</Badge>
-            </div>
-        </div>
-    );
+const ResizingTextarea = (props: React.ComponentProps<typeof Textarea>) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, [props.value]);
+
+    return <Textarea ref={textareaRef} rows={1} {...props} />;
 };
 
 
@@ -446,7 +448,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           </DialogTitle>
            {step === 'upload' ? (
             <DialogDescription>
-              Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Add only the amount paid; the system will auto-calculate the percentage split.
+             Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Add only the total amount paid; the system will auto-calculate the percentage split.
             </DialogDescription>
           ) : (
             <DialogDescription>
@@ -523,7 +525,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <Input
+                                            <ResizingTextarea
                                                 value={exp.description}
                                                 onChange={(e) => handleSuccessfulRowChange(i, 'description', e.target.value)}
                                                 className="h-8"
@@ -603,7 +605,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                             {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
                                         </TableCell>
                                         <TableCell>
-                                            <Input
+                                            <ResizingTextarea
                                                 value={fail.data.description}
                                                 onChange={(e) => handleFailedRowChange(i, 'description', e.target.value)}
                                                 className={cn("h-8", fail.errors.description && "border-destructive focus-visible:ring-destructive")}
