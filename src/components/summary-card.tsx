@@ -15,7 +15,7 @@ import type { ChildSupport, Expense, ExpenseSplit, Parent, ParentNames, MedicalE
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
-import { useDashboard } from './dashboard-provider';
+import { useAppContext } from '@/context/app-context';
 
 interface SummaryCardProps {
   parent: Parent;
@@ -34,7 +34,7 @@ export function SummaryCard({
   childSupport,
   parentNames,
 }: SummaryCardProps) {
-  const { onUpdateExpense, onUpdateChildSupport } = useDashboard();
+  const { updateExpense, updateChildSupport } = useAppContext();
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 

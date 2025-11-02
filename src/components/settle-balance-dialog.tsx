@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useDashboard } from './dashboard-provider';
+import { useAppContext } from '@/context/app-context';
 
 interface SettleBalanceDialogProps {
   parent: Parent;
@@ -63,7 +64,7 @@ export function SettleBalanceDialog({
 }: SettleBalanceDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const { onUpdateExpense, onUpdateChildSupport } = useDashboard();
+  const { updateExpense, updateChildSupport } = useAppContext();
   
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
     const expensesPaidByMe = expenses
@@ -146,9 +147,12 @@ export function SettleBalanceDialog({
   const handleMarkAsSettled = (item: ItemToSettle) => {
     if (item.type === 'expense') {
       const originalExpense = expenses.find(exp => exp.id === item.id);
-      if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Settled' });
+      if(originalExpense) {
+        const monthId = format(new Date(originalExpense.date), 'yyyy-MM');
+        updateExpense({ ...originalExpense, status: 'Settled' }, monthId);
+      }
     } else {
-      onUpdateChildSupport({ ...childSupport, status: 'Settled' });
+      updateChildSupport({ ...childSupport, status: 'Settled' });
     }
     toast({
       title: 'Payment Marked as Settled',
@@ -161,9 +165,12 @@ export function SettleBalanceDialog({
       if (item.status === 'Unsettled') {
         if (item.type === 'expense') {
           const originalExpense = expenses.find(exp => exp.id === item.id);
-          if(originalExpense) onUpdateExpense({ ...originalExpense, status: 'Settled' });
+          if(originalExpense) {
+            const monthId = format(new Date(originalExpense.date), 'yyyy-MM');
+            updateExpense({ ...originalExpense, status: 'Settled' }, monthId);
+          }
         } else {
-          onUpdateChildSupport({ ...childSupport, status: 'Settled' });
+          updateChildSupport({ ...childSupport, status: 'Settled' });
         }
       }
     });

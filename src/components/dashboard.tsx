@@ -24,7 +24,7 @@ import { useAppContext } from '@/context/app-context';
 import { ImportExpensesDialog } from './import-expenses-dialog';
 
 function DashboardComponent() {
-  const { appData, updateAppData, isLoading } = useAppContext();
+  const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const { toast } = useToast();
@@ -89,101 +89,12 @@ function DashboardComponent() {
     setActiveTab(value);
   };
 
-  const addExpense = (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => {
-    if (!appData?.months) return;
-
-    const expenseDate = new Date(newExpense.date);
-    const targetMonthId = format(expenseDate, 'yyyy-MM');
-
-    const newExpenseWithId: Expense = {
-      ...newExpense,
-      id: `${Date.now()}-${Math.random()}`,
-      year: getYear(expenseDate),
-      month: getMonth(expenseDate) + 1,
-    };
-
-    let targetMonthData = appData.months[targetMonthId];
-    const newMonths = { ...appData.months };
-
-    // If the target month doesn't exist, create it by copying from the most recent month
-    if (!targetMonthData) {
-        const monthKeys = Object.keys(appData.months).sort();
-        const mostRecentMonthId = monthKeys[monthKeys.length - 1];
-        const mostRecentMonthData = appData.months[mostRecentMonthId];
-
-        targetMonthData = {
-            id: targetMonthId,
-            year: getYear(expenseDate),
-            month: getMonth(expenseDate) + 1,
-            childSupport: mostRecentMonthData?.childSupport ? { ...mostRecentMonthData.childSupport, status: 'Unsettled' } : { amount: 0, paidBy: 'None', status: 'Unsettled' },
-            expenseSplit: mostRecentMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
-            medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
-            parentNames: mostRecentMonthData?.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
-            expenses: [],
-        };
-    }
-    
-    const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
-    newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
-    updateAppData({ months: newMonths });
+  const handleDeleteExpense = (expenseId: string) => {
+    deleteExpense(expenseId, monthId);
   };
   
-  const addImportedExpenses = (importedExpenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => {
-    if (!appData?.months) return;
-
-    const newMonths = { ...appData.months };
-
-    importedExpenses.forEach(newExpense => {
-        const expenseDate = new Date(newExpense.date);
-        const targetMonthId = format(expenseDate, 'yyyy-MM');
-
-        const newExpenseWithId: Expense = {
-            ...newExpense,
-            id: `${Date.now()}-${Math.random()}`,
-            year: getYear(expenseDate),
-            month: getMonth(expenseDate) + 1,
-        };
-
-        let targetMonthData = newMonths[targetMonthId];
-
-        if (!targetMonthData) {
-            const monthKeys = Object.keys(newMonths).sort();
-            const mostRecentMonthId = monthKeys[monthKeys.length - 1];
-            const mostRecentMonthData = newMonths[mostRecentMonthId];
-            
-            targetMonthData = {
-                id: targetMonthId,
-                year: getYear(expenseDate),
-                month: getMonth(expenseDate) + 1,
-                childSupport: mostRecentMonthData?.childSupport ? { ...mostRecentMonthData.childSupport, status: 'Unsettled' } : { amount: 0, paidBy: 'None', status: 'Unsettled' },
-                expenseSplit: mostRecentMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
-                medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
-                parentNames: mostRecentMonthData?.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
-                expenses: [],
-            };
-        }
-
-        const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
-        newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
-    });
-
-    updateAppData({ months: newMonths });
-    toast({
-      title: 'Import Successful',
-      description: `Successfully imported ${importedExpenses.length} expenses.`,
-    });
-  };
-
-  const deleteExpense = (expenseId: string) => {
-    if (!currentMonthData) return;
-    const updatedExpenses = currentMonthData.expenses.filter(exp => exp.id !== expenseId);
-    updateCurrentMonthData({ expenses: updatedExpenses });
-  };
-  
-  const updateExpense = (updatedExpense: Expense) => {
-    if (!currentMonthData) return;
-    const updatedExpenses = currentMonthData.expenses.map(exp => exp.id === updatedExpense.id ? updatedExpense : exp);
-    updateCurrentMonthData({ expenses: updatedExpenses });
+  const handleUpdateExpense = (updatedExpense: Expense) => {
+    contextUpdateExpense(updatedExpense, monthId);
   };
 
   const updateChildSupport = (updatedChildSupport: ChildSupport) => {
@@ -272,7 +183,7 @@ function DashboardComponent() {
 
   return (
     <DashboardProvider
-      onUpdateExpense={updateExpense}
+      onUpdateExpense={handleUpdateExpense}
       onUpdateChildSupport={updateChildSupport}
     >
       <div className="flex flex-col">
@@ -369,8 +280,8 @@ function DashboardComponent() {
                     childSupport={currentMonthData.childSupport}
                     expenseSplit={currentMonthData.expenseSplit}
                     medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                    onDelete={deleteExpense}
-                    onUpdateExpense={updateExpense}
+                    onDelete={handleDeleteExpense}
+                    onUpdateExpense={handleUpdateExpense}
                     onUpdateChildSupport={updateChildSupport}
                     onMarkAllAsSettled={handleMarkAllAsSettled}
                     onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
@@ -390,7 +301,7 @@ function DashboardComponent() {
             <TabsContent value="settings">
               <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
                 <ParentNamesCard
-                    parentNames={currentMonthData.parentNames}
+                    parentNames={appData.months[Object.keys(appData.months)[0]].parentNames}
                     onUpdate={handleUpdateParentNames}
                 />
                 <ChildSupportCard
