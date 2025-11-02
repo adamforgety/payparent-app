@@ -231,6 +231,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
         return expense.amount * (split[parent] / 100);
     } else { // Child Support
+        const isFutureMonth = isAfter(parse(transaction.date, 'yyyy-MM-dd', new Date()), startOfMonth(new Date()));
+        if (isFutureMonth) return 0;
         return transaction.paidBy === parent ? transaction.amount : 0;
     }
   };
@@ -406,78 +408,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         </div>
       </CardHeader>
       <CardContent>
-         <Tabs defaultValue="summary" className="w-full">
+         <Tabs defaultValue="transactions" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="transactions">All Transactions</TabsTrigger>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
           </TabsList>
-          <TabsContent value="summary" className="mt-6">
-            {periodData.length > 0 ? (
-              <div className="space-y-8">
-                <div>
-                  <ChartContainer
-                    config={chartConfig}
-                    className="min-h-[250px] w-full"
-                  >
-                    <RechartsBarChart data={periodData} accessibilityLayer>
-                      <CartesianGrid vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
-                      />
-                      <YAxis
-                        tickFormatter={(value) => `$${value}`}
-                       />
-                      <Tooltip
-                        cursor={false}
-                        content={<ChartTooltipContent indicator="dot" />}
-                      />
-                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={4} />
-                    </RechartsBarChart>
-                  </ChartContainer>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Category</TableHead>
-                          <TableHead className="text-right">Total Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {periodData.map((item) => (
-                          <TableRow key={item.name}>
-                            <TableCell className="font-medium">
-                              <Badge variant="outline">{item.name}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              ${item.amount.toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-secondary/50 font-bold">
-                           <TableCell>Total</TableCell>
-                           <TableCell className="text-right">${totalPeriodExpenses.toFixed(2)}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
-                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                    <ReceiptText className="h-8 w-8" />
-                </div>
-                <p className="font-medium">No expenses logged for this period.</p>
-                <p className="text-sm">Once you add expenses, a summary will appear here.</p>
-              </div>
-            )}
-          </TabsContent>
           <TabsContent value="transactions" className="mt-6">
             <div className='flex flex-col sm:flex-row gap-4 mb-4'>
                 <div className='relative flex-1'>
@@ -551,6 +486,73 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   )}
                 </Table>
               </div>
+          </TabsContent>
+          <TabsContent value="summary" className="mt-6">
+            {periodData.length > 0 ? (
+              <div className="space-y-8">
+                <div>
+                  <ChartContainer
+                    config={chartConfig}
+                    className="min-h-[250px] w-full"
+                  >
+                    <RechartsBarChart data={periodData} accessibilityLayer>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        tickFormatter={(value) => `$${value}`}
+                       />
+                      <Tooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="dot" />}
+                      />
+                      <Bar dataKey="amount" fill="hsl(var(--primary))" radius={4} />
+                    </RechartsBarChart>
+                  </ChartContainer>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Category Breakdown</h3>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Total Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {periodData.map((item) => (
+                          <TableRow key={item.name}>
+                            <TableCell className="font-medium">
+                              <Badge variant="outline">{item.name}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ${item.amount.toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-secondary/50 font-bold">
+                           <TableCell>Total</TableCell>
+                           <TableCell className="text-right">${totalPeriodExpenses.toFixed(2)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
+                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                    <ReceiptText className="h-8 w-8" />
+                </div>
+                <p className="font-medium">No expenses logged for this period.</p>
+                <p className="text-sm">Once you add expenses, a summary will appear here.</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
