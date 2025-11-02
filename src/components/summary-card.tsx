@@ -102,6 +102,7 @@ export function SummaryCard({
         const unsettledExpenses = monthData.expenses.filter(
           (e) => e.status === 'Unsettled'
         );
+        
         const unsettledPaidByParent = unsettledExpenses
           .filter((exp) => exp.paidBy === parent)
           .reduce((sum, exp) => sum + exp.amount, 0);
@@ -125,14 +126,14 @@ export function SummaryCard({
         ) {
           if (monthData.childSupport.paidBy === parent) {
             // If I paid, it's a debit from my perspective for this calculation
-            childSupportBalance = -monthData.childSupport.amount;
+            childSupportBalance = monthData.childSupport.amount;
           } else {
              // If they paid, it's a credit to me
-            childSupportBalance = monthData.childSupport.amount;
+            childSupportBalance = -monthData.childSupport.amount;
           }
         }
         
-        return { monthId, balance: -1 * (expenseBalance + childSupportBalance) };
+        return { monthId, balance: expenseBalance + childSupportBalance };
       })
       .filter((item) => item.balance !== 0);
   }, [appData.months, currentMonthId, parent]);
@@ -172,7 +173,7 @@ export function SummaryCard({
     }
   }
 
-  const currentMonthNetBalance = -1 * (expenseBalance + childSupportBalance);
+  const currentMonthNetBalance = expenseBalance + childSupportBalance;
 
   const totalNetBalance = previousMonthsTotalBalance + currentMonthNetBalance;
 
@@ -180,9 +181,9 @@ export function SummaryCard({
 
   let transferDescription = 'All settled up';
   if (!isSettled) {
-    if (totalNetBalance > 0) {
+    if (totalNetBalance < 0) {
       transferDescription = `You Owe ${otherParentName}`;
-    } else if (totalNetBalance < 0) {
+    } else if (totalNetBalance > 0) {
       transferDescription = `${otherParentName} Owes You`;
     }
   }
@@ -218,7 +219,7 @@ export function SummaryCard({
           <h4 className="font-medium text-sm">This Month's Balance</h4>
           <div className="flex items-center justify-between text-sm">
             <p className="text-muted-foreground">Your Share of Expenses</p>
-            <p className="font-semibold">${parentExpenseShare.toFixed(2)}</p>
+            <p className="font-semibold">-${parentExpenseShare.toFixed(2)}</p>
           </div>
           <div className="flex items-center justify-between text-sm">
             <p className="text-muted-foreground">Unsettled Expenses You Paid</p>
@@ -248,12 +249,12 @@ export function SummaryCard({
             <p
               className={cn(
                 'font-semibold',
-                currentMonthNetBalance > 0 && 'text-destructive',
-                currentMonthNetBalance < 0 && 'text-green-600'
+                currentMonthNetBalance > 0 && 'text-green-600',
+                currentMonthNetBalance < 0 && 'text-destructive'
               )}
             >
-              {currentMonthNetBalance > 0
-                ? `$${currentMonthNetBalance.toFixed(2)}`
+              {currentMonthNetBalance >= 0
+                ? `+$${currentMonthNetBalance.toFixed(2)}`
                 : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
             </p>
           </div>
@@ -268,12 +269,12 @@ export function SummaryCard({
                   <span
                     className={cn(
                       'font-semibold',
-                      previousMonthsTotalBalance > 0 && 'text-destructive',
-                      previousMonthsTotalBalance < 0 && 'text-green-600'
+                      previousMonthsTotalBalance > 0 && 'text-green-600',
+                      previousMonthsTotalBalance < 0 && 'text-destructive'
                     )}
                   >
-                    {previousMonthsTotalBalance > 0
-                      ? `$${previousMonthsTotalBalance.toFixed(2)}`
+                    {previousMonthsTotalBalance >= 0
+                      ? `+$${previousMonthsTotalBalance.toFixed(2)}`
                       : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
                   </span>
                 </div>
@@ -291,12 +292,12 @@ export function SummaryCard({
                       <p
                         className={cn(
                           'font-medium',
-                          balance > 0 && 'text-destructive',
-                          balance < 0 && 'text-green-600'
+                          balance > 0 && 'text-green-600',
+                          balance < 0 && 'text-destructive'
                         )}
                       >
-                        {balance > 0
-                          ? `$${balance.toFixed(2)}`
+                        {balance >= 0
+                          ? `+$${balance.toFixed(2)}`
                           : `-$${Math.abs(balance).toFixed(2)}`}
                       </p>
                     </div>
@@ -316,11 +317,15 @@ export function SummaryCard({
           <p
             className={cn(
               'text-2xl font-bold',
-              !isSettled && totalNetBalance > 0 && 'text-destructive',
-              !isSettled && totalNetBalance < 0 && 'text-green-600'
+              !isSettled && totalNetBalance < 0 && 'text-destructive',
+              !isSettled && totalNetBalance > 0 && 'text-green-600'
             )}
           >
-            ${Math.abs(totalNetBalance).toFixed(2)}
+            {isSettled
+              ? '$0.00'
+              : totalNetBalance > 0
+                ? `+$${totalNetBalance.toFixed(2)}`
+                : `-$${Math.abs(totalNetBalance).toFixed(2)}`}
           </p>
         </div>
         <p className="pt-2 text-xs text-muted-foreground">
