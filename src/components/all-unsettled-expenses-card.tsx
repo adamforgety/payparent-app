@@ -1,6 +1,6 @@
 'use client';
 
-import { format, isAfter, startOfMonth, parse } from 'date-fns';
+import { format, isAfter, startOfMonth, parse, isBefore } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, MoreVertical } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -49,25 +49,24 @@ export function AllUnsettledExpensesCard({
   currentDate,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
-  const [showPastDueOnly, setShowPastDueOnly] = useState(false);
+  const [showPriorMonthsOnly, setShowPriorMonthsOnly] = useState(false);
 
   const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
     let items: UnsettledItem[] = [];
     if (!appData?.months) return items;
 
-    const today = new Date();
-    const dashboardMonthId = format(currentDate, 'yyyy-MM');
+    const dashboardMonthDate = startOfMonth(currentDate);
 
     for (const monthId in appData.months) {
-      // Filter out current month items if the switch is on
-      if (showPastDueOnly && monthId === dashboardMonthId) {
+      const monthDate = parse(monthId, 'yyyy-MM', new Date());
+
+      // If the filter is on, skip any month that is not before the dashboard's currently viewed month
+      if (showPriorMonthsOnly && !isBefore(monthDate, dashboardMonthDate)) {
         continue;
       }
       
       const monthData = appData.months[monthId];
-      const localDate = new Date(monthData.year, monthData.month - 1, 1, 12); // Use noon to avoid TZ issues
-      const isFutureMonth = isAfter(localDate, startOfMonth(today));
-
+      const isFutureMonth = isAfter(monthDate, startOfMonth(new Date()));
 
       // Add unsettled expenses
       monthData.expenses
@@ -96,7 +95,7 @@ export function AllUnsettledExpensesCard({
         items.push({
           id: `cs-${monthId}`,
           monthId,
-          date: localDate.toISOString(),
+          date: new Date(monthData.year, monthData.month - 1, 1, 12).toISOString(),
           description: 'Child Support',
           amount: monthData.childSupport.amount,
           paidBy: monthData.childSupport.paidBy,
@@ -112,7 +111,7 @@ export function AllUnsettledExpensesCard({
 
     // Sort by date descending
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [appData.months, showPastDueOnly, currentDate]);
+  }, [appData.months, showPriorMonthsOnly, currentDate]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -148,10 +147,10 @@ export function AllUnsettledExpensesCard({
         <div className="flex items-center space-x-2 mb-4">
           <Switch
             id="past-due-only"
-            checked={showPastDueOnly}
-            onCheckedChange={setShowPastDueOnly}
+            checked={showPriorMonthsOnly}
+            onCheckedChange={setShowPriorMonthsOnly}
           />
-          <Label htmlFor="past-due-only">Show Past Due Items Only</Label>
+          <Label htmlFor="past-due-only">Show Prior Months Only</Label>
         </div>
         <div className="rounded-md border">
           <Table>
