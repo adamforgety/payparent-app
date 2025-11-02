@@ -1,6 +1,6 @@
 'use client';
 
-import { format, isAfter, startOfMonth } from 'date-fns';
+import { format, isAfter, startOfMonth, parse } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, MoreVertical } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -56,7 +56,7 @@ export function AllUnsettledExpensesCard({
 
     for (const monthId in appData.months) {
       const monthData = appData.months[monthId];
-      const monthDate = new Date(monthId);
+      const monthDate = parse(monthId, 'yyyy-MM', new Date());
 
       // Add unsettled expenses
       monthData.expenses
@@ -82,10 +82,14 @@ export function AllUnsettledExpensesCard({
 
       // Add unsettled child support (if not in a future month)
       if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isAfter(monthDate, today)) {
+        // The `monthId` is 'yyyy-MM'. Appending '-01' makes it 'yyyy-MM-dd'.
+        // `parse` will correctly interpret this as the first day of the month in the local timezone.
+        const localDate = parse(`${monthId}-01`, 'yyyy-MM-dd', new Date());
+        
         items.push({
           id: `cs-${monthId}`,
           monthId,
-          date: startOfMonth(new Date(monthId)).toISOString(),
+          date: localDate.toISOString(),
           description: 'Child Support',
           amount: monthData.childSupport.amount,
           paidBy: monthData.childSupport.paidBy,
