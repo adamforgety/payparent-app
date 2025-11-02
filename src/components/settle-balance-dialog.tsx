@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/context/app-context';
-import { format } from 'date-fns';
+import { isAfter, startOfMonth } from 'date-fns';
 
 interface SettleBalanceDialogProps {
   parent: Parent;
@@ -51,7 +51,6 @@ type ItemToSettle = {
   status: PaymentStatus;
   type: 'expense' | 'child_support';
   originalPayer: Parent | 'None';
-  monthId: string;
 };
 
 export function SettleBalanceDialog({
@@ -73,54 +72,50 @@ export function SettleBalanceDialog({
   
   const allUnsettledItems = useMemo<ItemToSettle[]>(() => {
     let items: ItemToSettle[] = [];
-     Object.keys(appData.months).forEach(monthId => {
-        const monthData = appData.months[monthId];
-        if (monthData) {
-            // Unsettled expenses for the month
-            monthData.expenses
-                .filter(exp => exp.status === 'Unsettled')
-                .forEach(exp => {
-                    let split = 0;
-                    if (exp.category === 'Reimbursement') {
-                        // The full amount is owed by the non-paying parent
-                        split = 1;
-                    } else if (exp.category === 'Medical' || exp.category === 'Child Care') {
-                        // The share owed by the non-paying parent
-                        split = monthData.medicalExpenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
-                    } else {
-                        // The share owed by the non-paying parent
-                        split = monthData.expenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
-                    }
+    const isCurrentMonthFuture = isAfter(new Date(currentMonthId), startOfMonth(new Date()));
 
-                    items.push({
-                        id: exp.id,
-                        description: exp.description,
-                        totalAmount: exp.amount,
-                        owedAmount: exp.amount * split,
-                        status: exp.status,
-                        type: 'expense',
-                        originalPayer: exp.paidBy,
-                        monthId: monthId,
-                    });
-                });
-
-            // Unsettled child support for the month
-            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled') {
-                items.push({
-                    id: `cs-${monthId}`,
-                    description: 'Child Support',
-                    totalAmount: monthData.childSupport.amount,
-                    owedAmount: monthData.childSupport.amount,
-                    status: monthData.childSupport.status,
-                    type: 'child_support',
-                    originalPayer: monthData.childSupport.paidBy,
-                    monthId: monthId,
-                });
+    // Unsettled expenses for the current month
+    expenses
+        .filter(exp => exp.status === 'Unsettled')
+        .forEach(exp => {
+            let split = 0;
+            if (exp.category === 'Reimbursement') {
+                // The full amount is owed by the non-paying parent
+                split = 1;
+            } else if (exp.category === 'Medical' || exp.category === 'Child Care') {
+                // The share owed by the non-paying parent
+                split = medicalExpenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
+            } else {
+                // The share owed by the non-paying parent
+                split = expenseSplit[exp.paidBy === parent ? otherParent : parent] / 100;
             }
-        }
-    });
+
+            items.push({
+                id: exp.id,
+                description: exp.description,
+                totalAmount: exp.amount,
+                owedAmount: exp.amount * split,
+                status: exp.status,
+                type: 'expense',
+                originalPayer: exp.paidBy,
+            });
+        });
+
+    // Unsettled child support for the current month
+    if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && childSupport.status === 'Unsettled' && !isCurrentMonthFuture) {
+        items.push({
+            id: `cs-${currentMonthId}`,
+            description: 'Child Support',
+            totalAmount: childSupport.amount,
+            owedAmount: childSupport.amount,
+            status: childSupport.status,
+            type: 'child_support',
+            originalPayer: childSupport.paidBy,
+        });
+    }
+        
     return items.filter(item => item.owedAmount > 0);
-  }, [appData.months, parent, otherParent]);
+  }, [expenses, childSupport, expenseSplit, medicalExpenseSplit, parent, otherParent, currentMonthId]);
 
   const itemsOwedToMe = useMemo<ItemToSettle[]>(() => {
     // Other parent owes me for:
@@ -154,17 +149,14 @@ export function SettleBalanceDialog({
 
 
   const handleMarkAsSettled = (item: ItemToSettle) => {
-    const targetMonth = appData.months[item.monthId];
-    if (!targetMonth) return;
-
     if (item.type === 'expense') {
-      const originalExpense = targetMonth.expenses.find(exp => exp.id === item.id);
+      const originalExpense = expenses.find(exp => exp.id === item.id);
       if(originalExpense) {
-        updateExpense({ ...originalExpense, status: 'Settled' }, item.monthId);
+        updateExpense({ ...originalExpense, status: 'Settled' }, currentMonthId);
       }
     } else { // child_support
-      const updatedChildSupport = { ...targetMonth.childSupport, status: 'Settled' };
-      const updatedMonths = { ...appData.months, [item.monthId]: { ...targetMonth, childSupport: updatedChildSupport }};
+      const updatedChildSupport = { ...childSupport, status: 'Settled' };
+      const updatedMonths = { ...appData.months, [currentMonthId]: { ...appData.months[currentMonthId], childSupport: updatedChildSupport }};
       updateAppData({ months: updatedMonths });
     }
     toast({
@@ -197,9 +189,9 @@ export function SettleBalanceDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-2xl w-full grid-rows-[auto,minmax(0,1fr),auto] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Settle Balances</DialogTitle>
+          <DialogTitle>Settle Balance for This Month</DialogTitle>
           <DialogDescription>
-             Review all unsettled items and mark them as settled to clear balances with {otherParentName}.
+             Review this month's unsettled items and mark them as settled to clear balances with {otherParentName}.
           </DialogDescription>
         </DialogHeader>
         
