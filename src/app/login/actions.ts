@@ -39,3 +39,5 @@ export async function handleNewUser(userId: string, email: string | null, userna
         return { success: false, error: error.message || 'An unknown error occurred during user creation.' };
     }
 }
+
+    

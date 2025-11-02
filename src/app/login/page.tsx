@@ -140,7 +140,7 @@ export default function LoginPage() {
         router.push(next);
         router.refresh();
       } catch (error: any) {
-        // If it's a "user not found" error AND the input isn't an email, try it as a username.
+        // If it's a "user not found" or "invalid email" error AND the input isn't an email, try it as a username.
         if (
           (error.code === AuthErrorCodes.USER_NOT_FOUND || error.code === AuthErrorCodes.INVALID_EMAIL) &&
           !email.includes('@')
@@ -433,3 +433,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
