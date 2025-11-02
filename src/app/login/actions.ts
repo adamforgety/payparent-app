@@ -25,6 +25,7 @@ export async function handleNewUser(userId: string, email: string | null) {
       id: userId,
       email: email,
       appData: appData,
+      partnerId: null,
     };
 
     const userDocRef = doc(firestore, 'users', userId);

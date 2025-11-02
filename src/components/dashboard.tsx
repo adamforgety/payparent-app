@@ -2,7 +2,7 @@
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Link2 } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -26,6 +26,7 @@ import { AccountSettingsCard } from './account-settings-card';
 import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SummaryDetailsCard } from './summary-details-card';
+import { PartnerLinkCard } from './partner-link-card';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
@@ -406,6 +407,7 @@ function DashboardComponent() {
                   </TabsContent>
                   <TabsContent value="account">
                      <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                        <PartnerLinkCard />
                         <AccountSettingsCard />
                      </div>
                   </TabsContent>
@@ -455,5 +457,3 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
-
-    

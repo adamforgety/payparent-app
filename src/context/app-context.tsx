@@ -9,11 +9,12 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import type { AppData, ChildSupport, Expense } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, UserDoc } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
 import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface AppContextType {
   appData: AppData | null;
@@ -26,6 +27,7 @@ interface AppContextType {
   deleteExpense: (expenseId: string, monthId: string) => void;
   updateExpense: (updatedExpense: Expense, originalMonthId: string) => void;
   updateChildSupport: (updatedChildSupport: ChildSupport, monthId: string) => void;
+  partnerData: UserDoc | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,60 +38,96 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const { firestore, user } = useFirebase();
 
   const [appData, setAppData] = useState<AppData | null>(null);
+  const [partnerData, setPartnerData] = useState<UserDoc | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Effect to load data when user and firestore are available
+  // Effect to load initial data and set up listeners
   useEffect(() => {
-    if (user && firestore) {
-      setIsLoading(true);
-      getUserData(firestore, user.uid)
-        .then((data) => {
-          setAppData(data);
-        })
-        .catch((error) => {
-          console.error('Failed to load user data:', error);
-          setAppData(null); // Or some error state
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else if (!user) {
-      // If there's no user, we are not loading data.
+    if (!user || !firestore) {
       setIsLoading(false);
       setAppData(null);
+      setPartnerData(null);
+      return;
     }
+
+    setIsLoading(true);
+
+    // Initial fetch of user data
+    getUserData(firestore, user.uid)
+      .then((data) => {
+        setAppData(data);
+      })
+      .catch((error) => {
+        console.error('Failed to load user data:', error);
+        setAppData(null);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+
+    // --- Set up real-time listeners ---
+    
+    // 1. Listener for the current user's document (for partnerId changes)
+    const userDocRef = doc(firestore, 'users', user.uid);
+    const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      const userDoc = docSnap.data() as UserDoc;
+      // If partnerId changes, refetch all data.
+      // This is a simple way to handle linking/unlinking.
+      if (userDoc?.partnerId !== (partnerData?.id || null)) {
+         getUserData(firestore, user.uid).then(setAppData);
+      }
+
+      // If a partner is linked, also fetch their user data to display their email.
+      if (userDoc?.partnerId) {
+        const partnerDocRef = doc(firestore, 'users', userDoc.partnerId);
+        getDoc(partnerDocRef).then(partnerSnap => {
+          if (partnerSnap.exists()) {
+            setPartnerData(partnerSnap.data() as UserDoc);
+          } else {
+             setPartnerData(null);
+          }
+        });
+      } else {
+        setPartnerData(null);
+      }
+    });
+
+    // 2. Listener for the actual app data (which might be the partner's data)
+    let dataUnsubscribe: () => void = () => {};
+    const setDataListener = async () => {
+        const currentUserDoc = (await getDoc(userDocRef)).data() as UserDoc | undefined;
+        const targetId = currentUserDoc?.partnerId || user.uid;
+        const dataDocRef = doc(firestore, 'users', targetId);
+
+        dataUnsubscribe = onSnapshot(dataDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const docData = docSnap.data() as UserDoc;
+                setAppData(docData.appData);
+            }
+        });
+    }
+    
+    setDataListener();
+
+
+    return () => {
+      userUnsubscribe();
+      dataUnsubscribe();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, firestore]);
 
   const updateAppData = useCallback(
-    async (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
-      if (!user || !firestore) return;
+    (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
+      if (!user || !firestore || !appData) return;
 
-      // Use a functional update to get the latest state
-      setAppData(prev => {
-        if (!prev) return null;
-        
-        // Deep merge months object
-        const newMonths = { ...prev.months };
-        if (newData.months) {
-          for (const monthId in newData.months) {
-            newMonths[monthId] = {
-              ...(newMonths[monthId] || {}), // Keep existing month data if any
-              ...newData.months[monthId],    // Overwrite with new data
-            };
-          }
-        }
-
-        const updated = {
-          ...prev,
-          ...newData,
-          months: newMonths,
-        };
-
-        saveUserData(firestore, user.uid, updated).catch(console.error);
-        return updated;
-      });
+      const newMonths = { ...appData.months, ...newData.months };
+      const updatedData = { ...appData, ...newData, months: newMonths };
+      
+      // The saveUserData function already contains the logic to save to the correct (partner's) document
+      saveUserData(firestore, user.uid, updatedData).catch(console.error);
     },
-    [user, firestore]
+    [user, firestore, appData]
   );
   
   const updateChildSupport = (updatedChildSupport: ChildSupport, monthId: string) => {
@@ -119,7 +157,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     const newMonths = { ...appData.months };
     let targetMonthData = newMonths[targetMonthId];
 
-    // If the target month doesn't exist, create it by copying from the most recent month
     if (!targetMonthData) {
       const monthKeys = Object.keys(appData.months).sort();
       const mostRecentMonthId = monthKeys[monthKeys.length - 1];
@@ -244,9 +281,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     const newMonthId = format(newDate, 'yyyy-MM');
     const newMonths = { ...appData.months };
 
-    // If month has changed, move the expense
     if (originalMonthId !== newMonthId) {
-      // 1. Remove from original month
       if (newMonths[originalMonthId]) {
         newMonths[originalMonthId] = {
           ...newMonths[originalMonthId],
@@ -256,10 +291,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         };
       }
 
-      // 2. Add to new month (or create new month if it doesn't exist)
       let targetMonthData = newMonths[newMonthId];
       if (!targetMonthData) {
-        // Create new month by copying from a recent month to preserve settings
         const monthKeys = Object.keys(appData.months).sort();
         const mostRecentMonthId = monthKeys[monthKeys.length - 1];
         const mostRecentMonthData = appData.months[mostRecentMonthId];
@@ -297,7 +330,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         expenses: [...targetMonthData.expenses, updatedExpense],
       };
     } else {
-      // If month is the same, just update the expense in place
       if (newMonths[originalMonthId]) {
         newMonths[originalMonthId] = {
           ...newMonths[originalMonthId],
@@ -321,8 +353,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       deleteExpense,
       updateExpense,
       updateChildSupport,
+      partnerData,
     }),
-    [appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense, updateChildSupport]
+    [appData, updateAppData, isLoading, partnerData]
   );
 
   if (isLoading) {

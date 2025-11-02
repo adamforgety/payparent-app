@@ -1,6 +1,6 @@
 'use client';
 
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { initialData } from '@/lib/data';
 import type { AppData, UserDoc } from '@/lib/types';
 import type { Firestore } from 'firebase/firestore';
@@ -9,52 +9,70 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { handleNewUser } from '@/app/login/actions';
 import { getAuth } from 'firebase/auth';
 
+async function getDocWithHandling<T>(docRef: any): Promise<T | null> {
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as T;
+    }
+    return null;
+  } catch (error) {
+     errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: docRef.path,
+        operation: 'get',
+      })
+    );
+    throw error;
+  }
+}
+
 /**
- * Fetches the user's application data from Firestore.
- * If the user document doesn't exist, it creates it with initial data.
+ * Fetches the application data for the logged-in user.
+ * It intelligently fetches data from the partner's document if a partner link is established.
  * @param firestore - The Firestore instance.
- * @param userId - The ID of the user.
+ * @param userId - The ID of the currently logged-in user.
  * @returns A promise that resolves to the AppData.
  */
 export async function getUserData(firestore: Firestore, userId: string): Promise<AppData> {
-  const userDocRef = doc(firestore, 'users', userId);
-  try {
-    const docSnap = await getDoc(userDocRef);
+  const currentUserDocRef = doc(firestore, 'users', userId);
+  
+  const currentUserDoc = await getDocWithHandling<UserDoc>(currentUserDocRef);
 
-    if (docSnap.exists()) {
-      // Document exists, return its nested appData.
-      const userDoc = docSnap.data() as UserDoc;
-      return userDoc.appData;
+  // If the current user has a partnerId, fetch the partner's data instead.
+  if (currentUserDoc?.partnerId) {
+    const partnerDocRef = doc(firestore, 'users', currentUserDoc.partnerId);
+    const partnerDoc = await getDocWithHandling<UserDoc>(partnerDocRef);
+    if (partnerDoc) {
+      return partnerDoc.appData;
     } else {
-      // Document doesn't exist, create it with initial data.
-      console.log('No user document found. Creating one with initial data.');
-      
-      const auth = getAuth();
-      const email = auth.currentUser?.email || null;
-
-      await handleNewUser(userId, email);
-      
-      // Return a local copy of the initial data for the current session.
-      const newInitialData: AppData = {
-          ...JSON.parse(JSON.stringify(initialData)),
-      }
-      return newInitialData;
+      // The partner document was not found or accessible, which could be a data integrity issue.
+      // Unlink the partner on the current user's doc and fall back to their own data.
+      await updateDoc(currentUserDocRef, { partnerId: null });
+      return currentUserDoc.appData || JSON.parse(JSON.stringify(initialData));
     }
-  } catch (error) {
-    console.error("Error fetching or creating user document:", error);
-    // In case of error, fall back to a local version of initial data.
-    const fallbackData: AppData = {
-        ...JSON.parse(JSON.stringify(initialData)),
-    };
-    return fallbackData;
+  }
+
+  // If no partnerId, use the current user's data.
+  if (currentUserDoc) {
+    return currentUserDoc.appData;
+  } else {
+    // This is a fallback for a rare case where the user document doesn't exist
+    // after the login flow should have created it.
+    console.log('No user document found. Creating one with initial data.');
+    const auth = getAuth();
+    const email = auth.currentUser?.email || null;
+    await handleNewUser(userId, email);
+    return JSON.parse(JSON.stringify(initialData));
   }
 }
 
 /**
  * Saves the user's application data to Firestore.
- * This performs an update on the user document.
+ * This intelligently saves data to the correct document (the user's or their partner's).
  * @param firestore - The Firestore instance.
- * @param userId - The ID of the user.
+ * @param userId - The ID of the currently logged-in user.
  * @param appData - The application data to save.
  */
 export async function saveUserData(firestore: Firestore, userId: string, appData: AppData): Promise<void> {
@@ -62,26 +80,29 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
     console.error("Firestore or User ID is not available. Cannot save.");
     return;
   }
-  const userDocRef = doc(firestore, 'users', userId);
   
-  // Create the payload to be saved. We are replacing the entire appData object.
-  const payload = {
-    appData: appData
-  };
+  const currentUserDocRef = doc(firestore, 'users', userId);
+  const currentUserDocSnap = await getDoc(currentUserDocRef);
+  const currentUserDoc = currentUserDocSnap.data() as UserDoc;
+  
+  // Determine the correct document to write to. If there's a partner, write to their document.
+  const targetUserId = currentUserDoc?.partnerId || userId;
+  const targetDocRef = doc(firestore, 'users', targetUserId);
+  
+  const payload = { appData };
 
   try {
-    // Use set with merge:true to update the appData field without overwriting other top-level fields like 'id' or 'email'.
-    await setDoc(userDocRef, payload, { merge: true });
+    // Use set with merge to update just the appData field.
+    await setDoc(targetDocRef, payload, { merge: true });
   } catch (error) {
      errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
-        path: userDocRef.path,
+        path: targetDocRef.path,
         operation: 'update',
         requestResourceData: payload,
       })
     );
-    // Re-throw the error so the caller can handle it if needed
     throw error;
   }
 }
