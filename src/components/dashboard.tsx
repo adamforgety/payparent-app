@@ -333,27 +333,41 @@ function DashboardComponent() {
                 </div>
             </TabsContent>
             <TabsContent value="settings">
-              <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
-                <AccountSettingsCard />
-                <ParentNamesCard
-                    parentNames={appData.months[Object.keys(appData.months)[0]].parentNames}
-                    onUpdate={handleUpdateParentNames}
-                />
-                <ChildSupportCard
-                  childSupport={currentMonthData.childSupport}
-                  onUpdate={updateChildSupport}
-                  parentNames={currentMonthData.parentNames}
-                />
-                <ParentSplitCard
-                  expenseSplit={currentMonthData.expenseSplit}
-                  onUpdate={(expenseSplit) => updateCurrentMonthData({ expenseSplit })}
-                  parentNames={currentMonthData.parentNames}
-                />
-                <MedicalSplitCard
-                  expenseSplit={currentMonthData.medicalExpenseSplit}
-                  onUpdate={(medicalExpenseSplit) => updateCurrentMonthData({ medicalExpenseSplit })}
-                  parentNames={currentMonthData.parentNames}
-                />
+              <div className="mt-6">
+                <Tabs defaultValue="app" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="app">App Settings</TabsTrigger>
+                    <TabsTrigger value="account">Account Settings</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="app">
+                    <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                      <ParentNamesCard
+                          parentNames={appData.months[Object.keys(appData.months)[0]].parentNames}
+                          onUpdate={handleUpdateParentNames}
+                      />
+                      <ChildSupportCard
+                        childSupport={currentMonthData.childSupport}
+                        onUpdate={updateChildSupport}
+                        parentNames={currentMonthData.parentNames}
+                      />
+                      <ParentSplitCard
+                        expenseSplit={currentMonthData.expenseSplit}
+                        onUpdate={(expenseSplit) => updateCurrentMonthData({ expenseSplit })}
+                        parentNames={currentMonthData.parentNames}
+                      />
+                      <MedicalSplitCard
+                        expenseSplit={currentMonthData.medicalExpenseSplit}
+                        onUpdate={(medicalExpenseSplit) => updateCurrentMonthData({ medicalExpenseSplit })}
+                        parentNames={currentMonthData.parentNames}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="account">
+                     <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                        <AccountSettingsCard />
+                     </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </TabsContent>
           </Tabs>
