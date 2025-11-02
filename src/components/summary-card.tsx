@@ -174,12 +174,6 @@ export function SummaryCard({
 
   const isSettled = totalNetBalance === 0;
 
-  const totalBalanceLabel = useMemo(() => {
-    if (totalNetBalance > 0) return `You Owe ${otherParentName}`;
-    if (totalNetBalance < 0) return `${otherParentName} Owes You`;
-    return 'Total Net Balance';
-  }, [totalNetBalance, otherParentName]);
-  
   let transferDescription = 'All settled up';
   if (!isSettled) {
     if (totalNetBalance < 0) {
@@ -310,24 +304,7 @@ export function SummaryCard({
         )}
 
         <Separator />
-
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between text-base">
-            <p className="font-semibold">{totalBalanceLabel}</p>
-            <p
-              className={cn(
-                'font-bold',
-                !isSettled && totalNetBalance > 0 && 'text-destructive',
-                !isSettled && totalNetBalance < 0 && 'text-green-600'
-              )}
-            >
-              {totalNetBalance > 0
-                ? `$${totalNetBalance.toFixed(2)}`
-                : `-$${Math.abs(totalNetBalance).toFixed(2)}`}
-            </p>
-          </div>
-        </div>
-
+        
         <div className="rounded-lg bg-secondary/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">
             {transferDescription}
@@ -335,8 +312,8 @@ export function SummaryCard({
           <p
             className={cn(
               'text-2xl font-bold',
-              !isSettled && totalNetBalance > 0 && 'text-green-600',
-              !isSettled && totalNetBalance < 0 && 'text-destructive'
+              !isSettled && totalNetBalance > 0 && 'text-destructive',
+              !isSettled && totalNetBalance < 0 && 'text-green-600'
             )}
           >
             ${Math.abs(totalNetBalance).toFixed(2)}
