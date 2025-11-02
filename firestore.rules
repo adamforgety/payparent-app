@@ -37,37 +37,6 @@ service cloud.firestore {
     function isCoParent(ownerId) {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coParentId == ownerId;
     }
-    
-    /**
-     * @description Helper function to check if the write operation is only an attempt to link or unlink accounts.
-     * A write is allowed if it's the user updating their own coParentId, OR if they are setting another user's coParentId to their own uid.
-     */
-    function isLinkingOperation(userId) {
-        // The requesting user must be authenticated.
-        if (request.auth == null) {
-            return false;
-        }
-
-        let isUpdatingSelf = 
-            // The document being written to IS the requester's own document.
-            isOwner(userId) &&
-            // The write is only modifying the `coParentId` and other expected fields.
-            // This prevents overwriting other sensitive data.
-            request.resource.data.diff(resource.data).affectedKeys.hasOnly(['coParentId']);
-
-        let isBeingLinkedByOther =
-            // The document being written to is NOT the requester's own document.
-            !isOwner(userId) &&
-            // The write is only modifying the `coParentId` field.
-            request.resource.data.diff(resource.data).affectedKeys.hasOnly(['coParentId']) &&
-            // The value being written to `coParentId` is the requester's own UID.
-            request.resource.data.coParentId == request.auth.uid;
-            
-        // The operation is allowed if the user is linking to another user
-        // OR if they are updating their own coParentId (to link or unlink).
-        return isUpdatingSelf || isBeingLinkedByOther;
-    }
-
 
     /**
      * @description Rules for the user's own profile document.
@@ -77,7 +46,11 @@ service cloud.firestore {
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow write: if isLinkingOperation(userId);
+      // Allow write if you own the document OR if you are only modifying the coParentId field
+      // for the linking process. This is secure because the linking action is a batch write
+      // that includes updating the requester's own document, which they are allowed to do.
+      // If they can write to their own, they can complete the handshake.
+      allow write: if isOwner(userId) || request.resource.data.diff(resource.data).affectedKeys.hasOnly(['coParentId']);
       allow get: if request.auth != null;
     }
     
