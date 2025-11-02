@@ -13,7 +13,7 @@ import type { AppData, Expense, ParentNames } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
-import { format, getMonth, getYear } from 'date-fns';
+import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
 
 interface AppContextType {
   appData: AppData | null;
@@ -128,13 +128,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const mostRecentMonthId = monthKeys[monthKeys.length - 1];
       const mostRecentMonthData = appData.months[mostRecentMonthId];
 
+      const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
+      const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
+      
+      const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+
+
       targetMonthData = {
         id: targetMonthId,
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
-        childSupport: mostRecentMonthData?.childSupport
-          ? { ...mostRecentMonthData.childSupport, status: 'Unsettled' }
-          : { amount: 0, paidBy: 'None', status: 'Unsettled' },
+        childSupport: childSupportSettings,
         expenseSplit: mostRecentMonthData?.expenseSplit || {
           'Parent 1': 50,
           'Parent 2': 50,
@@ -181,13 +187,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const mostRecentMonthId = monthKeys[monthKeys.length - 1];
         const mostRecentMonthData = newMonths[mostRecentMonthId];
 
+        const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
+        const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
+
+        const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+
         targetMonthData = {
           id: targetMonthId,
           year: getYear(expenseDate),
           month: getMonth(expenseDate) + 1,
-          childSupport: mostRecentMonthData?.childSupport
-            ? { ...mostRecentMonthData.childSupport, status: 'Unsettled' }
-            : { amount: 0, paidBy: 'None', status: 'Unsettled' },
+          childSupport: childSupportSettings,
           expenseSplit: mostRecentMonthData?.expenseSplit || {
             'Parent 1': 50,
             'Parent 2': 50,
@@ -252,13 +263,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const monthKeys = Object.keys(appData.months).sort();
         const mostRecentMonthId = monthKeys[monthKeys.length - 1];
         const mostRecentMonthData = appData.months[mostRecentMonthId];
+        
+        const newMonthDate = parse(newMonthId, 'yyyy-MM', new Date());
+        const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
+
+        const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate)
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+        
         targetMonthData = {
           id: newMonthId,
           year: getYear(newDate),
           month: getMonth(newDate) + 1,
-          childSupport: mostRecentMonthData?.childSupport
-            ? { ...mostRecentMonthData.childSupport, status: 'Unsettled' }
-            : { amount: 0, paidBy: 'None', status: 'Unsettled' },
+          childSupport: childSupportSettings,
           expenseSplit:
             mostRecentMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
           medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {

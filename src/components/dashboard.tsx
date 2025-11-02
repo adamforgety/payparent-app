@@ -1,6 +1,6 @@
 'use client';
 
-import { addMonths, format, subMonths, getYear, getMonth } from 'date-fns';
+import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -34,19 +34,28 @@ function DashboardComponent() {
   useEffect(() => {
     if (appData && !appData.months[monthId] && !isLoading) {
       const monthKeys = Object.keys(appData.months).sort();
-      const lastMonthId = monthKeys[monthKeys.length - 1];
-      const lastMonthData = appData.months[lastMonthId] || appData.months[Object.keys(appData.months)[0]];
+      const mostRecentMonthId = monthKeys[monthKeys.length - 1];
+      const mostRecentMonthData = appData.months[mostRecentMonthId] || appData.months[Object.keys(appData.months)[0]];
 
-      if (!lastMonthData) return;
+      if (!mostRecentMonthData) return;
+      
+      const newMonthDate = parse(monthId, 'yyyy-MM', new Date());
+      const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
+
+      // Only copy child support if the new month is AFTER the most recent month
+      const childSupportSettings = isAfter(newMonthDate, mostRecentMonthDate) 
+        ? { ...(mostRecentMonthData.childSupport || { amount: 0, paidBy: 'None', ignored: false }), status: 'Unsettled' }
+        : { amount: 0, paidBy: 'None', status: 'Unsettled', ignored: false };
+
 
       const newMonthData: MonthData = {
         id: monthId,
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
-        childSupport: { ...(lastMonthData.childSupport || { amount: 0, paidBy: 'None' }), status: 'Unsettled' },
-        expenseSplit: lastMonthData.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
-        medicalExpenseSplit: lastMonthData.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
-        parentNames: lastMonthData.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
+        childSupport: childSupportSettings,
+        expenseSplit: mostRecentMonthData.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
+        medicalExpenseSplit: mostRecentMonthData.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
+        parentNames: mostRecentMonthData.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
         expenses: [],
       };
       
@@ -68,13 +77,33 @@ function DashboardComponent() {
   
   const updateCurrentMonthData = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
       if (!appData || !currentMonthData) return;
+
+      const updatedMonths = { ...appData.months };
       
-      const updatedMonthPayload = {
+      // Update the current month
+      updatedMonths[monthId] = {
         ...currentMonthData,
         ...dataToUpdate,
       };
+
+      // If child support settings changed, propagate to future months
+      if (dataToUpdate.childSupport) {
+        const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
+        for (const key in updatedMonths) {
+            const monthDate = parse(key, 'yyyy-MM', new Date());
+            if (isAfter(monthDate, currentMonthDate)) {
+                updatedMonths[key] = {
+                    ...updatedMonths[key],
+                    childSupport: {
+                      ...updatedMonths[key].childSupport, // keep existing status
+                      ...dataToUpdate.childSupport,
+                    }
+                };
+            }
+        }
+      }
       
-      updateAppData({ months: { ...appData.months, [monthId]: updatedMonthPayload } });
+      updateAppData({ months: updatedMonths });
   }
 
   const handleTabChange = (value: string) => {
