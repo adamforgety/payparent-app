@@ -1,9 +1,35 @@
 'use server';
 
-import { doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
 import type { AppData, UserDoc } from '@/lib/types';
 import { initialData } from '@/lib/data';
+
+/**
+ * Finds a user's email by their username.
+ * This enables them to log in with a username instead of an email.
+ */
+export async function findEmailByUsername(username: string): Promise<string | null> {
+  try {
+    const { firestore } = initializeFirebase();
+    const usersRef = collection(firestore, 'users');
+    // It's assumed usernames are unique. Add DB constraints if needed.
+    const q = query(usersRef, where('username', '==', username));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    // Return the email of the first user found.
+    const userDoc = querySnapshot.docs[0].data() as UserDoc;
+    return userDoc.email;
+
+  } catch (error) {
+    console.error("Error finding user by username:", error);
+    return null;
+  }
+}
 
 /**
  * Creates a new user document in Firestore with initial data structure.
@@ -46,5 +72,3 @@ export async function handleNewUser(userId: string, email: string | null, userna
         return { success: false, error: error.message || 'An unknown error occurred during user creation.' };
     }
 }
-
-    

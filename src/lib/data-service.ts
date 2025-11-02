@@ -6,6 +6,7 @@ import type { AppData, UserDoc } from '@/lib/types';
 import type { Firestore } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { getAuth } from 'firebase/auth';
 
 /**
  * Fetches the user's application data from Firestore.
@@ -22,6 +23,10 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
     if (docSnap.exists()) {
       // Document exists, return its data.
       const userDoc = docSnap.data() as UserDoc;
+      // Make sure the top-level username is synced with appData
+      if (userDoc.appData.username !== userDoc.username) {
+        userDoc.appData.username = userDoc.username;
+      }
       return userDoc.appData;
     } else {
       // Document doesn't exist, create it with initial data.
@@ -30,7 +35,11 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
       const initial = JSON.parse(JSON.stringify(initialData));
       initial.id = userId;
       
-      await saveUserData(firestore, userId, initial);
+      // Get user's email for the initial doc
+      const auth = getAuth();
+      const email = auth.currentUser?.email || null;
+
+      await saveUserData(firestore, userId, initial, email);
       
       // Return the initial data for immediate use in the app.
       return initial;
@@ -50,16 +59,21 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
  * @param userId - The ID of the user.
  * @param appData - The application data to save.
  */
-export async function saveUserData(firestore: Firestore, userId: string, appData: AppData): Promise<void> {
+export async function saveUserData(firestore: Firestore, userId: string, appData: AppData, email?: string | null): Promise<void> {
   if (!firestore || !userId) {
     console.error("Firestore or User ID is not available. Cannot save.");
     return;
   }
   const userDocRef = doc(firestore, 'users', userId);
+  
+  const currentDocSnap = await getDoc(userDocRef);
+  const currentEmail = currentDocSnap.exists() ? (currentDocSnap.data() as UserDoc).email : null;
+  
   const userDocPayload: UserDoc = { 
     id: userId, 
-    appData: appData, 
-    email: appData.months[Object.keys(appData.months)[0]]?.parentNames?.['Parent 1'] || null,
+    appData: appData,
+    // Use provided email, fallback to current email, then to null
+    email: email !== undefined ? email : currentEmail, 
     username: appData.username,
   };
   
@@ -81,5 +95,3 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
     throw error;
   }
 }
-
-    

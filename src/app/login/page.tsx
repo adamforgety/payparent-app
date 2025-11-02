@@ -29,14 +29,14 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
-import { handleNewUser } from './actions';
+import { findEmailByUsername, handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 
 const signupSchema = z
   .object({
+    username: z.string().min(3, 'Username must be at least 3 characters.').max(20, 'Username must be 20 characters or less.').regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores.'),
     email: z.string().email({ message: 'Please enter a valid email address.' }),
     password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
     confirmPassword: z.string(),
@@ -47,7 +47,7 @@ const signupSchema = z
   });
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email.' }),
+  emailOrUsername: z.string().min(1, { message: 'Email or username is required.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
 
@@ -66,7 +66,7 @@ function getErrorMessage(error: any): string {
               return "This user account has been disabled.";
           case AuthErrorCodes.USER_NOT_FOUND:
           case AuthErrorCodes.INVALID_LOGIN_CREDENTIALS:
-              return "Invalid email or password. Please try again.";
+              return "Invalid credentials. Please try again.";
           case AuthErrorCodes.EMAIL_EXISTS:
               return "An account with this email address already exists.";
           case AuthErrorCodes.WEAK_PASSWORD:
@@ -94,12 +94,12 @@ export default function LoginPage() {
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { emailOrUsername: '', password: '' },
   });
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
   });
 
   const passwordResetForm = useForm<z.infer<typeof passwordResetSchema>>({
@@ -111,7 +111,22 @@ export default function LoginPage() {
   const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     startTransition(async () => {
       try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
+        let email = values.emailOrUsername;
+        // If it's not an email, assume it's a username and try to find the email
+        if (!email.includes('@')) {
+          const foundEmail = await findEmailByUsername(email);
+          if (!foundEmail) {
+            toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'User not found.',
+            });
+            return;
+          }
+          email = foundEmail;
+        }
+
+        await signInWithEmailAndPassword(auth, email, values.password);
         toast({ title: 'Login Successful', description: 'Welcome back!' });
         router.push(next);
         router.refresh(); 
@@ -129,7 +144,7 @@ export default function LoginPage() {
     startTransition(async () => {
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-        const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email);
+        const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email, values.username);
         
         if (actionResult.error) {
            toast({
@@ -195,12 +210,12 @@ export default function LoginPage() {
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 mt-4">
                   <FormField
                     control={loginForm.control}
-                    name="email"
+                    name="emailOrUsername"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>Email or Username</FormLabel>
                         <FormControl>
-                          <Input placeholder="you@example.com" {...field} />
+                          <Input placeholder="you@example.com or your_username" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -288,6 +303,19 @@ export default function LoginPage() {
             <TabsContent value="signup">
               <Form {...signupForm}>
                 <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4 mt-4">
+                   <FormField
+                    control={signupForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your_username" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={signupForm.control}
                     name="email"
@@ -346,19 +374,6 @@ export default function LoginPage() {
                               placeholder="••••••••"
                               {...field}
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                              onClick={() => setShowSignupPassword(!showSignupPassword)}
-                            >
-                              {showSignupPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -378,5 +393,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
