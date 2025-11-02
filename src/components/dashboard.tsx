@@ -26,7 +26,7 @@ import { AccountSettingsCard } from './account-settings-card';
 import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SummaryDetailsCard } from './summary-details-card';
-import { PartnerLinkCard } from './partner-link-card';
+import { CoParentLinkCard } from './co-parent-link-card';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
@@ -407,7 +407,7 @@ function DashboardComponent() {
                   </TabsContent>
                   <TabsContent value="account">
                      <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
-                        <PartnerLinkCard />
+                        <CoParentLinkCard />
                         <AccountSettingsCard />
                      </div>
                   </TabsContent>

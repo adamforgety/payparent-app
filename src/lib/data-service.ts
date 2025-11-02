@@ -30,7 +30,7 @@ async function getDocWithHandling<T>(docRef: any): Promise<T | null> {
 
 /**
  * Fetches the application data for the logged-in user.
- * It intelligently fetches data from the partner's document if a partner link is established.
+ * It intelligently fetches data from the co-parent's document if a link is established.
  * @param firestore - The Firestore instance.
  * @param userId - The ID of the currently logged-in user.
  * @returns A promise that resolves to the AppData.
@@ -40,21 +40,21 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
   
   const currentUserDoc = await getDocWithHandling<UserDoc>(currentUserDocRef);
 
-  // If the current user has a partnerId, fetch the partner's data instead.
-  if (currentUserDoc?.partnerId) {
-    const partnerDocRef = doc(firestore, 'users', currentUserDoc.partnerId);
-    const partnerDoc = await getDocWithHandling<UserDoc>(partnerDocRef);
-    if (partnerDoc) {
-      return partnerDoc.appData;
+  // If the current user has a coParentId, fetch the co-parent's data instead.
+  if (currentUserDoc?.coParentId) {
+    const coParentDocRef = doc(firestore, 'users', currentUserDoc.coParentId);
+    const coParentDoc = await getDocWithHandling<UserDoc>(coParentDocRef);
+    if (coParentDoc) {
+      return coParentDoc.appData;
     } else {
-      // The partner document was not found or accessible, which could be a data integrity issue.
-      // Unlink the partner on the current user's doc and fall back to their own data.
-      await updateDoc(currentUserDocRef, { partnerId: null });
+      // The co-parent document was not found or accessible, which could be a data integrity issue.
+      // Unlink the co-parent on the current user's doc and fall back to their own data.
+      await updateDoc(currentUserDocRef, { coParentId: null });
       return currentUserDoc.appData || JSON.parse(JSON.stringify(initialData));
     }
   }
 
-  // If no partnerId, use the current user's data.
+  // If no coParentId, use the current user's data.
   if (currentUserDoc) {
     return currentUserDoc.appData;
   } else {
@@ -70,7 +70,7 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
 
 /**
  * Saves the user's application data to Firestore.
- * This intelligently saves data to the correct document (the user's or their partner's).
+ * This intelligently saves data to the correct document (the user's or their co-parent's).
  * @param firestore - The Firestore instance.
  * @param userId - The ID of the currently logged-in user.
  * @param appData - The application data to save.
@@ -85,8 +85,8 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
   const currentUserDocSnap = await getDoc(currentUserDocRef);
   const currentUserDoc = currentUserDocSnap.data() as UserDoc;
   
-  // Determine the correct document to write to. If there's a partner, write to their document.
-  const targetUserId = currentUserDoc?.partnerId || userId;
+  // Determine the correct document to write to. If there's a co-parent, write to their document.
+  const targetUserId = currentUserDoc?.coParentId || userId;
   const targetDocRef = doc(firestore, 'users', targetUserId);
   
   const payload = { appData };

@@ -14,7 +14,7 @@ import { useFirebase } from '@/firebase';
 import { getUserData, saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
 import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 
 interface AppContextType {
   appData: AppData | null;
@@ -27,7 +27,7 @@ interface AppContextType {
   deleteExpense: (expenseId: string, monthId: string) => void;
   updateExpense: (updatedExpense: Expense, originalMonthId: string) => void;
   updateChildSupport: (updatedChildSupport: ChildSupport, monthId: string) => void;
-  partnerData: UserDoc | null;
+  coParentData: UserDoc | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,7 +38,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const { firestore, user } = useFirebase();
 
   const [appData, setAppData] = useState<AppData | null>(null);
-  const [partnerData, setPartnerData] = useState<UserDoc | null>(null);
+  const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Effect to load initial data and set up listeners
@@ -46,7 +46,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     if (!user || !firestore) {
       setIsLoading(false);
       setAppData(null);
-      setPartnerData(null);
+      setCoParentData(null);
       return;
     }
 
@@ -67,36 +67,36 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
     // --- Set up real-time listeners ---
     
-    // 1. Listener for the current user's document (for partnerId changes)
+    // 1. Listener for the current user's document (for coParentId changes)
     const userDocRef = doc(firestore, 'users', user.uid);
     const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
       const userDoc = docSnap.data() as UserDoc;
-      // If partnerId changes, refetch all data.
+      // If coParentId changes, refetch all data.
       // This is a simple way to handle linking/unlinking.
-      if (userDoc?.partnerId !== (partnerData?.id || null)) {
+      if (userDoc?.coParentId !== (coParentData?.id || null)) {
          getUserData(firestore, user.uid).then(setAppData);
       }
 
-      // If a partner is linked, also fetch their user data to display their email.
-      if (userDoc?.partnerId) {
-        const partnerDocRef = doc(firestore, 'users', userDoc.partnerId);
-        getDoc(partnerDocRef).then(partnerSnap => {
-          if (partnerSnap.exists()) {
-            setPartnerData(partnerSnap.data() as UserDoc);
+      // If a co-parent is linked, also fetch their user data to display their email.
+      if (userDoc?.coParentId) {
+        const coParentDocRef = doc(firestore, 'users', userDoc.coParentId);
+        getDoc(coParentDocRef).then(coParentSnap => {
+          if (coParentSnap.exists()) {
+            setCoParentData(coParentSnap.data() as UserDoc);
           } else {
-             setPartnerData(null);
+             setCoParentData(null);
           }
         });
       } else {
-        setPartnerData(null);
+        setCoParentData(null);
       }
     });
 
-    // 2. Listener for the actual app data (which might be the partner's data)
+    // 2. Listener for the actual app data (which might be the co-parent's data)
     let dataUnsubscribe: () => void = () => {};
     const setDataListener = async () => {
         const currentUserDoc = (await getDoc(userDocRef)).data() as UserDoc | undefined;
-        const targetId = currentUserDoc?.partnerId || user.uid;
+        const targetId = currentUserDoc?.coParentId || user.uid;
         const dataDocRef = doc(firestore, 'users', targetId);
 
         dataUnsubscribe = onSnapshot(dataDocRef, (docSnap) => {
@@ -124,7 +124,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const newMonths = { ...appData.months, ...newData.months };
       const updatedData = { ...appData, ...newData, months: newMonths };
       
-      // The saveUserData function already contains the logic to save to the correct (partner's) document
+      // The saveUserData function already contains the logic to save to the correct (co-parent's) document
       saveUserData(firestore, user.uid, updatedData).catch(console.error);
     },
     [user, firestore, appData]
@@ -353,9 +353,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       deleteExpense,
       updateExpense,
       updateChildSupport,
-      partnerData,
+      coParentData,
     }),
-    [appData, updateAppData, isLoading, partnerData]
+    [appData, updateAppData, isLoading, coParentData]
   );
 
   if (isLoading) {

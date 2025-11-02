@@ -43,59 +43,59 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const linkSchema = z.object({
-  partnerCode: z.string().trim().min(1, { message: 'Partner code is required.' }),
+  coParentCode: z.string().trim().min(1, { message: 'Co-parent code is required.' }),
 });
 
-export function PartnerLinkCard() {
+export function CoParentLinkCard() {
   const { auth, firestore, user } = useFirebase();
-  const { partnerData } = useAppContext();
+  const { coParentData } = useAppContext();
   const { toast } = useToast();
   const [isLinking, startLinking] = useTransition();
   const [isUnlinking, startUnlinking] = useTransition();
 
   const form = useForm<z.infer<typeof linkSchema>>({
     resolver: zodResolver(linkSchema),
-    defaultValues: { partnerCode: '' },
+    defaultValues: { coParentCode: '' },
   });
 
   const handleCopyToClipboard = () => {
     if (!user) return;
     navigator.clipboard.writeText(user.uid);
-    toast({ title: 'Copied!', description: 'Your partner code has been copied to the clipboard.' });
+    toast({ title: 'Copied!', description: 'Your co-parent code has been copied to the clipboard.' });
   };
   
   const onLinkSubmit = (values: z.infer<typeof linkSchema>) => {
     startLinking(async () => {
       if (!user || !firestore) return;
 
-      const partnerId = values.partnerCode;
+      const coParentId = values.coParentCode;
 
-      if (partnerId === user.uid) {
+      if (coParentId === user.uid) {
         toast({ variant: 'destructive', title: 'Error', description: 'You cannot link to your own account.' });
         return;
       }
       
-      const partnerDocRef = doc(firestore, 'users', partnerId);
+      const coParentDocRef = doc(firestore, 'users', coParentId);
       const currentUserDocRef = doc(firestore, 'users', user.uid);
       
       try {
-        const partnerDoc = await getDoc(partnerDocRef);
-        if (!partnerDoc.exists()) {
-          toast({ variant: 'destructive', title: 'Partner Not Found', description: 'The partner code is invalid.' });
+        const coParentDoc = await getDoc(coParentDocRef);
+        if (!coParentDoc.exists()) {
+          toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
           return;
         }
 
         const batch = writeBatch(firestore);
         
-        // Link current user to partner
-        batch.update(currentUserDocRef, { partnerId: partnerId });
+        // Link current user to co-parent
+        batch.update(currentUserDocRef, { coParentId: coParentId });
         
-        // Link partner to current user
-        batch.update(partnerDocRef, { partnerId: user.uid });
+        // Link co-parent to current user
+        batch.update(coParentDocRef, { coParentId: user.uid });
         
         await batch.commit();
 
-        toast({ title: 'Success!', description: `You are now linked with ${partnerDoc.data().email}.` });
+        toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
         form.reset();
 
       } catch (error) {
@@ -107,20 +107,20 @@ export function PartnerLinkCard() {
 
   const handleUnlink = () => {
     startUnlinking(async () => {
-      if (!user || !firestore || !partnerData) return;
+      if (!user || !firestore || !coParentData) return;
       
-      const partnerId = partnerData.id;
-      const partnerDocRef = doc(firestore, 'users', partnerId);
+      const coParentId = coParentData.id;
+      const coParentDocRef = doc(firestore, 'users', coParentId);
       const currentUserDocRef = doc(firestore, 'users', user.uid);
 
       try {
         const batch = writeBatch(firestore);
         
         // Unlink current user
-        batch.update(currentUserDocRef, { partnerId: null });
+        batch.update(currentUserDocRef, { coParentId: null });
         
-        // Unlink partner
-        batch.update(partnerDocRef, { partnerId: null });
+        // Unlink co-parent
+        batch.update(coParentDocRef, { coParentId: null });
         
         await batch.commit();
         toast({ title: 'Unlinked Successfully', description: 'Your accounts are no longer connected.' });
@@ -140,20 +140,20 @@ export function PartnerLinkCard() {
             <Link2 className="h-5 w-5 text-secondary-foreground" />
           </span>
           <div>
-            <CardTitle>Partner Account Linking</CardTitle>
+            <CardTitle>Co-Parent Account Linking</CardTitle>
             <CardDescription>Share finances by linking your account with your co-parent.</CardDescription>
           </div>
         </div>
       </CardHeader>
       
-      {partnerData ? (
+      {coParentData ? (
         <>
           <CardContent>
             <Alert>
               <UserCheck className="h-4 w-4" />
               <AlertTitle>You are Linked!</AlertTitle>
               <AlertDescription>
-                You are sharing finances with <span className="font-semibold">{partnerData.email}</span>. All data is now synced between your accounts.
+                You are sharing finances with <span className="font-semibold">{coParentData.email}</span>. All data is now synced between your accounts.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -169,7 +169,7 @@ export function PartnerLinkCard() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure you want to unlink?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will stop data sharing between you and {partnerData.email}. You will both revert to your own separate data. This action can be undone by linking again.
+                    This will stop data sharing between you and {coParentData.email}. You will both revert to your own separate data. This action can be undone by linking again.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -186,8 +186,8 @@ export function PartnerLinkCard() {
         <>
           <CardContent className="space-y-6">
             <div>
-              <h3 className="font-medium">Your Partner Code</h3>
-              <p className="text-sm text-muted-foreground mb-2">Share this code with your partner. They will use it to link to your account.</p>
+              <h3 className="font-medium">Your Co-Parent Code</h3>
+              <p className="text-sm text-muted-foreground mb-2">Share this code with your co-parent. They will use it to link to your account.</p>
               <div className="flex items-center gap-2">
                 <Input readOnly value={user?.uid ?? 'Loading...'} />
                 <Button variant="outline" size="icon" onClick={handleCopyToClipboard} disabled={!user}>
@@ -200,14 +200,14 @@ export function PartnerLinkCard() {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onLinkSubmit)} className="space-y-4">
-                <h3 className="font-medium">Link to Partner</h3>
-                <p className="text-sm text-muted-foreground">Enter the code your partner shared with you to link accounts.</p>
+                <h3 className="font-medium">Link to Co-Parent</h3>
+                <p className="text-sm text-muted-foreground">Enter the code your co-parent shared with you to link accounts.</p>
                 <FormField
                   control={form.control}
-                  name="partnerCode"
+                  name="coParentCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Partner's Code</FormLabel>
+                      <FormLabel>Co-Parent's Code</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter code..." {...field} />
                       </FormControl>

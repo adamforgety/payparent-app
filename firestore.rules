@@ -2,22 +2,22 @@
  * @fileOverview Firestore Security Rules for CoParent Finances App
  *
  * Core Philosophy:
- * This ruleset enforces a user-ownership model where data can be shared with a single partner.
- * A user can read/write their own data. They can also read/write their partner's data if the `partnerId` in their own user document points to the other user's ID.
+ * This ruleset enforces a user-ownership model where data can be shared with a single co-parent.
+ * A user can read/write their own data. They can also read/write their co-parent's data if the `coParentId` in their own user document points to the other user's ID.
  *
  * Data Structure:
  * All data is nested under `/users/{userId}`, creating a clear separation of user data.
- * - `/users/{userId}`: Stores user profile information, including a `partnerId`.
+ * - `/users/{userId}`: Stores user profile information, including a `coParentId`.
  * - `/users/{userId}/...`: All other user-specific data.
  *
  * Key Security Decisions:
  * - A user must be authenticated to access any data.
  * - A user can read/write their own `/users/{userId}` document.
- * - A user can read/write any data under `/users/{partnerId}/...` if their own `/users/{userId}` document has a `partnerId` field that matches the `{partnerId}` in the path.
+ * - A user can read/write any data under `/users/{coParentId}/...` if their own `/users/{userId}` document has a `coParentId` field that matches the `{coParentId}` in the path.
  * - This allows for a two-way data sharing model once two users have linked their accounts.
  *
  * Denormalization for Authorization:
- * The `partnerId` is stored directly in the user's document. This requires one `get()` call to check for partnership, but avoids complex hierarchical rules.
+ * The `coParentId` is stored directly in the user's document. This requires one `get()` call to check for the relationship, but avoids complex hierarchical rules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -31,34 +31,34 @@ service cloud.firestore {
     }
 
     /**
-     * Helper function to check if the requesting user is a linked partner of the document owner.
-     * This grants access if the current user's partnerId points to the owner of the data they are trying to access.
+     * Helper function to check if the requesting user is a linked co-parent of the document owner.
+     * This grants access if the current user's coParentId points to the owner of the data they are trying to access.
      */
-    function isPartner(ownerId) {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.partnerId == ownerId;
+    function isCoParent(ownerId) {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coParentId == ownerId;
     }
 
     /**
      * @description Rules for the user's own profile document.
      * - A user can always read and write their own profile.
-     * - A user can read their partner's profile to facilitate UI features.
-     * - A user cannot write to their partner's profile (e.g., change their partner's email or partner link).
+     * - A user can read their co-parent's profile to facilitate UI features.
+     * - A user cannot write to their co-parent's profile (e.g., change their co-parent's email or link).
      * @path /users/{userId}
      */
     match /users/{userId} {
       allow read, write: if isOwner(userId);
-      // Allow a user to read their partner's profile data (e.g., to see their email)
-      allow get: if isPartner(userId);
+      // Allow a user to read their co-parent's profile data (e.g., to see their email)
+      allow get: if isCoParent(userId);
     }
     
     /**
      * @description Rules for all data nested under a user's document (expenses, payments, etc.).
-     * Access is granted if the requester is the owner OR the linked partner of the owner.
+     * Access is granted if the requester is the owner OR the linked co-parent of the owner.
      * This creates the shared data model.
      * @path /users/{userId}/{document=**}
      */
     match /users/{userId}/{document=**} {
-      allow read, write: if isOwner(userId) || isPartner(userId);
+      allow read, write: if isOwner(userId) || isCoParent(userId);
     }
   }
 }

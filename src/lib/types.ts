@@ -71,5 +71,5 @@ export interface UserDoc {
   email: string | null;
   // All app-specific data is nested here
   appData: AppData;
-  partnerId?: string | null;
+  coParentId?: string | null;
 }
