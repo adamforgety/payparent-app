@@ -35,11 +35,10 @@ export async function handleNewUser(userId: string, email: string | null, userna
     
     // Use setDoc to create the document for the new user.
     // Chain a .catch() to handle permission errors specifically.
-    return setDoc(userDocRef, userDocPayload)
-      .then(() => {
+    try {
+        await setDoc(userDocRef, userDocPayload);
         return { success: true, userId: userId };
-      })
-      .catch((error: any) => {
+      } catch (error: any) {
         // This is where we create and emit the detailed error
         const permissionError = new FirestorePermissionError({
           path: userDocRef.path,
@@ -55,5 +54,5 @@ export async function handleNewUser(userId: string, email: string | null, userna
 
         // For the client, return a user-friendly error.
         return { success: false, error: 'A security rule prevented user creation.' };
-      });
+      }
 }
