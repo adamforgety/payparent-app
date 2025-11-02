@@ -378,7 +378,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                             <TableBody>
                                 {failedImports.map((fail, i) => (
                                     <TableRow key={i}>
-                                        <TableCell className="text-xs font-mono">{JSON.stringify(fail.row)}</TableCell>
+                                        <TableCell className="text-sm">{Object.values(fail.row).join(', ')}</TableCell>
                                         <TableCell><Badge variant="destructive">{fail.reason}</Badge></TableCell>
                                     </TableRow>
                                 ))}
