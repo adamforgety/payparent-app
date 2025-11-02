@@ -280,22 +280,6 @@ function DashboardComponent() {
               <TabsTrigger value="settings" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Settings</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
-               <div className="fixed bottom-8 right-8 z-50 no-print">
-                <TooltipProvider>
-                    <Tooltip>
-                    <TooltipTrigger asChild>
-                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
-                            <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
-                                <Plus className="h-6 w-6" />
-                            </Button>
-                         </AddExpenseDialog>
-                    </TooltipTrigger>
-                    <TooltipContent side="left">
-                        <p>Add New Expense</p>
-                    </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-              </div>
               <div className="mt-6">
                 <Tabs defaultValue="parent-1" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
@@ -371,9 +355,7 @@ function DashboardComponent() {
                 </div>
             </TabsContent>
             <TabsContent value="reporting">
-              <div className="mt-6">
-                  <ReportingPage appData={appData} />
-              </div>
+              <ReportingPage appData={appData} />
             </TabsContent>
             <TabsContent value="settings">
               <div className="mt-6">
@@ -414,6 +396,22 @@ function DashboardComponent() {
               </div>
             </TabsContent>
           </Tabs>
+          <div className="fixed bottom-8 right-8 z-50 no-print">
+            <TooltipProvider>
+                <Tooltip>
+                <TooltipTrigger asChild>
+                      <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
+                        <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
+                            <Plus className="h-6 w-6" />
+                        </Button>
+                      </AddExpenseDialog>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                    <p>Add New Expense</p>
+                </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+          </div>
         </main>
       </div>
     </DashboardProvider>
