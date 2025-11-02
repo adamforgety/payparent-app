@@ -177,7 +177,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             }
 
             const amountAsString = String(amount || '').trim();
-             if (amount && !/^[0-9]+(\.[0-9]{1,2})?$/.test(amountAsString)) {
+             if (amount && !/^\s*(\d+(\.\d{1,2})?)\s*$/.test(amountAsString)) {
                errors.amount = 'Invalid Number';
             }
             
@@ -238,7 +238,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                         description: description,
                         category: category,
                         paidBy: paidby,
-                        amount: amount,
+                        amount: String(amount),
                     },
                     errors: { general: 'Duplicate row in file' },
                 });
@@ -295,15 +295,15 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     handleOpenChange(false);
   }
   
-  const ErrorDisplay = ({ error, value }: { error?: string, value: string }) => {
+  const ErrorDisplay = ({ error, value }: { error?: string; value: string }) => {
     if (!error) return <>{value}</>;
     return (
-        <div className="text-destructive font-medium">
-            <p className="line-through text-muted-foreground">{value || '""'}</p>
-            <p>
-                <Badge variant="destructive">{error}</Badge>
-            </p>
+      <div className="text-destructive font-medium">
+        <div className="line-through text-muted-foreground">{value || '""'}</div>
+        <div>
+          <Badge variant="destructive">{error}</Badge>
         </div>
+      </div>
     );
   };
 
