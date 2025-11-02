@@ -355,7 +355,9 @@ function DashboardComponent() {
                 </div>
             </TabsContent>
             <TabsContent value="reporting">
-              <ReportingPage appData={appData} />
+              <div className="mt-6">
+                <ReportingPage appData={appData} />
+              </div>
             </TabsContent>
             <TabsContent value="settings">
               <div className="mt-6">
