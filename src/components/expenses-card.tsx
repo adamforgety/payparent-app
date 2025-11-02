@@ -1,6 +1,6 @@
 'use client';
 
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfMonth, isAfter } from 'date-fns';
 import { ReceiptText, Trash2, MoreVertical, Paperclip, Upload } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo } from 'react';
@@ -87,7 +87,9 @@ export function ExpensesCard({
   
   const allItems = useMemo<DisplayItem[]>(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
-    if (childSupport.amount > 0 && childSupport.paidBy !== 'None') {
+    const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
+
+    if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && !isFutureMonth) {
         const childSupportItem: DisplayItem = {
             id: 'child-support',
             date: startOfMonth(currentDate).toISOString(),
@@ -133,7 +135,8 @@ export function ExpensesCard({
       }
     }
     
-    if (childSupport.paidBy === parent) {
+    const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
+    if (!isFutureMonth && childSupport.paidBy === parent) {
       totalShare += childSupport.amount;
     }
     
@@ -370,7 +373,7 @@ export function ExpensesCard({
             ${totalExpenses.toFixed(2)}
           </span>
         </div>
-        {childSupport.amount > 0 && (
+        {childSupport.amount > 0 && !isAfter(startOfMonth(currentDate), startOfMonth(new Date())) && (
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Child Support:</span>
             <span className="font-medium">

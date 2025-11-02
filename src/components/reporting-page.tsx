@@ -161,11 +161,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     medicalExpenseSplit: monthData.medicalExpenseSplit,
                 });
             });
-            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None') {
+
+            const monthDate = parse(monthId, 'yyyy-MM', new Date());
+            const isFutureMonth = isAfter(monthDate, today);
+
+            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
                 allTransactionsForPeriod.push({
                     ...monthData.childSupport,
                     id: `cs-${monthId}`,
-                    date: parse(monthId, 'yyyy-MM', new Date()).toISOString(),
+                    date: monthDate.toISOString(),
                     description: 'Child Support',
                     category: 'Child Support',
                     parentNames: monthData.parentNames,

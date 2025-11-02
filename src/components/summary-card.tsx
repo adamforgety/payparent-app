@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { SettleBalanceDialog } from './settle-balance-dialog';
 import { useAppContext } from '@/context/app-context';
-import { parse, isBefore, startOfDay, format } from 'date-fns';
+import { parse, isBefore, startOfDay, format, isAfter, startOfMonth } from 'date-fns';
 import {
   Accordion,
   AccordionContent,
@@ -115,9 +115,13 @@ export function SummaryCard({
         const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
         let childSupportBalance = 0;
+        const monthDate = parse(monthId, 'yyyy-MM', new Date());
+        const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+
         if (
           monthData.childSupport.status === 'Unsettled' &&
-          monthData.childSupport.paidBy !== 'None'
+          monthData.childSupport.paidBy !== 'None' &&
+          !isFutureMonth
         ) {
           if (monthData.childSupport.paidBy === parent) {
             childSupportBalance = monthData.childSupport.amount;
@@ -153,7 +157,10 @@ export function SummaryCard({
   const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
   let childSupportBalance = 0;
-  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None') {
+  const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
+  const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
+
+  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
     if (childSupport.paidBy === parent) {
       childSupportBalance = childSupport.amount;
     } else {
@@ -181,7 +188,11 @@ export function SummaryCard({
       m.expenses.some((e) => e.status === 'Unsettled')
     ) ||
     Object.values(appData.months).some(
-      (m) => m.childSupport.amount > 0 && m.childSupport.status === 'Unsettled'
+      (m) => {
+        const monthDate = parse(m.id, 'yyyy-MM', new Date());
+        const isFuture = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+        return m.childSupport.amount > 0 && m.childSupport.status === 'Unsettled' && !isFuture;
+      }
     )
   );
 
@@ -211,7 +222,7 @@ export function SummaryCard({
               +${unsettledPaidByParent.toFixed(2)}
             </p>
           </div>
-          {childSupport.amount > 0 && childSupport.status === 'Unsettled' && (
+          {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
             <div className="flex items-center justify-between text-sm">
               <p className="text-muted-foreground">Child Support</p>
               <p
