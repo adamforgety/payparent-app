@@ -196,19 +196,17 @@ export function SummaryDetailsCard({
              <li className="flex items-center justify-between">
                <Accordion type="single" collapsible className="w-full">
                  <AccordionItem value="item-1" className="border-b-0">
-                   <AccordionTrigger className="p-0 hover:no-underline -ml-8 -mr-4">
-                      <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-3">
-                              {renderBalanceIcon(previousMonthsTotalBalance)}
-                              <span className="text-base">Balance from Prior Months</span>
-                          </div>
-                          <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-                          <span className={cn('font-medium text-base', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                            {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
-                          </span>
-                      </div>
-                   </AccordionTrigger>
-                   <AccordionContent className="pt-2 pl-8">
+                    <AccordionTrigger className="flex items-center justify-between w-full p-0 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            {renderBalanceIcon(previousMonthsTotalBalance)}
+                            <span className="text-base">Balance from Prior Months</span>
+                        </div>
+                        <div className="flex-grow border-b border-dotted border-border mx-4"></div>
+                        <span className={cn('font-medium text-base', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                        {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+                        </span>
+                    </AccordionTrigger>
+                   <AccordionContent className="pt-2 pl-12 pr-4">
                      <div className="space-y-1">
                         {previousBalances.map(({ monthId, balance }) => (
                           <div key={monthId} className="flex items-center justify-between text-sm">
