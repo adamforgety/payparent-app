@@ -135,57 +135,58 @@ export function ExpensesCard({
             expTotal += item.amount;
         }
 
-        let p1Share = 0;
-        let p2Share = 0;
-        
         if (item.status === 'Settled') {
-          // For settled items, "paid" means their share.
-          if (item.type === 'expense') {
-            const expense = item as Expense;
-             if (expense.category === 'Reimbursement') {
-                if(expense.paidBy === 'Parent 1') { // Parent 1 paid, Parent 2 reimburses
-                  p2Share = expense.amount;
-                } else { // Parent 2 paid, Parent 1 reimburses
-                  p1Share = expense.amount;
+            let p1Share = 0;
+            let p2Share = 0;
+            if (item.type === 'expense') {
+                const expense = item as Expense;
+                if (expense.category === 'Reimbursement') {
+                    if (expense.paidBy === 'Parent 1') { // Parent 1 paid, Parent 2 reimburses
+                        p2Share = expense.amount;
+                    } else { // Parent 2 paid, Parent 1 reimburses
+                        p1Share = expense.amount;
+                    }
+                } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+                    p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                    p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
+                } else {
+                    p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
+                    p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
                 }
-             } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-                p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
-            } else {
-                p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-                p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
+            } else { // Child Support
+                if (item.paidBy === 'Parent 1') { // Payer is Parent 1
+                    p1Share = item.amount;
+                } else { // Payer is Parent 2
+                    p2Share = item.amount;
+                }
             }
-          } else { // Child Support
-             if (item.paidBy === 'Parent 1') { // Payer is Parent 1
-                p1Share = item.amount;
-             } else { // Payer is Parent 2
-                p2Share = item.amount;
-             }
-          }
-          totalPaidP1 += p1Share;
-          totalPaidP2 += p2Share;
-
+            totalPaidP1 += p1Share;
+            totalPaidP2 += p2Share;
         } else { // Unsettled items
-            const p1InitialPaid = item.paidBy === 'Parent 1' ? item.amount : 0;
-            const p2InitialPaid = item.paidBy === 'Parent 2' ? item.amount : 0;
-            totalPaidP1 += p1InitialPaid;
-            totalPaidP2 += p2InitialPaid;
-            
             if (item.type === 'child_support') {
-                 if (item.paidBy === 'Parent 1') totalOwedP1 += item.amount;
-                 if (item.paidBy === 'Parent 2') totalOwedP2 += item.amount;
+                if (item.paidBy === 'Parent 1') totalOwedP1 += item.amount;
+                if (item.paidBy === 'Parent 2') totalOwedP2 += item.amount;
             } else {
-                 const expense = item as Expense;
-                 if (expense.category === 'Reimbursement') {
-                     if (expense.paidBy === 'Parent 1') totalOwedP2 += expense.amount;
-                     else totalOwedP1 += expense.amount;
-                 } else {
+                const expense = item as Expense;
+                const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+                const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                totalPaidP1 += p1InitialPaid;
+                totalPaidP2 += p2InitialPaid;
+
+                let p1Share = 0;
+                let p2Share = 0;
+                if (expense.category === 'Reimbursement') {
+                    if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
+                    else p1Share = expense.amount;
+                } else {
                     const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
                     p1Share = item.amount * (split['Parent 1'] / 100);
                     p2Share = item.amount * (split['Parent 2'] / 100);
-                    if (p1Share > p1InitialPaid) totalOwedP1 += p1Share - p1InitialPaid;
-                    if (p2Share > p2InitialPaid) totalOwedP2 += p2Share - p2InitialPaid;
-                 }
+                }
+                const p1Net = p1Share - p1InitialPaid;
+                const p2Net = p2Share - p2InitialPaid;
+                if (p1Net > 0) totalOwedP1 += p1Net;
+                if (p2Net > 0) totalOwedP2 += p2Net;
             }
         }
     });
