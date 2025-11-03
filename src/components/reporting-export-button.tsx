@@ -50,11 +50,11 @@ export function ReportingExportButton({
         } else {
           const expense = item as EnrichedExpense;
           if (expense.category === 'Reimbursement') {
-            // The share of a reimbursement belongs to the person receiving the money.
+            // The "Paid By" parent is the one who OWES.
             if (expense.paidBy === 'Parent 1') {
-              parent2Share = expense.amount;
-            } else {
               parent1Share = expense.amount;
+            } else {
+              parent2Share = expense.amount;
             }
           } else {
             const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;

@@ -45,9 +45,12 @@ const calculateShare = (
   let totalShare = 0;
   for (const expense of expenses) {
      if (expense.category === 'Reimbursement') {
-      // The share of a reimbursement belongs to the person receiving the money.
-      if (expense.paidBy !== p) {
-        totalShare += expense.amount;
+      // The "Paid By" parent is the one who OWES, so their share is the full amount.
+      // The other parent is owed, so we don't add to their share from this transaction.
+      if (expense.paidBy === p) {
+        // This parent owes the other parent
+      } else {
+        // This parent is owed by the other parent
       }
     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
@@ -87,12 +90,27 @@ export function SettleBalanceCard({
         if (!monthData) return totalBalance;
 
         const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-        const unsettledPaidByParent = unsettledExpenses
+        let expenseBalance = 0;
+
+        // Normal expenses
+        const normalExpenses = unsettledExpenses.filter(e => e.category !== 'Reimbursement');
+        const parentNormalExpenseShare = calculateShare(normalExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
+        const paidByParentNormal = normalExpenses
           .filter(exp => exp.paidBy === parent)
           .reduce((sum, exp) => sum + exp.amount, 0);
+        expenseBalance += (paidByParentNormal - parentNormalExpenseShare);
 
-        const parentExpenseShare = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
-        const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+        // Reimbursements
+        const reimbursements = unsettledExpenses.filter(e => e.category === 'Reimbursement');
+        reimbursements.forEach(exp => {
+          if (exp.paidBy === parent) {
+            // This parent OWES the other parent, so it's a debit for them.
+            expenseBalance -= exp.amount;
+          } else {
+            // This parent is OWED by the other parent, so it's a credit for them.
+            expenseBalance += exp.amount;
+          }
+        });
 
         let childSupportBalance = 0;
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
@@ -100,8 +118,10 @@ export function SettleBalanceCard({
 
         if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
           if (monthData.childSupport.paidBy === parent) {
+            // Parent is the Payer of child support, so it's a debit from their balance.
             childSupportBalance = -monthData.childSupport.amount;
           } else {
+            // Parent is the Recipient, so it's a credit.
             childSupportBalance = monthData.childSupport.amount;
           }
         }
@@ -112,25 +132,43 @@ export function SettleBalanceCard({
 
   // --- Calculate Current Month's Balance ---
   const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
-  const unsettledPaidByParent = unsettledExpenses
+  let currentMonthExpenseBalance = 0;
+
+  // Normal expenses
+  const normalExpenses = unsettledExpenses.filter(e => e.category !== 'Reimbursement');
+  const parentNormalExpenseShare = calculateShare(normalExpenses, expenseSplit, medicalExpenseSplit, parent);
+  const paidByParentNormal = normalExpenses
     .filter(exp => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
+  currentMonthExpenseBalance += (paidByParentNormal - parentNormalExpenseShare);
 
-  const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
-  const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+  // Reimbursements
+  const reimbursements = unsettledExpenses.filter(e => e.category === 'Reimbursement');
+  reimbursements.forEach(exp => {
+    if (exp.paidBy === parent) {
+      // This parent OWES the other, so it's a debit.
+      currentMonthExpenseBalance -= exp.amount;
+    } else {
+      // This parent is OWED, so it's a credit.
+      currentMonthExpenseBalance += exp.amount;
+    }
+  });
+
 
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
   const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
   if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
     if (childSupport.paidBy === parent) {
+      // Parent is Payer, so it's a debit.
       childSupportBalance = -childSupport.amount;
     } else {
+      // Parent is Recipient, so it's a credit.
       childSupportBalance = childSupport.amount;
     }
   }
 
-  const currentMonthNetBalance = expenseBalance + childSupportBalance;
+  const currentMonthNetBalance = currentMonthExpenseBalance + childSupportBalance;
   const totalNetBalance = previousMonthsTotalBalance + currentMonthNetBalance;
   const isSettled = Math.abs(totalNetBalance) < 0.01;
 

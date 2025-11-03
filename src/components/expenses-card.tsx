@@ -124,9 +124,12 @@ export function ExpensesCard({
     
     for (const expense of expenses) {
       if (expense.category === 'Reimbursement') {
-        // A reimbursement is a direct transfer. The "share" belongs to the recipient.
-        if (expense.paidBy !== parent) {
+        // For a reimbursement, the parent marked as "Paid By" owes the other parent.
+        // So, this parent's share is the full amount, and the other's is negative.
+        if (expense.paidBy === parent) {
           totalShare += expense.amount;
+        } else {
+          totalShare -= expense.amount;
         }
       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
         const medicalParentSplitPercent = medicalExpenseSplit[parent] / 100;
@@ -138,8 +141,11 @@ export function ExpensesCard({
     }
     
     const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
-    if (!isFutureMonth && childSupport.paidBy === parent) {
-      totalShare += childSupport.amount;
+    if (!isFutureMonth && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
+      // Child support is a direct payment, it adds to the share of the person who is supposed to pay.
+      if (childSupport.paidBy === parent) {
+        totalShare += childSupport.amount;
+      }
     }
     
     return totalShare;
@@ -244,23 +250,31 @@ export function ExpensesCard({
                   if (item.type === 'expense') {
                     const expense = expenses.find(e => e.id === item.id)!;
                     if (expense.category === 'Reimbursement') {
-                      if(expense.paidBy === 'Parent 1') {
-                        parent2Share = expense.amount;
-                      } else {
+                      // The parent marked as "Paid By" is the one who OWES the money.
+                      // Their share is the full amount. The other parent is receiving, so their "share" is negative.
+                      if (expense.paidBy === 'Parent 1') {
                         parent1Share = expense.amount;
+                        parent2Share = -expense.amount;
+                      } else {
+                        parent2Share = expense.amount;
+                        parent1Share = -expense.amount;
                       }
+                      // For display, we show positive shares. The negative indicates a credit in calculations.
+                      // Let's show the owed amount in the correct column.
+                      if (expense.paidBy === 'Parent 1') {
+                        parent1Share = expense.amount;
+                        parent2Share = 0;
+                      } else {
+                        parent2Share = expense.amount;
+                        parent1Share = 0;
+                      }
+
                     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                       parent1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
                       parent2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
                     } else {
                       parent1Share = item.amount * (expenseSplit['Parent 1'] / 100);
                       parent2Share = item.amount * (expenseSplit['Parent 2'] / 100);
-                    }
-
-                    const payer = item.paidBy as Parent;
-                    const payerShare = payer === 'Parent 1' ? parent1Share : parent2Share;
-                    if (payerShare === item.amount) {
-                      reimbursementRequired = false;
                     }
 
                   } else if (item.type === 'child_support') {
@@ -278,27 +292,23 @@ export function ExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'destructive' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                       </TableCell>
                       <TableCell>
-                        {!reimbursementRequired ? (
-                          <Badge variant="outline">Not Required</Badge>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`settle-switch-${item.id}`}
-                              checked={item.status === 'Settled'}
-                              onCheckedChange={() => handleStatusToggle(item)}
-                              aria-label={`Settle payment for ${item.description}`}
-                            />
-                            <Label htmlFor={`settle-switch-${item.id}`}>
-                              {item.status}
-                            </Label>
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id={`settle-switch-${item.id}`}
+                            checked={item.status === 'Settled'}
+                            onCheckedChange={() => handleStatusToggle(item)}
+                            aria-label={`Settle payment for ${item.description}`}
+                          />
+                          <Label htmlFor={`settle-switch-${item.id}`}>
+                            {item.status}
+                          </Label>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}

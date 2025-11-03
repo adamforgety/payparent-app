@@ -226,8 +226,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const getShare = (transaction: Transaction, parent: Parent) => {
     if (transaction.category === 'Reimbursement') {
         const expense = transaction as EnrichedExpense;
-        // The share of a reimbursement belongs to the person receiving the money.
-        return expense.paidBy !== parent ? expense.amount : 0;
+        // The parent marked "Paid By" is the one who OWES. Their share is the full amount.
+        return expense.paidBy === parent ? expense.amount : 0;
     } else if (transaction.category !== 'Child Support') {
         const expense = transaction as EnrichedExpense;
         const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;

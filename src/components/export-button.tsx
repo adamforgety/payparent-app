@@ -4,7 +4,7 @@ import { format, startOfMonth } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { DropdownMenuItem } from './ui/dropdown-menu';
@@ -60,11 +60,11 @@ export function ExportButton({
           parent2Share = item.amount;
         }
       } else if (item.category === 'Reimbursement') {
-        // The share of a reimbursement belongs to the person receiving the money.
+        // The "Paid By" parent is the one who OWES.
         if (item.paidBy === 'Parent 1') {
-          parent2Share = item.amount;
-        } else {
           parent1Share = item.amount;
+        } else {
+          parent2Share = item.amount;
         }
       } else {
         const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;

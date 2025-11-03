@@ -83,6 +83,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
   });
 
   const receiptRef = form.register('receipt');
+  const selectedCategory = form.watch('category');
 
   useEffect(() => {
     if (isOpen) {
@@ -159,7 +160,12 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Expense</DialogTitle>
-          <DialogDescription>Update the details of this expense.</DialogDescription>
+          <DialogDescription>
+            {selectedCategory === 'Reimbursement'
+              ? 'Update the reimbursement details. The parent selected as "Paid By" is the one who owes the money.'
+              : 'Update the details of this expense.'
+            }
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -223,7 +229,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
                 name="paidBy"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Paid By</FormLabel>
+                    <FormLabel>{selectedCategory === 'Reimbursement' ? 'Owed By' : 'Paid By'}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>

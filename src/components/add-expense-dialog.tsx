@@ -94,6 +94,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
   });
 
   const receiptRef = form.register('receipt');
+  const selectedCategory = form.watch('category');
 
   const onSubmit = async (values: FormValues) => {
     let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>> = {};
@@ -156,7 +157,10 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
-            Log a new child-related expense. It will be added to the correct month based on the date you select.
+            {selectedCategory === 'Reimbursement' 
+              ? 'Log a reimbursement. The parent selected as "Paid By" is the one who owes the money.'
+              : 'Log a new child-related expense. It will be added to the correct month based on the date you select.'
+            }
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -224,7 +228,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
                 name="paidBy"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Paid By</FormLabel>
+                    <FormLabel>{selectedCategory === 'Reimbursement' ? 'Owed By' : 'Paid By'}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}

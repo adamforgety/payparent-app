@@ -48,10 +48,8 @@ const calculateShare = (
   let totalShare = 0;
   for (const expense of expenses) {
     if (expense.category === 'Reimbursement') {
-      // The share of a reimbursement belongs to the person receiving the money.
-      if (expense.paidBy !== p) {
-        totalShare += expense.amount;
-      }
+      // Reimbursements are handled separately
+      continue;
     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
@@ -95,12 +93,24 @@ export function SummaryDetailsCard({
         if (!monthData) return { monthId, balance: 0 };
 
         const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-        const unsettledPaidByParent = unsettledExpenses
+        let expenseBalance = 0;
+
+        const normalExpenses = unsettledExpenses.filter(e => e.category !== 'Reimbursement');
+        const parentNormalExpenseShare = calculateShare(normalExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
+        const paidByParentNormal = normalExpenses
           .filter(exp => exp.paidBy === parent)
           .reduce((sum, exp) => sum + exp.amount, 0);
+        expenseBalance += (paidByParentNormal - parentNormalExpenseShare);
 
-        const parentExpenseShare = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
-        const expenseBalance = unsettledPaidByParent - parentExpenseShare;
+        const reimbursements = unsettledExpenses.filter(e => e.category === 'Reimbursement');
+        reimbursements.forEach(exp => {
+          if (exp.paidBy === parent) {
+            expenseBalance -= exp.amount;
+          } else {
+            expenseBalance += exp.amount;
+          }
+        });
+
 
         let childSupportBalance = 0;
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
@@ -124,16 +134,27 @@ export function SummaryDetailsCard({
   // --- Calculate Current Month's Balance ---
   const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
   
-  const unsettledPaidByParent = unsettledExpenses
+  // Normal Expenses
+  const normalExpenses = unsettledExpenses.filter(e => e.category !== 'Reimbursement');
+  const parentExpenseShare = calculateShare(normalExpenses, expenseSplit, medicalExpenseSplit, parent);
+  const paidByParent = normalExpenses
     .filter(exp => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
   
-  const unsettledPaidByOtherParent = unsettledExpenses
-    .filter(exp => exp.paidBy === otherParent)
-    .reduce((sum, exp) => sum + exp.amount, 0);
+  // Reimbursements
+  let reimbursementCredit = 0; // Money this parent is owed
+  let reimbursementDebit = 0; // Money this parent owes
 
+  unsettledExpenses.filter(e => e.category === 'Reimbursement').forEach(exp => {
+      if (exp.paidBy === parent) {
+          // This parent OWES, so it's a debit
+          reimbursementDebit += exp.amount;
+      } else {
+          // This parent is OWED, so it's a credit
+          reimbursementCredit += exp.amount;
+      }
+  });
+  
 
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
@@ -146,16 +167,19 @@ export function SummaryDetailsCard({
     }
   }
 
-  const totalNetBalance = previousMonthsTotalBalance + unsettledPaidByParent - parentExpenseShare + childSupportBalance;
+  const amountOwedToYou = (paidByParent - parentExpenseShare) + reimbursementCredit;
+  const amountYouOwe = (parentExpenseShare - paidByParent) + reimbursementDebit;
+
+  const totalNetBalance = previousMonthsTotalBalance + (paidByParent - parentExpenseShare) + reimbursementCredit - reimbursementDebit + childSupportBalance;
   
   const renderBalanceIcon = (balance: number) => {
     if (Math.abs(balance) < 0.01) return <Circle className="h-5 w-5 text-primary" />;
     if (balance > 0) return <ArrowUpCircle className="h-5 w-5 text-green-500" />;
     return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
   };
-
-  const amountYouOwe = parentExpenseShare - unsettledPaidByParent > 0 ? parentExpenseShare - unsettledPaidByParent : 0;
-  const amountOwedToYou = unsettledPaidByParent - parentExpenseShare > 0 ? unsettledPaidByParent - parentExpenseShare : 0;
+  
+  const finalAmountOwedToYou = amountOwedToYou > 0 ? amountOwedToYou : 0;
+  const finalAmountYouOwe = amountYouOwe > 0 ? amountYouOwe : 0;
 
 
   return (
@@ -175,22 +199,22 @@ export function SummaryDetailsCard({
         <ul className="space-y-4 text-lg">
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {renderBalanceIcon(amountOwedToYou)}
+              {renderBalanceIcon(finalAmountOwedToYou)}
               <span className="text-base">{otherParentName} Owes You</span>
             </div>
             <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-            <span className={cn("font-semibold text-lg", amountOwedToYou > 0 ? "text-green-600" : "text-muted-foreground")}>
-              +${amountOwedToYou.toFixed(2)}
+            <span className={cn("font-semibold text-lg", finalAmountOwedToYou > 0 ? "text-green-600" : "text-muted-foreground")}>
+              +${finalAmountOwedToYou.toFixed(2)}
             </span>
           </li>
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {renderBalanceIcon(-amountYouOwe)}
+              {renderBalanceIcon(-finalAmountYouOwe)}
               <span className="text-base">You Owe {otherParentName}</span>
             </div>
             <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-            <span className={cn("font-semibold text-lg", amountYouOwe > 0 ? "text-destructive" : "text-muted-foreground")}>
-              -${amountYouOwe.toFixed(2)}
+            <span className={cn("font-semibold text-lg", finalAmountYouOwe > 0 ? "text-destructive" : "text-muted-foreground")}>
+              -${finalAmountYouOwe.toFixed(2)}
             </span>
           </li>
            {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
