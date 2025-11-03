@@ -1,6 +1,6 @@
 'use client';
 
-import { format, isAfter, startOfMonth, parse, getYear } from 'date-fns';
+import { format, isAfter, startOfMonth, parse } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -234,7 +234,8 @@ export function AllUnsettledExpensesCard({
           <div>
             <CardTitle>All Unsettled Items</CardTitle>
             <CardDescription>
-              A ledger of all outstanding expenses and child support payments.
+              A complete ledger of all outstanding expenses and child support payments. 
+              Use the filters to narrow your view.
             </CardDescription>
           </div>
         </div>

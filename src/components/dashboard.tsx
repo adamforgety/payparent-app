@@ -2,7 +2,7 @@
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Plus, Link2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -72,6 +72,12 @@ function DashboardComponent() {
     }
   }, [appData, monthId, currentDate, updateAppData, isLoading]);
 
+  useEffect(() => {
+    // Sync the unsettled filters with the main date scroller
+    setUnsettledYearFilter(String(getYear(currentDate)));
+    setUnsettledMonthFilter(format(currentDate, 'yyyy-MM'));
+  }, [currentDate]);
+
 
   const currentMonthData = useMemo((): MonthData | null => {
     return appData?.months?.[monthId] ?? null;
@@ -118,20 +124,20 @@ function DashboardComponent() {
       });
       return;
     }
-    // When user navigates away from unsettled tab, reset filters
-    if (value !== 'expenses' && expensesSubTab !== 'unsettled') {
-      setUnsettledYearFilter(null);
-      setUnsettledMonthFilter(null);
+    // When user navigates away from unsettled tab, sync filters back to current date
+    if (value !== 'expenses' || (value === 'expenses' && expensesSubTab !== 'unsettled')) {
+      setUnsettledYearFilter(String(getYear(currentDate)));
+      setUnsettledMonthFilter(format(currentDate, 'yyyy-MM'));
     }
     setActiveTab(value);
   };
 
-  const handleGoToUnsettled = (monthId: string) => {
-    const year = monthId.substring(0, 4);
+  const handleGoToUnsettled = (monthIdToGo: string) => {
+    const year = monthIdToGo.substring(0, 4);
     setActiveTab('expenses');
     setExpensesSubTab('unsettled');
     setUnsettledYearFilter(year);
-    setUnsettledMonthFilter(monthId);
+    setUnsettledMonthFilter(monthIdToGo);
   };
 
   const handleDeleteExpense = (expenseId: string, expenseMonthId: string) => {
