@@ -168,7 +168,7 @@ export function SettleBalanceCard({
               : `$${Math.abs(totalNetBalance).toFixed(2)}`}
           </p>
         <p className="pt-4 text-xs text-muted-foreground flex-grow">
-          This is the total balance based on all unsettled items from all months.
+          This balance includes all unsettled items from the current and prior months.
         </p>
       </CardContent>
     </Card>
