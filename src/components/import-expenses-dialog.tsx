@@ -115,6 +115,8 @@ function flexibleDateParse(dateString: string): Date | null {
     'MM-dd-yyyy',
     'M-d-yyyy',
     'yyyy/MM/dd',
+    'MM/dd/yy',
+    'M/d/yy',
   ];
 
   for (const fmt of formats) {
