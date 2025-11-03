@@ -122,34 +122,38 @@ export function ExpensesCard({
   const calculateShare = (parent: Parent) => {
     let totalShare = 0;
     
-    for (const expense of expenses) {
-      if (expense.category === 'Reimbursement') {
-        // For a reimbursement, the parent marked as "Paid By" owes the other parent.
-        // So, this parent's share is the full amount, and the other's is negative.
-        if (expense.paidBy === parent) {
-          totalShare += expense.amount;
+    // First, handle all non-reimbursement expenses
+    const standardExpenses = expenses.filter(exp => exp.category !== 'Reimbursement');
+    for (const expense of standardExpenses) {
+        if (expense.category === 'Medical' || expense.category === 'Child Care') {
+            const medicalParentSplitPercent = medicalExpenseSplit[parent] / 100;
+            totalShare += expense.amount * medicalParentSplitPercent;
         } else {
-          totalShare -= expense.amount;
+            const parentSplitPercent = expenseSplit[parent] / 100;
+            totalShare += expense.amount * parentSplitPercent;
         }
-      } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-        const medicalParentSplitPercent = medicalExpenseSplit[parent] / 100;
-        totalShare += expense.amount * medicalParentSplitPercent;
-      } else {
-        const parentSplitPercent = expenseSplit[parent] / 100;
-        totalShare += expense.amount * parentSplitPercent;
-      }
     }
-    
+
+    // Then, add direct transfers: child support and reimbursements
     const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
     if (!isFutureMonth && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
-      // Child support is a direct payment, it adds to the share of the person who is supposed to pay.
-      if (childSupport.paidBy === parent) {
-        totalShare += childSupport.amount;
-      }
+        // Child support adds to the share of the person who is supposed to pay.
+        if (childSupport.paidBy === parent) {
+            totalShare += childSupport.amount;
+        }
+    }
+
+    const reimbursements = expenses.filter(exp => exp.category === 'Reimbursement');
+    for (const expense of reimbursements) {
+        // The parent marked as "Paid By" is the one who OWES the money.
+        // Their share is the full amount of the reimbursement.
+        if (expense.paidBy === parent) {
+            totalShare += expense.amount;
+        }
     }
     
     return totalShare;
-  };
+};
   
   const parent1TotalShare = calculateShare('Parent 1');
   const parent2TotalShare = calculateShare('Parent 2');
@@ -245,7 +249,6 @@ export function ExpensesCard({
                 filteredItems.map((item) => {
                   let parent1Share = 0;
                   let parent2Share = 0;
-                  let reimbursementRequired = true;
 
                   if (item.type === 'expense') {
                     const expense = expenses.find(e => e.id === item.id)!;
@@ -259,16 +262,6 @@ export function ExpensesCard({
                         parent2Share = expense.amount;
                         parent1Share = -expense.amount;
                       }
-                      // For display, we show positive shares. The negative indicates a credit in calculations.
-                      // Let's show the owed amount in the correct column.
-                      if (expense.paidBy === 'Parent 1') {
-                        parent1Share = expense.amount;
-                        parent2Share = 0;
-                      } else {
-                        parent2Share = expense.amount;
-                        parent1Share = 0;
-                      }
-
                     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                       parent1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
                       parent2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
@@ -276,7 +269,6 @@ export function ExpensesCard({
                       parent1Share = item.amount * (expenseSplit['Parent 1'] / 100);
                       parent2Share = item.amount * (expenseSplit['Parent 2'] / 100);
                     }
-
                   } else if (item.type === 'child_support') {
                     if (item.paidBy === 'Parent 1') {
                       parent1Share = item.amount;
@@ -292,7 +284,7 @@ export function ExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'destructive' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
@@ -313,11 +305,11 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right">
-                        ${parent1Share.toFixed(2)}
+                      <TableCell className="text-right text-green-600">
+                        ${parent1Share >= 0 ? parent1Share.toFixed(2) : `(${Math.abs(parent1Share).toFixed(2)})`}
                       </TableCell>
-                      <TableCell className="text-right">
-                        ${parent2Share.toFixed(2)}
+                      <TableCell className="text-right text-green-600">
+                        ${parent2Share >= 0 ? parent2Share.toFixed(2) : `(${Math.abs(parent2Share).toFixed(2)})`}
                       </TableCell>
                       <TableCell className="no-print text-center">
                           {item.type === 'expense' && item.receiptUrl && (

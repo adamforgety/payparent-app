@@ -143,11 +143,11 @@ export function AllUnsettledExpensesCard({
           const expense = item.originalExpense!;
           if (expense.category === 'Reimbursement') {
             if (expense.paidBy === 'Parent 1') {
-              parent1ItemShare = -expense.amount;
-              parent2ItemShare = expense.amount;
-            } else {
               parent1ItemShare = expense.amount;
               parent2ItemShare = -expense.amount;
+            } else {
+              parent1ItemShare = -expense.amount;
+              parent2ItemShare = expense.amount;
             }
           } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
             parent1ItemShare = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
@@ -221,11 +221,11 @@ export function AllUnsettledExpensesCard({
                       const expense = item.originalExpense!;
                       if (expense.category === 'Reimbursement') {
                           if (expense.paidBy === 'Parent 1') {
-                              parent1Share = -expense.amount;
-                              parent2Share = expense.amount;
-                          } else {
                               parent1Share = expense.amount;
                               parent2Share = -expense.amount;
+                          } else {
+                              parent1Share = -expense.amount;
+                              parent2Share = expense.amount;
                           }
                       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                           parent1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
@@ -249,7 +249,7 @@ export function AllUnsettledExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'destructive' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
@@ -268,11 +268,11 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right">
-                        ${parent1Share.toFixed(2)}
+                       <TableCell className="text-right text-green-600">
+                        ${parent1Share >= 0 ? parent1Share.toFixed(2) : `(${Math.abs(parent1Share).toFixed(2)})`}
                       </TableCell>
-                      <TableCell className="text-right">
-                        ${parent2Share.toFixed(2)}
+                      <TableCell className="text-right text-green-600">
+                        ${parent2Share >= 0 ? parent2Share.toFixed(2) : `(${Math.abs(parent2Share).toFixed(2)})`}
                       </TableCell>
                       <TableCell className="no-print text-center">
                         {item.type === 'expense' && item.receiptUrl && (
