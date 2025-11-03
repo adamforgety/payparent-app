@@ -45,13 +45,9 @@ const calculateShare = (
   let totalShare = 0;
   for (const expense of expenses) {
      if (expense.category === 'Reimbursement') {
-      // The "Paid By" parent is the one who OWES, so their share is the full amount.
-      // The other parent is owed, so we don't add to their share from this transaction.
-      if (expense.paidBy === p) {
-        // This parent owes the other parent
-      } else {
-        // This parent is owed by the other parent
-      }
+      // Reimbursements are direct transfers, not shared expenses.
+      // Their impact is calculated in the main balance logic.
+      continue;
     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
@@ -100,7 +96,7 @@ export function SettleBalanceCard({
           .reduce((sum, exp) => sum + exp.amount, 0);
         expenseBalance += (paidByParentNormal - parentNormalExpenseShare);
 
-        // Reimbursements
+        // Reimbursements - treated as direct transfers
         const reimbursements = unsettledExpenses.filter(e => e.category === 'Reimbursement');
         reimbursements.forEach(exp => {
           if (exp.paidBy === parent) {
@@ -142,7 +138,7 @@ export function SettleBalanceCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
   currentMonthExpenseBalance += (paidByParentNormal - parentNormalExpenseShare);
 
-  // Reimbursements
+  // Reimbursements - treated as direct transfers
   const reimbursements = unsettledExpenses.filter(e => e.category === 'Reimbursement');
   reimbursements.forEach(exp => {
     if (exp.paidBy === parent) {
@@ -223,5 +219,3 @@ export function SettleBalanceCard({
     </Card>
   );
 }
-
-    

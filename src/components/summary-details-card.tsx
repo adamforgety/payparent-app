@@ -48,7 +48,8 @@ const calculateShare = (
   let totalShare = 0;
   for (const expense of expenses) {
     if (expense.category === 'Reimbursement') {
-      // Reimbursements are handled separately
+      // Reimbursements are direct transfers, not shared expenses.
+      // Their impact is calculated in the main balance logic.
       continue;
     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
@@ -142,15 +143,15 @@ export function SummaryDetailsCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
   
   // Reimbursements
-  let reimbursementCredit = 0; // Money this parent is owed
-  let reimbursementDebit = 0; // Money this parent owes
+  let reimbursementCredit = 0; // Money this parent is owed from the other parent
+  let reimbursementDebit = 0; // Money this parent owes the other parent
 
   unsettledExpenses.filter(e => e.category === 'Reimbursement').forEach(exp => {
       if (exp.paidBy === parent) {
-          // This parent OWES, so it's a debit
+          // This parent OWES (is the payer of the reimbursement), so it's a debit
           reimbursementDebit += exp.amount;
       } else {
-          // This parent is OWED, so it's a credit
+          // This parent is OWED (is the receiver of the reimbursement), so it's a credit
           reimbursementCredit += exp.amount;
       }
   });
@@ -166,20 +167,24 @@ export function SummaryDetailsCard({
       childSupportBalance = childSupport.amount;
     }
   }
+  
+  // This parent's credit from paying more than their share of normal expenses
+  const expenseCredit = Math.max(0, paidByParent - parentExpenseShare);
+  // This parent's debit from paying less than their share of normal expenses
+  const expenseDebit = Math.max(0, parentExpenseShare - paidByParent);
 
-  const amountOwedToYou = (paidByParent - parentExpenseShare) + reimbursementCredit;
-  const amountYouOwe = (parentExpenseShare - paidByParent) + reimbursementDebit;
+  // Total credits for this parent
+  const totalCredit = expenseCredit + reimbursementCredit + (childSupportBalance > 0 ? childSupportBalance : 0);
+  // Total debits for this parent
+  const totalDebit = expenseDebit + reimbursementDebit + (childSupportBalance < 0 ? Math.abs(childSupportBalance) : 0);
 
-  const totalNetBalance = previousMonthsTotalBalance + (paidByParent - parentExpenseShare) + reimbursementCredit - reimbursementDebit + childSupportBalance;
+  const totalNetBalance = previousMonthsTotalBalance + totalCredit - totalDebit;
   
   const renderBalanceIcon = (balance: number) => {
     if (Math.abs(balance) < 0.01) return <Circle className="h-5 w-5 text-primary" />;
     if (balance > 0) return <ArrowUpCircle className="h-5 w-5 text-green-500" />;
     return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
   };
-  
-  const finalAmountOwedToYou = amountOwedToYou > 0 ? amountOwedToYou : 0;
-  const finalAmountYouOwe = amountYouOwe > 0 ? amountYouOwe : 0;
 
 
   return (
@@ -199,36 +204,24 @@ export function SummaryDetailsCard({
         <ul className="space-y-4 text-lg">
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {renderBalanceIcon(finalAmountOwedToYou)}
+              {renderBalanceIcon(totalCredit)}
               <span className="text-base">{otherParentName} Owes You</span>
             </div>
             <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-            <span className={cn("font-semibold text-lg", finalAmountOwedToYou > 0 ? "text-green-600" : "text-muted-foreground")}>
-              +${finalAmountOwedToYou.toFixed(2)}
+            <span className={cn("font-semibold text-lg", totalCredit > 0 ? "text-green-600" : "text-muted-foreground")}>
+              +${totalCredit.toFixed(2)}
             </span>
           </li>
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {renderBalanceIcon(-finalAmountYouOwe)}
+              {renderBalanceIcon(-totalDebit)}
               <span className="text-base">You Owe {otherParentName}</span>
             </div>
             <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-            <span className={cn("font-semibold text-lg", finalAmountYouOwe > 0 ? "text-destructive" : "text-muted-foreground")}>
-              -${finalAmountYouOwe.toFixed(2)}
+            <span className={cn("font-semibold text-lg", totalDebit > 0 ? "text-destructive" : "text-muted-foreground")}>
+              -${totalDebit.toFixed(2)}
             </span>
           </li>
-           {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
-            <li className="flex items-center justify-between">
-               <div className="flex items-center gap-3">
-                {renderBalanceIcon(childSupportBalance)}
-                <span className="text-base">Child Support</span>
-              </div>
-              <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-              <span className={cn('font-semibold text-lg', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                {childSupportBalance < 0 ? `-$${Math.abs(childSupportBalance).toFixed(2)}` : `+$${childSupportBalance.toFixed(2)}`}
-              </span>
-            </li>
-          )}
           {previousBalances.length > 0 && (
              <li className="w-full items-center justify-between">
                <Accordion type="single" collapsible className="w-full">
@@ -274,5 +267,3 @@ export function SummaryDetailsCard({
     </Card>
   );
 }
-
-    
