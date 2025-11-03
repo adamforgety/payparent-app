@@ -133,7 +133,6 @@ export function ExpensesCard({
         let p1Share = 0;
         let p2Share = 0;
 
-        // Step 1: Calculate each parent's share of the cost
         if (item.type === 'expense') {
             const expense = item as Expense;
             if (expense.category === 'Reimbursement') {
@@ -157,22 +156,16 @@ export function ExpensesCard({
             }
         }
 
-        // Step 2: Calculate "Owed" and "Paid" based on status
         if (item.status === 'Unsettled') {
             const p1InitialPaid = item.paidBy === 'Parent 1' ? item.amount : 0;
             const p2InitialPaid = item.paidBy === 'Parent 2' ? item.amount : 0;
-
             const p1Net = p1Share - p1InitialPaid;
             const p2Net = p2Share - p2InitialPaid;
-
             if (p1Net > 0) p1Owes += p1Net;
             if (p2Net > 0) p2Owes += p2Net;
-
             p1Paid += p1InitialPaid;
             p2Paid += p2InitialPaid;
-        } else { // item.status === 'Settled'
-            // For settled items, the "Owed" is $0.
-            // The "Paid" amount reflects each parent's actual share of the cost.
+        } else { // 'Settled'
             p1Paid += p1Share;
             p2Paid += p2Share;
         }
@@ -286,40 +279,36 @@ export function ExpensesCard({
                   let p2Net = 0;
 
                   if (item.status === 'Unsettled') {
+                    let p1Share = 0;
+                    let p2Share = 0;
+
                     if (item.type === 'expense') {
-                      const expense = item as Expense;
-                      let p1Share = 0;
-                      let p2Share = 0;
-
-                      if (expense.category === 'Reimbursement') {
-                          if (expense.paidBy === 'Parent 1') {
-                              p2Share = expense.amount;
-                          } else {
-                              p1Share = expense.amount;
-                          }
-                      } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                          p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-                          p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
-                      } else {
-                          p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-                          p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
-                      }
-                      
-                      const p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                      const p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-
-                      p1Net = p1Share - p1Paid;
-                      p2Net = p2Share - p2Paid;
-
+                        const expense = item as Expense;
+                        if (expense.category === 'Reimbursement') {
+                            if (expense.paidBy === 'Parent 1') {
+                                p2Share = expense.amount;
+                            } else {
+                                p1Share = expense.amount;
+                            }
+                        } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+                            p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                            p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
+                        } else {
+                            p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
+                            p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
+                        }
                     } else if (item.type === 'child_support') {
                         if (item.paidBy === 'Parent 1') { // Parent 1 paid child support to Parent 2
-                            p2Net = -item.amount; // Parent 2 has a credit
-                            p1Net = item.amount; // Parent 1 has a debit (owes this)
+                            p1Share = item.amount;
                         } else if (item.paidBy === 'Parent 2') { // Parent 2 paid child support to Parent 1
-                            p1Net = -item.amount; // Parent 1 has a credit
-                            p2Net = item.amount; // Parent 2 has a debit (owes this)
+                            p2Share = item.amount;
                         }
                     }
+
+                    const p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+                    const p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+                    p1Net = p1Share - p1Paid;
+                    p2Net = p2Share - p2Paid;
                   }
                   
                   const p1Owes = p1Net > 0 ? p1Net : 0;
