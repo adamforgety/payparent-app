@@ -50,26 +50,26 @@ export function ExportButton({
     ];
 
     const dataToExport = allItems.map((item) => {
-      let parent1Share = 0;
-      let parent2Share = 0;
+      let parent1Owes = 0;
+      let parent2Owes = 0;
 
       if (item.category === 'Child Support') {
         if (item.paidBy === 'Parent 1') {
-          parent1Share = item.amount;
+          parent1Owes = item.amount;
         } else if (item.paidBy === 'Parent 2') {
-          parent2Share = item.amount;
+          parent2Owes = item.amount;
         }
       } else if (item.category === 'Reimbursement') {
         // The "Paid By" parent is the one who OWES.
         if (item.paidBy === 'Parent 1') {
-          parent1Share = item.amount;
+          parent1Owes = item.amount;
         } else {
-          parent2Share = item.amount;
+          parent2Owes = item.amount;
         }
       } else {
         const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-        parent1Share = item.amount * (split['Parent 1'] / 100);
-        parent2Share = item.amount * (split['Parent 2'] / 100);
+        parent1Owes = item.amount * (split['Parent 1'] / 100);
+        parent2Owes = item.amount * (split['Parent 2'] / 100);
       }
 
       return {
@@ -78,8 +78,8 @@ export function ExportButton({
         Category: item.category,
         'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy],
         Amount: item.amount,
-        [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
-        [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
+        [`${parentNames['Parent 1']} Owes`]: parent1Owes.toFixed(2),
+        [`${parentNames['Parent 2']} Owes`]: parent2Owes.toFixed(2),
       };
     });
 

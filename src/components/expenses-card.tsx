@@ -118,9 +118,9 @@ export function ExpensesCard({
   const hasUnsettledItems = allItems.some(item => item.status === 'Unsettled');
   const hasSettledItems = allItems.some(item => item.status === 'Settled');
 
-  const { parent1TotalShare, parent2TotalShare } = useMemo(() => {
-    let p1Share = 0;
-    let p2Share = 0;
+  const { parent1TotalOwes, parent2TotalOwes } = useMemo(() => {
+    let p1Owes = 0;
+    let p2Owes = 0;
 
     filteredItems.forEach(item => {
       let itemP1Share = 0;
@@ -130,10 +130,8 @@ export function ExpensesCard({
         if (expense.category === 'Reimbursement') {
           if (expense.paidBy === 'Parent 1') {
             itemP1Share = expense.amount;
-            itemP2Share = -expense.amount;
           } else {
             itemP2Share = expense.amount;
-            itemP1Share = -expense.amount;
           }
         } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
           itemP1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
@@ -149,11 +147,11 @@ export function ExpensesCard({
           itemP2Share = item.amount;
         }
       }
-      p1Share += itemP1Share;
-      p2Share += itemP2Share;
+      p1Owes += itemP1Share;
+      p2Owes += itemP2Share;
     });
 
-    return { parent1TotalShare: p1Share, parent2TotalShare: p2Share };
+    return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes };
   }, [filteredItems, expenses, expenseSplit, medicalExpenseSplit, childSupport]);
 
   const totalExpenses = filteredItems
@@ -240,8 +238,8 @@ export function ExpensesCard({
                 <TableHead>Paid By</TableHead>
                 <TableHead className="w-[120px]">Settlement Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">{parentNames['Parent 1']}'s Share</TableHead>
-                <TableHead className="text-right">{parentNames['Parent 2']}'s Share</TableHead>
+                <TableHead className="text-right">{parentNames['Parent 1']} Owes</TableHead>
+                <TableHead className="text-right">{parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
               </TableRow>
@@ -249,44 +247,49 @@ export function ExpensesCard({
             <TableBody>
               {filteredItems.length > 0 ? (
                 filteredItems.map((item) => {
-                  let parent1Share = 0;
-                  let parent2Share = 0;
-                  let parent1Owes = false;
-                  let parent2Owes = false;
+                  let parent1Owes = 0;
+                  let parent2Owes = 0;
+                  
+                  let parent1IsOwed = false;
+                  let parent2IsOwed = false;
 
                   if (item.type === 'expense') {
                     const expense = expenses.find(e => e.id === item.id)!;
                     if (expense.category === 'Reimbursement') {
-                      if (expense.paidBy === 'Parent 1') {
-                        parent1Share = expense.amount;
-                        parent2Share = -expense.amount;
-                        parent1Owes = true;
-                      } else {
-                        parent2Share = expense.amount;
-                        parent1Share = -expense.amount;
-                        parent2Owes = true;
+                      if (expense.paidBy === 'Parent 1') { // Parent 1 owes
+                        parent1Owes = expense.amount;
+                        parent2IsOwed = true;
+                      } else { // Parent 2 owes
+                        parent2Owes = expense.amount;
+                        parent1IsOwed = true;
                       }
                     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                      parent1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-                      parent2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
+                      parent1Owes = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                      parent2Owes = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
                     } else {
-                      parent1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-                      parent2Share = item.amount * (expenseSplit['Parent 2'] / 100);
+                      parent1Owes = item.amount * (expenseSplit['Parent 1'] / 100);
+                      parent2Owes = item.amount * (expenseSplit['Parent 2'] / 100);
                     }
                      if (expense.category !== 'Reimbursement') {
-                      if (expense.paidBy === 'Parent 1') {
-                        parent2Owes = parent2Share > 0;
-                      } else {
-                        parent1Owes = parent1Share > 0;
-                      }
+                        if (expense.paidBy === 'Parent 1') {
+                            const p1Paid = expense.amount;
+                            const p1Share = parent1Owes;
+                            if(p1Paid < p1Share) parent1IsOwed = true;
+                            if(p1Paid > p1Share) parent2IsOwed = true;
+                        } else { // Parent 2 paid
+                           const p2Paid = expense.amount;
+                           const p2Share = parent2Owes;
+                           if(p2Paid < p2Share) parent2IsOwed = true;
+                           if(p2Paid > p2Share) parent1IsOwed = true;
+                        }
                     }
                   } else if (item.type === 'child_support') {
                     if (item.paidBy === 'Parent 1') {
-                      parent1Share = item.amount;
-                      parent1Owes = true;
+                      parent1Owes = item.amount;
+                      parent2IsOwed = true;
                     } else if (item.paidBy === 'Parent 2') {
-                      parent2Share = item.amount;
-                      parent2Owes = true;
+                      parent2Owes = item.amount;
+                      parent1IsOwed = true;
                     }
                   }
 
@@ -318,11 +321,11 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && parent1Owes && "text-destructive")}>
-                        ${parent1Share >= 0 ? parent1Share.toFixed(2) : `(${Math.abs(parent1Share).toFixed(2)})`}
+                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && parent1IsOwed && "text-destructive")}>
+                        ${parent1Owes.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && parent2Owes && "text-destructive")}>
-                        ${parent2Share >= 0 ? parent2Share.toFixed(2) : `(${Math.abs(parent2Share).toFixed(2)})`}
+                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && parent2IsOwed && "text-destructive")}>
+                        ${parent2Owes.toFixed(2)}
                       </TableCell>
                       <TableCell className="no-print text-center">
                           {item.type === 'expense' && item.receiptUrl && (
@@ -400,15 +403,15 @@ export function ExpensesCard({
         )}
         <Separator/>
         <div className="flex justify-between items-center">
-          <span className="font-semibold text-primary">{parentNames['Parent 1']}'s Total Share:</span>
+          <span className="font-semibold text-primary">{parentNames['Parent 1']} Owes:</span>
           <span className="font-bold text-base text-primary">
-            ${parent1TotalShare.toFixed(2)}
+            ${parent1TotalOwes.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="font-semibold text-primary">{parentNames['Parent 2']}'s Total Share:</span>
+          <span className="font-semibold text-primary">{parentNames['Parent 2']} Owes:</span>
           <span className="font-bold text-base text-primary">
-            ${parent2TotalShare.toFixed(2)}
+            ${parent2TotalOwes.toFixed(2)}
           </span>
         </div>
       </CardFooter>

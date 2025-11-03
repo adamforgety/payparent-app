@@ -129,10 +129,10 @@ export function AllUnsettledExpensesCard({
     });
   };
 
-  const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
+  const { totalAmount, totalParent1Owes, totalParent2Owes } = useMemo(() => {
      let amount = 0;
-     let p1Share = 0;
-     let p2Share = 0;
+     let p1Owes = 0;
+     let p2Owes = 0;
 
      allUnsettledItems.forEach(item => {
         amount += item.amount;
@@ -145,9 +145,9 @@ export function AllUnsettledExpensesCard({
           if (expense.category === 'Reimbursement') {
             if (expense.paidBy === 'Parent 1') {
               parent1ItemShare = expense.amount;
-              parent2ItemShare = -expense.amount;
+              parent2ItemShare = 0;
             } else {
-              parent1ItemShare = -expense.amount;
+              parent1ItemShare = 0;
               parent2ItemShare = expense.amount;
             }
           } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
@@ -165,11 +165,11 @@ export function AllUnsettledExpensesCard({
             }
         }
         
-        p1Share += parent1ItemShare;
-        p2Share += parent2ItemShare;
+        p1Owes += parent1ItemShare;
+        p2Owes += parent2ItemShare;
      });
 
-     return { totalAmount: amount, totalParent1Share: p1Share, totalParent2Share: p2Share };
+     return { totalAmount: amount, totalParent1Owes: p1Owes, totalParent2Owes: p2Owes };
 
   }, [allUnsettledItems]);
 
@@ -206,8 +206,8 @@ export function AllUnsettledExpensesCard({
                 <TableHead>Paid By</TableHead>
                 <TableHead className="w-[120px]">Settlement Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']}'s Share</TableHead>
-                <TableHead className="text-right">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']}'s Share</TableHead>
+                <TableHead className="text-right">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableHead>
+                <TableHead className="text-right">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
               </TableRow>
@@ -215,45 +215,50 @@ export function AllUnsettledExpensesCard({
             <TableBody>
               {allUnsettledItems.length > 0 ? (
                 allUnsettledItems.map((item) => {
-                  let parent1Share = 0;
-                  let parent2Share = 0;
-                  let parent1Owes = false;
-                  let parent2Owes = false;
+                  let parent1Owes = 0;
+                  let parent2Owes = 0;
+                  
+                  let parent1IsOwed = false;
+                  let parent2IsOwed = false;
 
                   if (item.type === 'expense') {
                       const expense = item.originalExpense!;
                       if (expense.category === 'Reimbursement') {
-                          if (expense.paidBy === 'Parent 1') {
-                              parent1Share = expense.amount;
-                              parent2Share = -expense.amount;
-                              parent1Owes = true;
-                          } else {
-                              parent1Share = -expense.amount;
-                              parent2Share = expense.amount;
-                              parent2Owes = true;
+                          if (expense.paidBy === 'Parent 1') { // Parent 1 owes
+                              parent1Owes = expense.amount;
+                              parent2IsOwed = true;
+                          } else { // Parent 2 owes
+                              parent2Owes = expense.amount;
+                              parent1IsOwed = true;
                           }
                       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                          parent1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
-                          parent2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
+                          parent1Owes = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
+                          parent2Owes = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
                       } else {
-                          parent1Share = item.amount * (item.expenseSplit['Parent 1'] / 100);
-                          parent2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
+                          parent1Owes = item.amount * (item.expenseSplit['Parent 1'] / 100);
+                          parent2Owes = item.amount * (item.expenseSplit['Parent 2'] / 100);
                       }
 
                       if (expense.category !== 'Reimbursement') {
                         if (expense.paidBy === 'Parent 1') {
-                          parent2Owes = parent2Share > 0;
-                        } else {
-                          parent1Owes = parent1Share > 0;
+                            const p1Paid = expense.amount;
+                            const p1Share = parent1Owes;
+                            if(p1Paid < p1Share) parent1IsOwed = true;
+                            if(p1Paid > p1Share) parent2IsOwed = true;
+                        } else { // Parent 2 paid
+                           const p2Paid = expense.amount;
+                           const p2Share = parent2Owes;
+                           if(p2Paid < p2Share) parent2IsOwed = true;
+                           if(p2Paid > p2Share) parent1IsOwed = true;
                         }
                       }
                   } else if (item.type === 'child_support') {
                       if (item.paidBy === 'Parent 1') {
-                          parent1Share = item.amount;
-                          parent1Owes = true;
+                          parent1Owes = item.amount;
+                          parent2IsOwed = true;
                       } else if (item.paidBy === 'Parent 2') {
-                          parent2Share = item.amount;
-                          parent2Owes = true;
+                          parent2Owes = item.amount;
+                          parent1IsOwed = true;
                       }
                   }
 
@@ -283,11 +288,11 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", parent1Owes && "text-destructive")}>
-                        ${parent1Share >= 0 ? parent1Share.toFixed(2) : `(${Math.abs(parent1Share).toFixed(2)})`}
+                       <TableCell className={cn("text-right text-primary", parent1IsOwed && "text-destructive")}>
+                        ${parent1Owes.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", parent2Owes && "text-destructive")}>
-                        ${parent2Share >= 0 ? parent2Share.toFixed(2) : `(${Math.abs(parent2Share).toFixed(2)})`}
+                      <TableCell className={cn("text-right text-primary", parent2IsOwed && "text-destructive")}>
+                        ${parent2Owes.toFixed(2)}
                       </TableCell>
                       <TableCell className="no-print text-center">
                         {item.type === 'expense' && item.receiptUrl && (
@@ -358,10 +363,10 @@ export function AllUnsettledExpensesCard({
                         ${totalAmount.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
-                        ${totalParent1Share.toFixed(2)}
+                        ${totalParent1Owes.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
-                        ${totalParent2Share.toFixed(2)}
+                        ${totalParent2Owes.toFixed(2)}
                     </TableCell>
                     <TableCell colSpan={2}></TableCell>
                     </TableRow>

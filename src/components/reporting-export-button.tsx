@@ -38,28 +38,28 @@ export function ReportingExportButton({
   const handleExport = () => {
     const dataToExport = transactions
       .map((item) => {
-        let parent1Share = 0;
-        let parent2Share = 0;
+        let parent1Owes = 0;
+        let parent2Owes = 0;
 
         if (item.category === 'Child Support') {
           if (item.paidBy === 'Parent 1') {
-            parent1Share = item.amount;
+            parent1Owes = item.amount;
           } else if (item.paidBy === 'Parent 2') {
-            parent2Share = item.amount;
+            parent2Owes = item.amount;
           }
         } else {
           const expense = item as EnrichedExpense;
           if (expense.category === 'Reimbursement') {
             // The "Paid By" parent is the one who OWES.
             if (expense.paidBy === 'Parent 1') {
-              parent1Share = expense.amount;
+              parent1Owes = expense.amount;
             } else {
-              parent2Share = expense.amount;
+              parent2Owes = expense.amount;
             }
           } else {
             const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-            parent1Share = expense.amount * (split['Parent 1'] / 100);
-            parent2Share = expense.amount * (split['Parent 2'] / 100);
+            parent1Owes = expense.amount * (split['Parent 1'] / 100);
+            parent2Owes = expense.amount * (split['Parent 2'] / 100);
           }
         }
 
@@ -69,8 +69,8 @@ export function ReportingExportButton({
           Category: item.category,
           'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
           Amount: item.amount,
-          [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
-          [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
+          [`${parentNames['Parent 1']} Owes`]: parent1Owes.toFixed(2),
+          [`${parentNames['Parent 2']} Owes`]: parent2Owes.toFixed(2),
         };
       });
 

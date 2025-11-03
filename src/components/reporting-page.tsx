@@ -226,7 +226,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const getShare = (transaction: Transaction, parent: Parent) => {
     if (transaction.category === 'Reimbursement') {
         const expense = transaction as EnrichedExpense;
-        // The parent marked "Paid By" is the one who OWES. Their share is the full amount.
         return expense.paidBy === parent ? expense.amount : 0;
     } else if (transaction.category !== 'Child Support') {
         const expense = transaction as EnrichedExpense;
@@ -304,15 +303,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     return sortableItems;
   }, [filteredTransactions, sortConfig]);
 
-  const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
+  const { totalAmount, totalParent1Owes, totalParent2Owes } = useMemo(() => {
     return sortedTransactions.reduce(
       (totals, transaction) => {
         totals.totalAmount += transaction.amount;
-        totals.totalParent1Share += getShare(transaction, 'Parent 1');
-        totals.totalParent2Share += getShare(transaction, 'Parent 2');
+        totals.totalParent1Owes += getShare(transaction, 'Parent 1');
+        totals.totalParent2Owes += getShare(transaction, 'Parent 2');
         return totals;
       },
-      { totalAmount: 0, totalParent1Share: 0, totalParent2Share: 0 }
+      { totalAmount: 0, totalParent1Owes: 0, totalParent2Owes: 0 }
     );
   }, [sortedTransactions]);
   
@@ -457,13 +456,13 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         sortKey="parent1Share"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 1']}'s Share
+                        {parentNamesForPeriod['Parent 1']} Owes
                       </SortableHeader>
                       <SortableHeader
                         sortKey="parent2Share"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 2']}'s Share
+                        {parentNamesForPeriod['Parent 2']} Owes
                       </SortableHeader>
                     </TableRow>
                   </TableHeader>
@@ -538,10 +537,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                           ${totalAmount.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totalParent1Share.toFixed(2)}
+                          ${totalParent1Owes.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totalParent2Share.toFixed(2)}
+                          ${totalParent2Owes.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableFooter>
