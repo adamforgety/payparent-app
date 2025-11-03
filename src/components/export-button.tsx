@@ -60,16 +60,22 @@ export function ExportButton({
           parent2Owes = item.amount;
         }
       } else if (item.category === 'Reimbursement') {
-        // The "Paid By" parent is the one who OWES.
+        // The parent who did NOT pay owes 100%
         if (item.paidBy === 'Parent 1') {
-          parent1Owes = item.amount;
-        } else {
           parent2Owes = item.amount;
+        } else {
+          parent1Owes = item.amount;
         }
       } else {
         const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-        parent1Owes = item.amount * (split['Parent 1'] / 100);
-        parent2Owes = item.amount * (split['Parent 2'] / 100);
+        const p1Share = item.amount * (split['Parent 1'] / 100);
+        const p2Share = item.amount * (split['Parent 2'] / 100);
+
+        const p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+        const p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+
+        parent1Owes = Math.max(0, p1Share - p1Paid);
+        parent2Owes = Math.max(0, p2Share - p2Paid);
       }
 
       return {
@@ -124,5 +130,3 @@ export function ExportButton({
     </TooltipProvider>
   );
 }
-
-    

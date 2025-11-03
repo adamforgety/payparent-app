@@ -162,7 +162,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
           <DialogTitle>Edit Expense</DialogTitle>
           <DialogDescription>
             {selectedCategory === 'Reimbursement'
-              ? 'Update the reimbursement details. The parent selected as "Paid By" is the one who owes the money.'
+              ? 'Update the reimbursement request. "Paid By" is the parent requesting the reimbursement.'
               : 'Update the details of this expense.'
             }
           </DialogDescription>
@@ -229,7 +229,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
                 name="paidBy"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{selectedCategory === 'Reimbursement' ? 'Owed By' : 'Paid By'}</FormLabel>
+                    <FormLabel>Paid By</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>

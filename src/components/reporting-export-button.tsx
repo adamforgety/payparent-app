@@ -42,12 +42,13 @@ export function ReportingExportButton({
         let parent2Paid = 0;
 
         if (item.status === 'Settled') {
-          if (item.category === 'Child Support' || item.category === 'Reimbursement') {
-            if (item.paidBy === 'Parent 1') {
-              parent1Paid = item.amount;
-            } else if (item.paidBy === 'Parent 2') {
-              parent2Paid = item.amount;
-            }
+          if (item.category === 'Child Support') {
+              parent1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+              parent2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+          } else if (item.category === 'Reimbursement') {
+              // The parent who did NOT initiate the request is the one who "pays" it back.
+              parent1Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+              parent2Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
           } else {
             const expense = item as EnrichedExpense;
             const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
@@ -91,5 +92,3 @@ export function ReportingExportButton({
       </Button>
   );
 }
-
-    

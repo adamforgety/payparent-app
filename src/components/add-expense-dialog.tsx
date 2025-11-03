@@ -157,8 +157,8 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
-            {selectedCategory === 'Reimbursement' 
-              ? 'Log a reimbursement. The parent selected as "Paid By" is the one who owes the money.'
+            {selectedCategory === 'Reimbursement'
+              ? 'Log a reimbursement request. Select the parent who paid; the other parent will owe 100% of the amount.'
               : 'Log a new child-related expense. It will be added to the correct month based on the date you select.'
             }
           </DialogDescription>
@@ -228,7 +228,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
                 name="paidBy"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{selectedCategory === 'Reimbursement' ? 'Owed By' : 'Paid By'}</FormLabel>
+                    <FormLabel>Paid By</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}

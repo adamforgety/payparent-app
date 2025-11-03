@@ -229,9 +229,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const getPaidAmount = (transaction: Transaction, parent: Parent) => {
       if (transaction.status !== 'Settled') return 0;
   
-      if (transaction.category === 'Child Support' || transaction.category === 'Reimbursement') {
+      if (transaction.category === 'Child Support') {
           // The parent who "Paid By" is responsible for the full amount
           return transaction.paidBy === parent ? transaction.amount : 0;
+      }
+
+      if (transaction.category === 'Reimbursement') {
+        // The parent who "Paid By" is getting reimbursed, so they get the credit.
+        // The other parent is the one who "paid" it back.
+        return transaction.paidBy !== parent ? transaction.amount : 0;
       }
   
       // For standard expenses, the "paid" amount is their share
@@ -687,8 +693,3 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </div>
   );
 }
-
-    
-
-    
-

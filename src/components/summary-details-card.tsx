@@ -47,10 +47,11 @@ const calculateShare = (
 ): number => {
   let totalShare = 0;
   for (const expense of expenses) {
-    if (expense.category === 'Reimbursement') {
-      // Reimbursements are direct transfers, not shared expenses.
-      // Their impact is calculated in the main balance logic.
-      continue;
+     if (expense.category === 'Reimbursement') {
+      // The parent who was NOT paid is responsible for 100%
+      if (expense.paidBy !== p) {
+        totalShare += expense.amount;
+      }
     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
@@ -94,24 +95,18 @@ export function SummaryDetailsCard({
         if (!monthData) return { monthId, balance: 0 };
 
         const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-        let expenseBalance = 0;
-
-        const normalExpenses = unsettledExpenses.filter(e => e.category !== 'Reimbursement');
-        const parentNormalExpenseShare = calculateShare(normalExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, parent);
-        const paidByParentNormal = normalExpenses
-          .filter(exp => exp.paidBy === parent)
+        
+        const paidByParent = unsettledExpenses
+          .filter((exp) => exp.paidBy === parent)
           .reduce((sum, exp) => sum + exp.amount, 0);
-        expenseBalance += (paidByParentNormal - parentNormalExpenseShare);
 
-        const reimbursements = unsettledExpenses.filter(e => e.category === 'Reimbursement');
-        reimbursements.forEach(exp => {
-          if (exp.paidBy === parent) {
-            expenseBalance -= exp.amount;
-          } else {
-            expenseBalance += exp.amount;
-          }
-        });
-
+        const parentExpenseShare = calculateShare(
+          unsettledExpenses,
+          monthData.expenseSplit,
+          monthData.medicalExpenseSplit,
+          parent
+        );
+        const expenseBalance = paidByParent - parentExpenseShare;
 
         let childSupportBalance = 0;
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
@@ -135,27 +130,16 @@ export function SummaryDetailsCard({
   // --- Calculate Current Month's Balance ---
   const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
   
-  // Normal Expenses
-  const normalExpenses = unsettledExpenses.filter(e => e.category !== 'Reimbursement');
-  const parentExpenseShare = calculateShare(normalExpenses, expenseSplit, medicalExpenseSplit, parent);
-  const paidByParent = normalExpenses
-    .filter(exp => exp.paidBy === parent)
+  const paidByParent = unsettledExpenses
+    .filter((exp) => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
-  
-  // Reimbursements
-  let reimbursementCredit = 0; // Money this parent is owed from the other parent
-  let reimbursementDebit = 0; // Money this parent owes the other parent
 
-  unsettledExpenses.filter(e => e.category === 'Reimbursement').forEach(exp => {
-      if (exp.paidBy === parent) {
-          // This parent OWES (is the payer of the reimbursement), so it's a debit
-          reimbursementDebit += exp.amount;
-      } else {
-          // This parent is OWED (is the receiver of the reimbursement), so it's a credit
-          reimbursementCredit += exp.amount;
-      }
-  });
-  
+  const parentExpenseShare = calculateShare(
+    unsettledExpenses,
+    expenseSplit,
+    medicalExpenseSplit,
+    parent
+  );
 
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
@@ -167,18 +151,17 @@ export function SummaryDetailsCard({
       childSupportBalance = childSupport.amount;
     }
   }
+
+  // What this parent owes the other for the current month
+  const currentMonthDebit = Math.max(0, parentExpenseShare - paidByParent) + (childSupportBalance < 0 ? Math.abs(childSupportBalance) : 0);
   
-  // This parent's credit from paying more than their share of normal expenses
-  const expenseCredit = Math.max(0, paidByParent - parentExpenseShare);
-  // This parent's debit from paying less than their share of normal expenses
-  const expenseDebit = Math.max(0, parentExpenseShare - paidByParent);
+  // What the other parent owes this parent for the current month
+  const currentMonthCredit = Math.max(0, paidByParent - parentExpenseShare) + (childSupportBalance > 0 ? childSupportBalance : 0);
 
-  // Total credits for this parent
-  const totalCredit = expenseCredit + reimbursementCredit + (childSupportBalance > 0 ? childSupportBalance : 0);
-  // Total debits for this parent
-  const totalDebit = expenseDebit + reimbursementDebit + (childSupportBalance < 0 ? Math.abs(childSupportBalance) : 0);
+  const totalCredit = currentMonthCredit + Math.max(0, previousMonthsTotalBalance);
+  const totalDebit = currentMonthDebit + Math.max(0, -previousMonthsTotalBalance);
 
-  const totalNetBalance = previousMonthsTotalBalance + totalCredit - totalDebit;
+  const totalNetBalance = totalCredit - totalDebit;
   
   const renderBalanceIcon = (balance: number) => {
     if (Math.abs(balance) < 0.01) return <Circle className="h-5 w-5 text-primary" />;
