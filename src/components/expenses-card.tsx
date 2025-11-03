@@ -92,7 +92,7 @@ export function ExpensesCard({
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
     const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
 
-    let allItems: DisplayItem[] = expenseItems;
+    let allItems: DisplayItem[] = [...expenseItems];
     if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && !isFutureMonth) {
       const childSupportItem: DisplayItem = {
         id: 'child-support',
@@ -128,48 +128,50 @@ export function ExpensesCard({
     let p2Paid = 0;
 
     filteredItems.forEach(item => {
-      let p1Net = 0;
-      let p2Net = 0;
+        const originalExpense = item.type === 'expense'
+            ? expenses.find(e => e.id === item.id)
+            : null;
 
-      if (item.type === 'expense') {
-        const expense = expenses.find(e => e.id === item.id)!;
-        if (!expense) return;
-
-        if (expense.paidBy === 'Parent 1') p1Paid += expense.amount;
-        if (expense.paidBy === 'Parent 2') p2Paid += expense.amount;
-
-        let p1Share = 0;
-        let p2Share = 0;
-
-        if (expense.category === 'Reimbursement') {
-          if (expense.paidBy === 'Parent 1') p1Share = expense.amount;
-          else p2Share = expense.amount;
-        } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-          p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-          p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
-        } else {
-          p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-          p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
-        }
-
-        const itemP1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-        const itemP2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-
-        p1Net = p1Share - itemP1Paid;
-        p2Net = p2Share - itemP2Paid;
-
-      } else if (item.type === 'child_support') {
         if (item.paidBy === 'Parent 1') {
-          p1Net = item.amount;
-          p1Paid += item.amount;
+            p1Paid += item.amount;
         } else if (item.paidBy === 'Parent 2') {
-          p2Net = item.amount;
-          p2Paid += item.amount;
+            p2Paid += item.amount;
         }
-      }
+        
+        let p1Net = 0;
+        let p2Net = 0;
 
-      if (p1Net > 0) p1Owes += p1Net;
-      if (p2Net > 0) p2Owes += p2Net;
+        if (item.type === 'expense' && originalExpense) {
+            let p1Share = 0;
+            let p2Share = 0;
+
+            if (originalExpense.category === 'Reimbursement') {
+                if (originalExpense.paidBy === 'Parent 1') p1Share = originalExpense.amount;
+                else p2Share = originalExpense.amount;
+            } else if (originalExpense.category === 'Medical' || originalExpense.category === 'Child Care') {
+                p1Share = originalExpense.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                p2Share = originalExpense.amount * (medicalExpenseSplit['Parent 2'] / 100);
+            } else {
+                p1Share = originalExpense.amount * (expenseSplit['Parent 1'] / 100);
+                p2Share = originalExpense.amount * (expenseSplit['Parent 2'] / 100);
+            }
+
+            const itemP1Paid = originalExpense.paidBy === 'Parent 1' ? originalExpense.amount : 0;
+            const itemP2Paid = originalExpense.paidBy === 'Parent 2' ? originalExpense.amount : 0;
+
+            p1Net = p1Share - itemP1Paid;
+            p2Net = p2Share - itemP2Paid;
+
+        } else if (item.type === 'child_support') {
+            if (item.paidBy === 'Parent 1') {
+                p1Net = item.amount;
+            } else if (item.paidBy === 'Parent 2') {
+                p2Net = item.amount;
+            }
+        }
+        
+        if (p1Net > 0) p1Owes += p1Net;
+        if (p2Net > 0) p2Owes += p2Net;
     });
 
     return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes, parent1TotalPaid: p1Paid, parent2TotalPaid: p2Paid };
@@ -179,27 +181,29 @@ export function ExpensesCard({
     .filter(item => item.type === 'expense')
     .reduce((sum, exp) => sum + exp.amount, 0);
 
-  const handleStatusToggle = (item: DisplayItem) => {
-    const newStatus: PaymentStatus = item.status === 'Settled' ? 'Unsettled' : 'Settled';
+  const handleStatusToggle = (itemToToggle: DisplayItem) => {
+    const newStatus: PaymentStatus = itemToToggle.status === 'Settled' ? 'Unsettled' : 'Settled';
     
-    // Optimistically update local state for immediate UI feedback
+    // Update local state immediately for instant UI feedback
     setLocalItems(prevItems => 
-      prevItems.map(i => i.id === item.id ? { ...i, status: newStatus } : i)
+      prevItems.map(item => 
+        item.id === itemToToggle.id ? { ...item, status: newStatus } : item
+      )
     );
     
     // Propagate change to parent for persistence
-    if (item.type === 'expense') {
-        const originalExpense = expenses.find(e => e.id === item.id);
+    if (itemToToggle.type === 'expense') {
+        const originalExpense = expenses.find(e => e.id === itemToToggle.id);
         if (originalExpense) {
             onUpdateExpense({ ...originalExpense, status: newStatus }, monthId);
         }
-    } else {
+    } else { // Child Support
         onUpdateChildSupport({ ...childSupport, status: newStatus });
     }
 
      toast({
       title: `Item Marked as ${newStatus}`,
-      description: `"${item.description}" has been updated.`,
+      description: `"${itemToToggle.description}" has been updated.`,
     });
   };
 
@@ -451,5 +455,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
