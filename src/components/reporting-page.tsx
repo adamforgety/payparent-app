@@ -486,6 +486,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 variant={
                                   transaction.category === 'Child Support'
                                     ? 'default'
+                                    : transaction.category === 'Reimbursement'
+                                    ? 'reimbursement'
                                     : 'outline'
                                 }
                               >
