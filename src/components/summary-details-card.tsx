@@ -152,44 +152,44 @@ export function SummaryDetailsCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <ul className="space-y-3">
+      <CardContent className="space-y-6">
+        <ul className="space-y-4">
           <li className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {renderBalanceIcon(unsettledPaidByParent)}
-              <span className="text-sm">Expenses You Covered</span>
+              <span className="text-base">Expenses You Covered</span>
             </div>
-            <span className={cn("font-medium", unsettledPaidByParent > 0 ? "text-green-600" : "text-muted-foreground")}>
+            <span className={cn("font-medium text-base", unsettledPaidByParent > 0 ? "text-green-600" : "text-muted-foreground")}>
               +${unsettledPaidByParent.toFixed(2)}
             </span>
           </li>
           <li className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {renderBalanceIcon(-parentExpenseShare)}
-              <span className="text-sm">Your Share of Costs</span>
+              <span className="text-base">Your Share of Costs</span>
             </div>
-            <span className={cn("font-medium", parentExpenseShare > 0 ? "text-destructive" : "text-muted-foreground")}>
+            <span className={cn("font-medium text-base", parentExpenseShare > 0 ? "text-destructive" : "text-muted-foreground")}>
               -${parentExpenseShare.toFixed(2)}
             </span>
           </li>
            {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
             <li className="flex items-center justify-between">
-               <div className="flex items-center gap-2">
+               <div className="flex items-center gap-3">
                 {renderBalanceIcon(childSupportBalance)}
-                <span className="text-sm">Child Support</span>
+                <span className="text-base">Child Support</span>
               </div>
-              <span className={cn('font-medium', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+              <span className={cn('font-medium text-base', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
                 {childSupportBalance < 0 ? `-$${Math.abs(childSupportBalance).toFixed(2)}` : `+$${childSupportBalance.toFixed(2)}`}
               </span>
             </li>
           )}
           {previousBalances.length > 0 && (
              <li className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 {renderBalanceIcon(previousMonthsTotalBalance)}
-                <span className="text-sm">Balance from Prior Months</span>
+                <span className="text-base">Balance from Prior Months</span>
               </div>
-              <span className={cn('font-medium', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+              <span className={cn('font-medium text-base', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
                 {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
               </span>
             </li>
@@ -197,8 +197,8 @@ export function SummaryDetailsCard({
         </ul>
         <Separator />
         <div className="flex items-center justify-between">
-          <span className="font-semibold">Total Net Balance</span>
-           <span className={cn('text-lg font-bold', totalNetBalance < 0 ? 'text-destructive' : totalNetBalance > 0 ? 'text-green-600' : 'text-primary')}>
+          <span className="font-semibold text-lg">Total Net Balance</span>
+           <span className={cn('text-xl font-bold', totalNetBalance < 0 ? 'text-destructive' : totalNetBalance > 0 ? 'text-green-600' : 'text-primary')}>
                 {totalNetBalance < 0 ? `-$${Math.abs(totalNetBalance).toFixed(2)}` : `+$${totalNetBalance.toFixed(2)}`}
             </span>
         </div>
