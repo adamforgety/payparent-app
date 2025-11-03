@@ -48,6 +48,7 @@ const calculateShare = (
   let totalShare = 0;
   for (const expense of expenses) {
     if (expense.category === 'Reimbursement') {
+      // The share of a reimbursement belongs to the person receiving the money.
       if (expense.paidBy !== p) {
         totalShare += expense.amount;
       }
@@ -249,3 +250,5 @@ export function SummaryDetailsCard({
     </Card>
   );
 }
+
+    

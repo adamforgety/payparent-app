@@ -60,6 +60,7 @@ export function ExportButton({
           parent2Share = item.amount;
         }
       } else if (item.category === 'Reimbursement') {
+        // The share of a reimbursement belongs to the person receiving the money.
         if (item.paidBy === 'Parent 1') {
           parent2Share = item.amount;
         } else {
@@ -123,3 +124,5 @@ export function ExportButton({
     </TooltipProvider>
   );
 }
+
+    

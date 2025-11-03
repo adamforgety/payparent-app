@@ -50,6 +50,7 @@ export function ReportingExportButton({
         } else {
           const expense = item as EnrichedExpense;
           if (expense.category === 'Reimbursement') {
+            // The share of a reimbursement belongs to the person receiving the money.
             if (expense.paidBy === 'Parent 1') {
               parent2Share = expense.amount;
             } else {
@@ -96,3 +97,5 @@ export function ReportingExportButton({
       </Button>
   );
 }
+
+    

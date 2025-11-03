@@ -124,6 +124,7 @@ export function ExpensesCard({
     
     for (const expense of expenses) {
       if (expense.category === 'Reimbursement') {
+        // A reimbursement is a direct transfer. The "share" belongs to the recipient.
         if (expense.paidBy !== parent) {
           totalShare += expense.amount;
         }
@@ -401,3 +402,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
