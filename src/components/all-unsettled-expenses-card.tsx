@@ -15,6 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -50,23 +57,32 @@ export function AllUnsettledExpensesCard({
   currentDate,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
-  const [showPriorMonthsOnly, setShowPriorMonthsOnly] = useState(false);
+  const [monthFilter, setMonthFilter] = useState('all');
+
+  const availableMonths = useMemo(() => {
+    if (!appData?.months) return [];
+    return Object.keys(appData.months)
+      .sort()
+      .reverse()
+      .map(monthId => ({
+        value: monthId,
+        label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy'),
+      }));
+  }, [appData.months]);
 
   const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
     let items: UnsettledItem[] = [];
     if (!appData?.months) return items;
 
-    const dashboardMonthDate = startOfMonth(currentDate);
+    const monthIdsToProcess = monthFilter === 'all'
+        ? Object.keys(appData.months)
+        : [monthFilter];
 
-    for (const monthId in appData.months) {
-      const monthDate = parse(monthId, 'yyyy-MM', new Date());
+    for (const monthId of monthIdsToProcess) {
+      if (!appData.months[monthId]) continue;
 
-      // If the filter is on, skip any month that is not before the dashboard's currently viewed month
-      if (showPriorMonthsOnly && !isBefore(monthDate, dashboardMonthDate)) {
-        continue;
-      }
-      
       const monthData = appData.months[monthId];
+      const monthDate = parse(monthId, 'yyyy-MM', new Date());
       const isFutureMonth = isAfter(monthDate, startOfMonth(new Date()));
 
       // Add unsettled expenses
@@ -112,7 +128,7 @@ export function AllUnsettledExpensesCard({
 
     // Sort by date descending
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [appData.months, showPriorMonthsOnly, currentDate]);
+  }, [appData.months, monthFilter]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -189,19 +205,26 @@ export function AllUnsettledExpensesCard({
           <div>
             <CardTitle>All Unsettled Items</CardTitle>
             <CardDescription>
-              A ledger of all outstanding expenses and child support payments across all months.
+              A ledger of all outstanding expenses and child support payments.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-2 mb-4">
-          <Switch
-            id="past-due-only"
-            checked={showPriorMonthsOnly}
-            onCheckedChange={setShowPriorMonthsOnly}
-          />
-          <Label htmlFor="past-due-only">Show Prior Months Only</Label>
+           <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Filter by month" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Months</SelectItem>
+              {availableMonths.map(month => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="rounded-md border">
           <Table>
@@ -353,7 +376,9 @@ export function AllUnsettledExpensesCard({
               ) : (
                 <TableRow>
                   <TableCell colSpan={9} className="h-24 text-center">
-                    All items are settled. Great job!
+                    {monthFilter === 'all'
+                      ? 'All items are settled. Great job!'
+                      : 'No unsettled items for this month.'}
                   </TableCell>
                 </TableRow>
               )}
