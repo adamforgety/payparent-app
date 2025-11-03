@@ -272,9 +272,9 @@ export function ExpensesCard({
             <TableHeader>
               <TableRow>
                 <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Paid By</TableHead>
-                <TableHead className="w-[120px]">Settlement Status</TableHead>
+                <TableHead className="w-[140px]">Category</TableHead>
+                <TableHead className="w-[120px]">Paid By</TableHead>
+                <TableHead className="w-[150px]">Settlement Status</TableHead>
                 <TableHead className="text-right w-[100px]">Total</TableHead>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
