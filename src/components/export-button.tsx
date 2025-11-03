@@ -59,13 +59,6 @@ export function ExportButton({
         } else if (item.paidBy === 'Parent 2') {
           parent2Owes = item.amount;
         }
-      } else if (item.category === 'Reimbursement') {
-        // The parent who did NOT pay owes 100%
-        if (item.paidBy === 'Parent 1') {
-          parent2Owes = item.amount;
-        } else {
-          parent1Owes = item.amount;
-        }
       } else {
         const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
         const p1Share = item.amount * (split['Parent 1'] / 100);

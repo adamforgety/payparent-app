@@ -44,12 +44,7 @@ const calculateShare = (
 ): number => {
   let totalShare = 0;
   for (const expense of expenses) {
-    if (expense.category === 'Reimbursement') {
-      // The parent who was NOT paid is responsible for 100%
-      if (expense.paidBy !== p) {
-        totalShare += expense.amount;
-      }
-    } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+    if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
     } else {
@@ -199,5 +194,3 @@ export function SettleBalanceCard({
     </Card>
   );
 }
-
-    

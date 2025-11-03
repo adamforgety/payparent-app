@@ -55,7 +55,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
+    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z
@@ -94,7 +94,6 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
   });
 
   const receiptRef = form.register('receipt');
-  const selectedCategory = form.watch('category');
 
   const onSubmit = async (values: FormValues) => {
     let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>> = {};
@@ -157,10 +156,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
-            {selectedCategory === 'Reimbursement'
-              ? 'Log a reimbursement request. Select the parent who paid; the other parent will owe 100% of the amount.'
-              : 'Log a new child-related expense. It will be added to the correct month based on the date you select.'
-            }
+            Log a new child-related expense. It will be added to the correct month based on the date you select.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -201,8 +197,6 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
                         <SelectItem value="Clothing">Clothing</SelectItem>
                         <SelectItem value="Food">Food</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
-                        <Separator />
-                        <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -146,19 +146,9 @@ export function ExpensesCard({
         } else { // It's an expense
             const expense = item as Expense;
             if (item.status === 'Settled') {
-                 let p1Share = 0;
-                 let p2Share = 0;
-                 if (expense.category === 'Reimbursement') {
-                     if (expense.paidBy === 'Parent 1') { // Parent 1 paid, Parent 2 reimburses
-                         p2Share = expense.amount;
-                     } else { // Parent 2 paid, Parent 1 reimburses
-                         p1Share = expense.amount;
-                     }
-                 } else {
-                     const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                     p1Share = item.amount * (split['Parent 1'] / 100);
-                     p2Share = item.amount * (split['Parent 2'] / 100);
-                 }
+                 const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+                 const p1Share = item.amount * (split['Parent 1'] / 100);
+                 const p2Share = item.amount * (split['Parent 2'] / 100);
                  totalPaidP1 += p1Share;
                  totalPaidP2 += p2Share;
             } else { // Unsettled expense
@@ -167,16 +157,9 @@ export function ExpensesCard({
                 totalPaidP1 += p1InitialPaid;
                 totalPaidP2 += p2InitialPaid;
 
-                let p1Share = 0;
-                let p2Share = 0;
-                if (expense.category === 'Reimbursement') {
-                    if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
-                    else p1Share = expense.amount;
-                } else {
-                    const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                    p1Share = item.amount * (split['Parent 1'] / 100);
-                    p2Share = item.amount * (split['Parent 2'] / 100);
-                }
+                const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+                const p1Share = item.amount * (split['Parent 1'] / 100);
+                const p2Share = item.amount * (split['Parent 2'] / 100);
                 const p1Net = p1Share - p1InitialPaid;
                 const p2Net = p2Share - p2InitialPaid;
                 if (p1Net > 0) totalOwedP1 += p1Net;
@@ -304,20 +287,9 @@ export function ExpensesCard({
                     }
                   } else { // It's an expense
                     const expense = item as Expense;
-                    let p1Share = 0;
-                    let p2Share = 0;
-
-                    if (expense.category === 'Reimbursement') {
-                      if (expense.paidBy === 'Parent 1') { // P1 is reimbursed by P2
-                        p2Share = expense.amount;
-                      } else { // P2 is reimbursed by P1
-                        p1Share = expense.amount;
-                      }
-                    } else {
-                      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                      p1Share = item.amount * (split['Parent 1'] / 100);
-                      p2Share = item.amount * (split['Parent 2'] / 100);
-                    }
+                    const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+                    const p1Share = item.amount * (split['Parent 1'] / 100);
+                    const p2Share = item.amount * (split['Parent 2'] / 100);
 
                     if (item.status === 'Settled') {
                       p1Paid = p1Share;
@@ -344,7 +316,7 @@ export function ExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}

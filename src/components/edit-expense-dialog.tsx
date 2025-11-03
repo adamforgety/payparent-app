@@ -56,7 +56,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
+    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z.any().optional(),
@@ -83,7 +83,6 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
   });
 
   const receiptRef = form.register('receipt');
-  const selectedCategory = form.watch('category');
 
   useEffect(() => {
     if (isOpen) {
@@ -161,10 +160,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
         <DialogHeader>
           <DialogTitle>Edit Expense</DialogTitle>
           <DialogDescription>
-            {selectedCategory === 'Reimbursement'
-              ? 'Update the reimbursement request. "Paid By" is the parent requesting the reimbursement.'
-              : 'Update the details of this expense.'
-            }
+            Update the details of this expense.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -202,8 +198,6 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
                       <SelectItem value="Clothing">Clothing</SelectItem>
                       <SelectItem value="Food">Food</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
-                      <Separator />
-                      <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

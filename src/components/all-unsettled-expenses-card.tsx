@@ -190,13 +190,7 @@ export function AllUnsettledExpensesCard({
 
         if (item.type === 'expense') {
           const expense = item.originalExpense!;
-          if (expense.category === 'Reimbursement') {
-            if (expense.paidBy === 'Parent 1') {
-                p2Share = expense.amount;
-            } else {
-                p1Share = expense.amount;
-            }
-          } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+          if (expense.category === 'Medical' || expense.category === 'Child Care') {
             p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
             p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
           } else {
@@ -292,20 +286,12 @@ export function AllUnsettledExpensesCard({
                 allUnsettledItems.map((item) => {
                   let p1OwesAmount = 0;
                   let p2OwesAmount = 0;
-                  let isTransfer = false;
                   
                   if (item.type === 'expense') {
                       const expense = item.originalExpense!;
                       let p1Share = 0;
                       let p2Share = 0;
-                      if (expense.category === 'Reimbursement') {
-                          if (expense.paidBy === 'Parent 1') {
-                            p2Share = expense.amount;
-                          } else {
-                            p1Share = expense.amount;
-                          }
-                          isTransfer = true;
-                      } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+                      if (expense.category === 'Medical' || expense.category === 'Child Care') {
                           p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
                           p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
                       } else {
@@ -325,7 +311,6 @@ export function AllUnsettledExpensesCard({
                       } else if (item.paidBy === 'Parent 2') { // Parent 2 is the payer
                           p2OwesAmount = item.amount;
                       }
-                      isTransfer = true;
                   }
 
                   const p1OwesMoney = p1OwesAmount > 0;
@@ -338,7 +323,7 @@ export function AllUnsettledExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}

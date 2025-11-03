@@ -45,10 +45,6 @@ export function ReportingExportButton({
           if (item.category === 'Child Support') {
               parent1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
               parent2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-          } else if (item.category === 'Reimbursement') {
-              // The parent who did NOT initiate the request is the one who "pays" it back.
-              parent1Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-              parent2Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
           } else {
             const expense = item as EnrichedExpense;
             const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;

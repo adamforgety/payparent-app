@@ -81,7 +81,6 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Activities',
   'Clothing',
   'Food',
-  'Reimbursement',
   'Other',
 ];
 
@@ -232,12 +231,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       if (transaction.category === 'Child Support') {
           // The parent who "Paid By" is responsible for the full amount
           return transaction.paidBy === parent ? transaction.amount : 0;
-      }
-
-      if (transaction.category === 'Reimbursement') {
-        // The parent who "Paid By" is getting reimbursed, so they get the credit.
-        // The other parent is the one who "paid" it back.
-        return transaction.paidBy !== parent ? transaction.amount : 0;
       }
   
       // For standard expenses, the "paid" amount is their share
@@ -493,8 +486,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 variant={
                                   transaction.category === 'Child Support'
                                     ? 'default'
-                                    : transaction.category === 'Reimbursement'
-                                    ? 'reimbursement'
                                     : 'outline'
                                 }
                               >
