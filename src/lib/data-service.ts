@@ -6,7 +6,6 @@ import type { AppData, UserDoc } from '@/lib/types';
 import type { Firestore } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { handleNewUser } from '@/app/login/actions';
 import { getAuth } from 'firebase/auth';
 
 async function getDocWithHandling<T>(docRef: any): Promise<T | null> {
@@ -44,7 +43,31 @@ export async function getUserData(firestore: Firestore, userId: string): Promise
     console.log('No user document found. Creating one with initial data.');
     const auth = getAuth();
     const email = auth.currentUser?.email || null;
-    await handleNewUser(userId, email);
+    
+    // Create a fresh copy of the initial app data structure
+    const appData: AppData = {
+        ...JSON.parse(JSON.stringify(initialData)),
+    };
+    
+    // Create the full UserDoc payload with the correct nested structure.
+    const userDocPayload: UserDoc = {
+      id: userId,
+      email: email,
+      appData: appData,
+      coParentId: null,
+      dataOwnerId: userId, // Initially, the user owns their own data.
+    };
+
+    const userDocRef = doc(firestore, 'users', userId);
+    
+    try {
+        // Using setDoc to create the document with the full payload
+        await setDoc(userDocRef, userDocPayload);
+    } catch (serverError: any) {
+        // In a real app, you would log this error to a monitoring service.
+        console.error('Error creating user document:', serverError);
+    }
+    
     // After creating, fetch again to ensure consistency.
     const newUserDoc = await getDocWithHandling<UserDoc>(currentUserDocRef);
     return newUserDoc?.appData || JSON.parse(JSON.stringify(initialData));
