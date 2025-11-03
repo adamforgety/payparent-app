@@ -123,24 +123,23 @@ export function ExpensesCard({
   const hasUnsettledItems = localItems.some(item => item.status === 'Unsettled');
   const hasSettledItems = localItems.some(item => item.status === 'Settled');
 
-  const { parent1TotalOwes, parent2TotalOwes, parent1TotalPaid, parent2TotalPaid } = useMemo(() => {
-    let p1Owes = 0;
-    let p2Owes = 0;
-    let p1Paid = 0;
-    let p2Paid = 0;
+  const { totalOwedParent1, totalOwedParent2, totalPaidParent1, totalPaidParent2, totalExpenses } = useMemo(() => {
+    let totalOwedP1 = 0;
+    let totalOwedP2 = 0;
+    let totalPaidP1 = 0;
+    let totalPaidP2 = 0;
+    let expTotal = 0;
 
     filteredItems.forEach(item => {
         let p1Share = 0;
         let p2Share = 0;
 
         if (item.type === 'expense') {
+            expTotal += item.amount;
             const expense = item as Expense;
             if (expense.category === 'Reimbursement') {
-                if (expense.paidBy === 'Parent 1') {
-                    p2Share = expense.amount;
-                } else {
-                    p1Share = expense.amount;
-                }
+                if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
+                else p1Share = expense.amount;
             } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                 p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
                 p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
@@ -149,34 +148,27 @@ export function ExpensesCard({
                 p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
             }
         } else if (item.type === 'child_support') {
-            if (item.paidBy === 'Parent 1') { 
-                p1Share = item.amount;
-            } else { 
-                p2Share = item.amount;
-            }
+            if (item.paidBy === 'Parent 1') p1Share = item.amount;
+            else p2Share = item.amount;
         }
 
         if (item.status === 'Unsettled') {
-            const p1InitialPaid = item.paidBy === 'Parent 1' ? item.amount : 0;
-            const p2InitialPaid = item.paidBy === 'Parent 2' ? item.amount : 0;
-            const p1Net = p1Share - p1InitialPaid;
-            const p2Net = p2Share - p2InitialPaid;
-            if (p1Net > 0) p1Owes += p1Net;
-            if (p2Net > 0) p2Owes += p2Net;
-            p1Paid += p1InitialPaid;
-            p2Paid += p2InitialPaid;
+            const p1PaidInitial = item.paidBy === 'Parent 1' ? item.amount : 0;
+            const p2PaidInitial = item.paidBy === 'Parent 2' ? item.amount : 0;
+            const p1Net = p1Share - p1PaidInitial;
+            const p2Net = p2Share - p2PaidInitial;
+            if (p1Net > 0) totalOwedP1 += p1Net;
+            if (p2Net > 0) totalOwedP2 += p2Net;
+            totalPaidP1 += p1PaidInitial;
+            totalPaidP2 += p2PaidInitial;
         } else { // 'Settled'
-            p1Paid += p1Share;
-            p2Paid += p2Share;
+            totalPaidP1 += p1Share;
+            totalPaidP2 += p2Share;
         }
     });
 
-    return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes, parent1TotalPaid: p1Paid, parent2TotalPaid: p2Paid };
+    return { totalOwedParent1: totalOwedP1, totalOwedParent2: totalOwedP2, totalPaidParent1: totalPaidP1, totalPaidParent2: totalPaidP2, totalExpenses: expTotal };
   }, [filteredItems, expenseSplit, medicalExpenseSplit]);
-
-  const totalExpenses = filteredItems
-    .filter(item => item.type === 'expense')
-    .reduce((sum, exp) => sum + exp.amount, 0);
 
   const handleStatusToggle = (itemToToggle: DisplayItem) => {
     const newStatus: PaymentStatus = itemToToggle.status === 'Settled' ? 'Unsettled' : 'Settled';
@@ -266,7 +258,9 @@ export function ExpensesCard({
                 <TableHead>Paid By</TableHead>
                 <TableHead className="w-[120px]">Settlement Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">{parentNames['Parent 1']} Paid</TableHead>
                 <TableHead className="text-right">{parentNames['Parent 1']} Owes</TableHead>
+                <TableHead className="text-right">{parentNames['Parent 2']} Paid</TableHead>
                 <TableHead className="text-right">{parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
@@ -275,46 +269,43 @@ export function ExpensesCard({
             <TableBody>
               {filteredItems.length > 0 ? (
                 filteredItems.map((item) => {
-                  let p1Net = 0;
-                  let p2Net = 0;
+                  let p1Share = 0;
+                  let p2Share = 0;
 
-                  if (item.status === 'Unsettled') {
-                    let p1Share = 0;
-                    let p2Share = 0;
-
-                    if (item.type === 'expense') {
-                        const expense = item as Expense;
-                        if (expense.category === 'Reimbursement') {
-                            if (expense.paidBy === 'Parent 1') {
-                                p2Share = expense.amount;
-                            } else {
-                                p1Share = expense.amount;
-                            }
-                        } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                            p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-                            p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
-                        } else {
-                            p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-                            p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
-                        }
-                    } else if (item.type === 'child_support') {
-                        if (item.paidBy === 'Parent 1') { // Parent 1 paid child support to Parent 2
-                            p1Share = item.amount;
-                        } else if (item.paidBy === 'Parent 2') { // Parent 2 paid child support to Parent 1
-                            p2Share = item.amount;
-                        }
-                    }
-
-                    const p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-                    const p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-                    p1Net = p1Share - p1Paid;
-                    p2Net = p2Share - p2Paid;
+                  if (item.type === 'expense') {
+                      const expense = item as Expense;
+                      if (expense.category === 'Reimbursement') {
+                          if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
+                          else p1Share = expense.amount;
+                      } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+                          p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                          p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
+                      } else {
+                          p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
+                          p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
+                      }
+                  } else if (item.type === 'child_support') {
+                      if (item.paidBy === 'Parent 1') p1Share = item.amount;
+                      else p2Share = item.amount;
                   }
-                  
-                  const p1Owes = p1Net > 0 ? p1Net : 0;
-                  const p2Owes = p2Net > 0 ? p2Net : 0;
-                  const p1Credit = p1Net < 0 ? -p1Net : 0;
-                  const p2Credit = p2Net < 0 ? -p2Net : 0;
+
+                  let p1Paid = 0;
+                  let p2Paid = 0;
+                  let p1Owes = 0;
+                  let p2Owes = 0;
+
+                  if (item.status === 'Settled') {
+                    p1Paid = p1Share;
+                    p2Paid = p2Share;
+                  } else { // Unsettled
+                    p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+                    p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+                    const p1Net = p1Share - p1Paid;
+                    const p2Net = p2Share - p2Paid;
+                    if (p1Net > 0) p1Owes = p1Net;
+                    if (p2Net > 0) p2Owes = p2Net;
+                  }
+
 
                   return (
                     <TableRow key={item.id}>
@@ -344,11 +335,17 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right", item.status === 'Unsettled' && p1Owes > 0 && "text-destructive font-semibold")}>
-                        {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
+                      <TableCell className="text-right">
+                        ${p1Paid.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right", item.status === 'Unsettled' && p2Owes > 0 && "text-destructive font-semibold")}>
-                         {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
+                      <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
+                        ${p1Owes.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ${p2Paid.toFixed(2)}
+                      </TableCell>
+                      <TableCell className={cn("text-right", p2Owes > 0 && "text-destructive font-semibold")}>
+                         ${p2Owes.toFixed(2)}
                       </TableCell>
                       <TableCell className="no-print text-center">
                           {item.type === 'expense' && item.receiptUrl && (
@@ -400,7 +397,7 @@ export function ExpensesCard({
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
+                  <TableCell colSpan={11} className="h-24 text-center">
                     No {statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.
                   </TableCell>
                 </TableRow>
@@ -427,22 +424,22 @@ export function ExpensesCard({
         <Separator/>
         <div className="flex justify-between items-center">
             <span className="text-muted-foreground">{parentNames['Parent 1']} Paid:</span>
-            <span className="font-medium">${parent1TotalPaid.toFixed(2)}</span>
+            <span className="font-medium">${totalPaidParent1.toFixed(2)}</span>
         </div>
         <div className="flex justify-between items-center">
             <span className="text-muted-foreground">{parentNames['Parent 2']} Paid:</span>
-            <span className="font-medium">${parent2TotalPaid.toFixed(2)}</span>
+            <span className="font-medium">${totalPaidParent2.toFixed(2)}</span>
         </div>
         <div className="flex justify-between items-center mt-2">
           <span className="font-semibold text-primary">{parentNames['Parent 1']} Owes:</span>
           <span className="font-bold text-base text-destructive">
-            ${parent1TotalOwes.toFixed(2)}
+            ${totalOwedParent1.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="font-semibold text-primary">{parentNames['Parent 2']} Owes:</span>
           <span className="font-bold text-base text-destructive">
-            ${parent2TotalOwes.toFixed(2)}
+            ${totalOwedParent2.toFixed(2)}
           </span>
         </div>
       </CardFooter>
@@ -451,5 +448,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
