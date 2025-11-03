@@ -122,6 +122,12 @@ function flexibleDateParse(dateString: string): Date | null {
   for (const fmt of formats) {
     const parsedDate = parse(dateString, fmt, new Date());
     if (isValid(parsedDate)) {
+      // Check for two-digit year ambiguity
+      if (fmt.endsWith('yy') && parsedDate.getFullYear() < 100) {
+        const twoDigitYear = parsedDate.getFullYear();
+        // Sliding window: years < 70 are 21st century, >= 70 are 20th.
+        parsedDate.setFullYear(twoDigitYear + (twoDigitYear < 70 ? 2000 : 1900));
+      }
       return parsedDate;
     }
   }
