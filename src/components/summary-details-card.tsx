@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { parse, isBefore, startOfDay, format, isAfter, startOfMonth } from 'date-fns';
+import { parse, isBefore, startOfDay, isAfter, startOfMonth } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -10,12 +10,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import type {
   ChildSupport,
   Expense,
@@ -26,7 +20,7 @@ import type {
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Info, Circle } from 'lucide-react';
 
 interface SummaryDetailsCardProps {
   parent: Parent;
@@ -139,6 +133,12 @@ export function SummaryDetailsCard({
 
   const totalNetBalance = previousMonthsTotalBalance + unsettledPaidByParent - parentExpenseShare + childSupportBalance;
   
+  const renderBalanceIcon = (balance: number) => {
+    if (balance > 0) return <ArrowUpCircle className="h-5 w-5 text-green-500" />;
+    if (balance < 0) return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
+    return <Circle className="h-5 w-5 text-primary" />;
+  };
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -156,26 +156,26 @@ export function SummaryDetailsCard({
         <ul className="space-y-3">
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ArrowUpCircle className="h-5 w-5 text-green-500" />
+              {renderBalanceIcon(unsettledPaidByParent)}
               <span className="text-sm">Expenses You Paid (Credit)</span>
             </div>
-            <span className="font-medium text-green-600">+${unsettledPaidByParent.toFixed(2)}</span>
+            <span className={cn("font-medium", unsettledPaidByParent > 0 ? "text-green-600" : "text-muted-foreground")}>
+              +${unsettledPaidByParent.toFixed(2)}
+            </span>
           </li>
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <ArrowDownCircle className="h-5 w-5 text-destructive" />
+              {renderBalanceIcon(-parentExpenseShare)}
               <span className="text-sm">Your Share of Expenses (Debit)</span>
             </div>
-            <span className="font-medium text-destructive">-${parentExpenseShare.toFixed(2)}</span>
+            <span className={cn("font-medium", parentExpenseShare > 0 ? "text-destructive" : "text-muted-foreground")}>
+              -${parentExpenseShare.toFixed(2)}
+            </span>
           </li>
            {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
             <li className="flex items-center justify-between">
                <div className="flex items-center gap-2">
-                {childSupportBalance < 0 ? (
-                    <ArrowDownCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                    <ArrowUpCircle className="h-5 w-5 text-green-500" />
-                )}
+                {renderBalanceIcon(childSupportBalance)}
                 <span className="text-sm">Child Support</span>
               </div>
               <span className={cn('font-medium', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
@@ -186,11 +186,7 @@ export function SummaryDetailsCard({
           {previousBalances.length > 0 && (
              <li className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {previousMonthsTotalBalance < 0 ? (
-                    <ArrowDownCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                    <ArrowUpCircle className="h-5 w-5 text-green-500" />
-                )}
+                {renderBalanceIcon(previousMonthsTotalBalance)}
                 <span className="text-sm">Balance from Prior Months</span>
               </div>
               <span className={cn('font-medium', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
@@ -202,7 +198,7 @@ export function SummaryDetailsCard({
         <Separator />
         <div className="flex items-center justify-between">
           <span className="font-semibold">Total Net Balance</span>
-           <span className={cn('text-lg font-bold', totalNetBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+           <span className={cn('text-lg font-bold', totalNetBalance < 0 ? 'text-destructive' : totalNetBalance > 0 ? 'text-green-600' : 'text-primary')}>
                 {totalNetBalance < 0 ? `-$${Math.abs(totalNetBalance).toFixed(2)}` : `+$${totalNetBalance.toFixed(2)}`}
             </span>
         </div>
