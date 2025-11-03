@@ -104,8 +104,10 @@ export function ExpensesCard({
         category: 'Child Support',
         type: 'child_support',
       };
-      allItems = [childSupportItem, ...expenseItems];
+      allItems.unshift(childSupportItem); // Add to the beginning
     }
+    // Sort by date after combining
+    allItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setLocalItems(allItems);
   }, [expenses, childSupport, currentDate]);
 
@@ -170,8 +172,8 @@ export function ExpensesCard({
             }
         }
         
-        if (p1Net > 0) p1Owes += p1Net;
-        if (p2Net > 0) p2Owes += p2Net;
+        if (p1Net > 0 && item.status === 'Unsettled') p1Owes += p1Net;
+        if (p2Net > 0 && item.status === 'Unsettled') p2Owes += p2Net;
     });
 
     return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes, parent1TotalPaid: p1Paid, parent2TotalPaid: p2Paid };
@@ -348,10 +350,10 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p1Owes > 0 && (!isTransfer || p1Owes > 0) && "text-destructive")}>
+                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p1Owes > 0 && "text-destructive")}>
                         {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p2Owes > 0 && (!isTransfer || p2Owes > 0) && "text-destructive")}>
+                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p2Owes > 0 && "text-destructive")}>
                          {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
