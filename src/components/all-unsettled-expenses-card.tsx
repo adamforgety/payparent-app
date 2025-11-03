@@ -218,18 +218,18 @@ export function AllUnsettledExpensesCard({
                   let parent1Owes = 0;
                   let parent2Owes = 0;
                   
-                  let parent1IsOwed = false;
-                  let parent2IsOwed = false;
+                  let p1OwesMoney = false;
+                  let p2OwesMoney = false;
 
                   if (item.type === 'expense') {
                       const expense = item.originalExpense!;
                       if (expense.category === 'Reimbursement') {
                           if (expense.paidBy === 'Parent 1') { // Parent 1 owes
                               parent1Owes = expense.amount;
-                              parent2IsOwed = true;
+                              p1OwesMoney = true;
                           } else { // Parent 2 owes
                               parent2Owes = expense.amount;
-                              parent1IsOwed = true;
+                              p2OwesMoney = true;
                           }
                       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                           parent1Owes = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
@@ -242,23 +242,21 @@ export function AllUnsettledExpensesCard({
                       if (expense.category !== 'Reimbursement') {
                         if (expense.paidBy === 'Parent 1') {
                             const p1Paid = expense.amount;
-                            const p1Share = parent1Owes;
-                            if(p1Paid < p1Share) parent1IsOwed = true;
-                            if(p1Paid > p1Share) parent2IsOwed = true;
+                            if(p1Paid < parent1Owes) p1OwesMoney = true;
+                            if(p1Paid > parent1Owes) p2OwesMoney = true;
                         } else { // Parent 2 paid
                            const p2Paid = expense.amount;
-                           const p2Share = parent2Owes;
-                           if(p2Paid < p2Share) parent2IsOwed = true;
-                           if(p2Paid > p2Share) parent1IsOwed = true;
+                           if(p2Paid < parent2Owes) p2OwesMoney = true;
+                           if(p2Paid > parent2Owes) p1OwesMoney = true;
                         }
                       }
                   } else if (item.type === 'child_support') {
                       if (item.paidBy === 'Parent 1') {
                           parent1Owes = item.amount;
-                          parent2IsOwed = true;
+                          p1OwesMoney = true;
                       } else if (item.paidBy === 'Parent 2') {
                           parent2Owes = item.amount;
-                          parent1IsOwed = true;
+                          p2OwesMoney = true;
                       }
                   }
 
@@ -288,10 +286,10 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", parent1IsOwed && "text-destructive")}>
+                       <TableCell className={cn("text-right text-primary", p1OwesMoney && parent1Owes > 0 && "text-destructive")}>
                         ${parent1Owes.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", parent2IsOwed && "text-destructive")}>
+                      <TableCell className={cn("text-right text-primary", p2OwesMoney && parent2Owes > 0 && "text-destructive")}>
                         ${parent2Owes.toFixed(2)}
                       </TableCell>
                       <TableCell className="no-print text-center">
