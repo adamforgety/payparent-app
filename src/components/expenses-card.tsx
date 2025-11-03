@@ -133,16 +133,11 @@ export function ExpensesCard({
         const originalExpense = item.type === 'expense'
             ? expenses.find(e => e.id === item.id)
             : null;
-
-        if (item.paidBy === 'Parent 1') {
-            p1Paid += item.amount;
-        } else if (item.paidBy === 'Parent 2') {
-            p2Paid += item.amount;
-        }
         
         let p1Net = 0;
         let p2Net = 0;
 
+        // Calculate the net balance for THIS item
         if (item.type === 'expense' && originalExpense) {
             let p1Share = 0;
             let p2Share = 0;
@@ -160,7 +155,7 @@ export function ExpensesCard({
 
             const itemP1Paid = originalExpense.paidBy === 'Parent 1' ? originalExpense.amount : 0;
             const itemP2Paid = originalExpense.paidBy === 'Parent 2' ? originalExpense.amount : 0;
-
+            
             p1Net = p1Share - itemP1Paid;
             p2Net = p2Share - itemP2Paid;
 
@@ -172,8 +167,28 @@ export function ExpensesCard({
             }
         }
         
-        if (p1Net > 0 && item.status === 'Unsettled') p1Owes += p1Net;
-        if (p2Net > 0 && item.status === 'Unsettled') p2Owes += p2Net;
+        // Accumulate "Owes" totals for UNSETTLED items
+        if (item.status === 'Unsettled') {
+            if (p1Net > 0) p1Owes += p1Net;
+            if (p2Net > 0) p2Owes += p2Net;
+        }
+
+        // Accumulate "Paid" totals
+        if (item.paidBy === 'Parent 1') {
+            p1Paid += item.amount;
+        } else if (item.paidBy === 'Parent 2') {
+            p2Paid += item.amount;
+        }
+        
+        // If an item is settled, the owed amount is considered "paid" by the one who owed it.
+        if (item.status === 'Settled') {
+            if (p1Net > 0) { // Parent 1 owed and has now "paid" this amount.
+                p1Paid += p1Net;
+            }
+            if (p2Net > 0) { // Parent 2 owed and has now "paid" this amount.
+                p2Paid += p2Net;
+            }
+        }
     });
 
     return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes, parent1TotalPaid: p1Paid, parent2TotalPaid: p2Paid };
