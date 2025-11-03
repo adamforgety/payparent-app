@@ -38,6 +38,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -117,46 +118,47 @@ export function ExpensesCard({
   const hasUnsettledItems = allItems.some(item => item.status === 'Unsettled');
   const hasSettledItems = allItems.some(item => item.status === 'Settled');
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const { parent1TotalShare, parent2TotalShare } = useMemo(() => {
+    let p1Share = 0;
+    let p2Share = 0;
 
-  const calculateShare = (parent: Parent) => {
-    let totalShare = 0;
-    
-    // First, handle all non-reimbursement expenses
-    const standardExpenses = expenses.filter(exp => exp.category !== 'Reimbursement');
-    for (const expense of standardExpenses) {
-        if (expense.category === 'Medical' || expense.category === 'Child Care') {
-            const medicalParentSplitPercent = medicalExpenseSplit[parent] / 100;
-            totalShare += expense.amount * medicalParentSplitPercent;
+    filteredItems.forEach(item => {
+      let itemP1Share = 0;
+      let itemP2Share = 0;
+      if (item.type === 'expense') {
+        const expense = expenses.find(e => e.id === item.id)!;
+        if (expense.category === 'Reimbursement') {
+          if (expense.paidBy === 'Parent 1') {
+            itemP1Share = expense.amount;
+            itemP2Share = -expense.amount;
+          } else {
+            itemP2Share = expense.amount;
+            itemP1Share = -expense.amount;
+          }
+        } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+          itemP1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+          itemP2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
         } else {
-            const parentSplitPercent = expenseSplit[parent] / 100;
-            totalShare += expense.amount * parentSplitPercent;
+          itemP1Share = item.amount * (expenseSplit['Parent 1'] / 100);
+          itemP2Share = item.amount * (expenseSplit['Parent 2'] / 100);
         }
-    }
+      } else if (item.type === 'child_support') {
+        if (item.paidBy === 'Parent 1') {
+          itemP1Share = item.amount;
+        } else if (item.paidBy === 'Parent 2') {
+          itemP2Share = item.amount;
+        }
+      }
+      p1Share += itemP1Share;
+      p2Share += itemP2Share;
+    });
 
-    // Then, add direct transfers: child support and reimbursements
-    const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
-    if (!isFutureMonth && childSupport.amount > 0 && childSupport.paidBy !== 'None') {
-        // Child support adds to the share of the person who is supposed to pay.
-        if (childSupport.paidBy === parent) {
-            totalShare += childSupport.amount;
-        }
-    }
+    return { parent1TotalShare: p1Share, parent2TotalShare: p2Share };
+  }, [filteredItems, expenses, expenseSplit, medicalExpenseSplit, childSupport]);
 
-    const reimbursements = expenses.filter(exp => exp.category === 'Reimbursement');
-    for (const expense of reimbursements) {
-        // The parent marked as "Paid By" is the one who OWES the money.
-        // Their share is the full amount of the reimbursement.
-        if (expense.paidBy === parent) {
-            totalShare += expense.amount;
-        }
-    }
-    
-    return totalShare;
-};
-  
-  const parent1TotalShare = calculateShare('Parent 1');
-  const parent2TotalShare = calculateShare('Parent 2');
+  const totalExpenses = filteredItems
+    .filter(item => item.type === 'expense')
+    .reduce((sum, exp) => sum + exp.amount, 0);
 
   const handleStatusToggle = (item: DisplayItem) => {
     const newStatus: PaymentStatus = item.status === 'Settled' ? 'Unsettled' : 'Settled';
@@ -249,18 +251,20 @@ export function ExpensesCard({
                 filteredItems.map((item) => {
                   let parent1Share = 0;
                   let parent2Share = 0;
+                  let parent1Owes = false;
+                  let parent2Owes = false;
 
                   if (item.type === 'expense') {
                     const expense = expenses.find(e => e.id === item.id)!;
                     if (expense.category === 'Reimbursement') {
-                      // The parent marked as "Paid By" is the one who OWES the money.
-                      // Their share is the full amount. The other parent is receiving, so their "share" is negative.
                       if (expense.paidBy === 'Parent 1') {
                         parent1Share = expense.amount;
                         parent2Share = -expense.amount;
+                        parent1Owes = true;
                       } else {
                         parent2Share = expense.amount;
                         parent1Share = -expense.amount;
+                        parent2Owes = true;
                       }
                     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                       parent1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
@@ -269,11 +273,20 @@ export function ExpensesCard({
                       parent1Share = item.amount * (expenseSplit['Parent 1'] / 100);
                       parent2Share = item.amount * (expenseSplit['Parent 2'] / 100);
                     }
+                     if (expense.category !== 'Reimbursement') {
+                      if (expense.paidBy === 'Parent 1') {
+                        parent2Owes = parent2Share > 0;
+                      } else {
+                        parent1Owes = parent1Share > 0;
+                      }
+                    }
                   } else if (item.type === 'child_support') {
                     if (item.paidBy === 'Parent 1') {
                       parent1Share = item.amount;
+                      parent1Owes = true;
                     } else if (item.paidBy === 'Parent 2') {
                       parent2Share = item.amount;
+                      parent2Owes = true;
                     }
                   }
 
@@ -305,10 +318,10 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right text-primary">
+                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && parent1Owes && "text-destructive")}>
                         ${parent1Share >= 0 ? parent1Share.toFixed(2) : `(${Math.abs(parent1Share).toFixed(2)})`}
                       </TableCell>
-                      <TableCell className="text-right text-primary">
+                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && parent2Owes && "text-destructive")}>
                         ${parent2Share >= 0 ? parent2Share.toFixed(2) : `(${Math.abs(parent2Share).toFixed(2)})`}
                       </TableCell>
                       <TableCell className="no-print text-center">

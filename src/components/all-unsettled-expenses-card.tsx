@@ -14,6 +14,7 @@ import { EditExpenseDialog } from './edit-expense-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { cn } from '@/lib/utils';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -216,6 +217,8 @@ export function AllUnsettledExpensesCard({
                 allUnsettledItems.map((item) => {
                   let parent1Share = 0;
                   let parent2Share = 0;
+                  let parent1Owes = false;
+                  let parent2Owes = false;
 
                   if (item.type === 'expense') {
                       const expense = item.originalExpense!;
@@ -223,9 +226,11 @@ export function AllUnsettledExpensesCard({
                           if (expense.paidBy === 'Parent 1') {
                               parent1Share = expense.amount;
                               parent2Share = -expense.amount;
+                              parent1Owes = true;
                           } else {
                               parent1Share = -expense.amount;
                               parent2Share = expense.amount;
+                              parent2Owes = true;
                           }
                       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                           parent1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
@@ -234,11 +239,21 @@ export function AllUnsettledExpensesCard({
                           parent1Share = item.amount * (item.expenseSplit['Parent 1'] / 100);
                           parent2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
                       }
+
+                      if (expense.category !== 'Reimbursement') {
+                        if (expense.paidBy === 'Parent 1') {
+                          parent2Owes = parent2Share > 0;
+                        } else {
+                          parent1Owes = parent1Share > 0;
+                        }
+                      }
                   } else if (item.type === 'child_support') {
                       if (item.paidBy === 'Parent 1') {
                           parent1Share = item.amount;
+                          parent1Owes = true;
                       } else if (item.paidBy === 'Parent 2') {
                           parent2Share = item.amount;
+                          parent2Owes = true;
                       }
                   }
 
@@ -268,10 +283,10 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className="text-right text-primary">
+                       <TableCell className={cn("text-right text-primary", parent1Owes && "text-destructive")}>
                         ${parent1Share >= 0 ? parent1Share.toFixed(2) : `(${Math.abs(parent1Share).toFixed(2)})`}
                       </TableCell>
-                      <TableCell className="text-right text-primary">
+                      <TableCell className={cn("text-right text-primary", parent2Owes && "text-destructive")}>
                         ${parent2Share >= 0 ? parent2Share.toFixed(2) : `(${Math.abs(parent2Share).toFixed(2)})`}
                       </TableCell>
                       <TableCell className="no-print text-center">
