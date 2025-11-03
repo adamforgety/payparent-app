@@ -1,8 +1,8 @@
 'use client';
 
-import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual } from 'date-fns';
+import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, CalendarToday } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -276,6 +276,23 @@ function DashboardComponent() {
                 >
                   <ArrowRight className="h-4 w-4" />
                 </Button>
+                 <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setCurrentDate(new Date())}
+                        disabled={isSameMonth(currentDate, new Date())}
+                      >
+                        <CalendarToday className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Go to Current Month</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             ) : (
                <div className="h-10" />
