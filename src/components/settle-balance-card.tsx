@@ -33,7 +33,7 @@ interface SettleBalanceCardProps {
   parentNames: ParentNames;
   appData: AppData;
   currentMonthId: string;
-  onGoToExpenses: () => void;
+  onGoToExpenses: (monthId: string) => void;
 }
 
 const calculateShare = (
@@ -191,11 +191,13 @@ export function SettleBalanceCard({
         </p>
       </CardContent>
        <CardFooter>
-        <Button className="w-full" onClick={onGoToExpenses}>
-          View & Settle Expenses
+        <Button className="w-full" onClick={() => onGoToExpenses(currentMonthId)}>
+          View &amp; Settle Expenses
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
   );
 }
+
+    

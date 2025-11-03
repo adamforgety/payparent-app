@@ -33,6 +33,8 @@ function DashboardComponent() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
+  const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(null);
+  const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(null);
   const { toast } = useToast();
 
   const monthId = format(currentDate, 'yyyy-MM');
@@ -116,12 +118,20 @@ function DashboardComponent() {
       });
       return;
     }
+    // When user navigates away from unsettled tab, reset filters
+    if (value !== 'expenses' && expensesSubTab !== 'unsettled') {
+      setUnsettledYearFilter(null);
+      setUnsettledMonthFilter(null);
+    }
     setActiveTab(value);
   };
 
-  const handleGoToUnsettled = () => {
+  const handleGoToUnsettled = (monthId: string) => {
+    const year = monthId.substring(0, 4);
     setActiveTab('expenses');
     setExpensesSubTab('unsettled');
+    setUnsettledYearFilter(year);
+    setUnsettledMonthFilter(monthId);
   };
 
   const handleDeleteExpense = (expenseId: string, expenseMonthId: string) => {
@@ -292,7 +302,7 @@ function DashboardComponent() {
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
-                            onGoToExpenses={handleGoToUnsettled}
+                            onGoToExpenses={() => handleGoToUnsettled(monthId)}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -321,7 +331,7 @@ function DashboardComponent() {
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
-                            onGoToExpenses={handleGoToUnsettled}
+                            onGoToExpenses={() => handleGoToUnsettled(monthId)}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -373,6 +383,8 @@ function DashboardComponent() {
                             onUpdateChildSupport={updateChildSupportForSingleMonth}
                             onDeleteExpense={handleDeleteExpense}
                             currentDate={currentDate}
+                            initialYearFilter={unsettledYearFilter}
+                            initialMonthFilter={unsettledMonthFilter}
                         />
                     </TabsContent>
                  </Tabs>
@@ -465,3 +477,5 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
+
+    

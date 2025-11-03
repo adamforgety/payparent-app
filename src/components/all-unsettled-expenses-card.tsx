@@ -29,6 +29,8 @@ interface AllUnsettledExpensesCardProps {
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
   currentDate: Date;
+  initialYearFilter?: string | null;
+  initialMonthFilter?: string | null;
 }
 
 type UnsettledItem = {
@@ -55,10 +57,17 @@ export function AllUnsettledExpensesCard({
   onUpdateChildSupport,
   onDeleteExpense,
   currentDate,
+  initialYearFilter,
+  initialMonthFilter,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
-  const [yearFilter, setYearFilter] = useState<string>(String(currentDate.getFullYear()));
-  const [monthFilter, setMonthFilter] = useState('all'); // 'all' or 'yyyy-MM'
+  const [yearFilter, setYearFilter] = useState<string>(initialYearFilter || String(currentDate.getFullYear()));
+  const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter || 'all');
+
+  useEffect(() => {
+    if (initialYearFilter) setYearFilter(initialYearFilter);
+    if (initialMonthFilter) setMonthFilter(initialMonthFilter);
+  }, [initialYearFilter, initialMonthFilter]);
 
   const { availableYears, availableMonths } = useMemo(() => {
     if (!appData?.months) return { availableYears: [], availableMonths: [] };
@@ -438,3 +447,5 @@ export function AllUnsettledExpensesCard({
     </Card>
   );
 }
+
+    
