@@ -131,15 +131,21 @@ export function ExpensesCard({
     let expTotal = 0;
 
     filteredItems.forEach(item => {
+        if (item.type === 'expense') {
+            expTotal += item.amount;
+        }
+
         let p1Share = 0;
         let p2Share = 0;
 
         if (item.type === 'expense') {
-            expTotal += item.amount;
             const expense = item as Expense;
             if (expense.category === 'Reimbursement') {
-                if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
-                else p1Share = expense.amount;
+                if (expense.paidBy === 'Parent 1') {
+                    p2Share = expense.amount;
+                } else {
+                    p1Share = expense.amount;
+                }
             } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                 p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
                 p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
@@ -148,8 +154,11 @@ export function ExpensesCard({
                 p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
             }
         } else if (item.type === 'child_support') {
-            if (item.paidBy === 'Parent 1') p1Share = item.amount;
-            else p2Share = item.amount;
+            if (item.paidBy === 'Parent 1') { // Payer is Parent 1, so P1's share is the full amount
+              p1Share = item.amount;
+            } else { // Payer is Parent 2, so P2's share is the full amount
+              p2Share = item.amount;
+            }
         }
 
         if (item.status === 'Unsettled') {
@@ -275,8 +284,11 @@ export function ExpensesCard({
                   if (item.type === 'expense') {
                       const expense = item as Expense;
                       if (expense.category === 'Reimbursement') {
-                          if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
-                          else p1Share = expense.amount;
+                          if (expense.paidBy === 'Parent 1') {
+                            p2Share = expense.amount;
+                          } else {
+                            p1Share = expense.amount;
+                          }
                       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                           p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
                           p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
@@ -285,14 +297,19 @@ export function ExpensesCard({
                           p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
                       }
                   } else if (item.type === 'child_support') {
-                      if (item.paidBy === 'Parent 1') p1Share = item.amount;
-                      else p2Share = item.amount;
+                      if (item.paidBy === 'Parent 1') { // Payer is P1
+                          p1Share = item.amount;
+                      } else { // Payer is P2
+                          p2Share = item.amount;
+                      }
                   }
 
                   let p1Paid = 0;
                   let p2Paid = 0;
                   let p1Owes = 0;
                   let p2Owes = 0;
+                  let p1Credit = 0;
+                  let p2Credit = 0;
 
                   if (item.status === 'Settled') {
                     p1Paid = p1Share;
@@ -300,12 +317,20 @@ export function ExpensesCard({
                   } else { // Unsettled
                     p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
                     p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-                    const p1Net = p1Share - p1Paid;
-                    const p2Net = p2Share - p2Paid;
-                    if (p1Net > 0) p1Owes = p1Net;
-                    if (p2Net > 0) p2Owes = p2Net;
+                    
+                    if (item.type === 'child_support') {
+                       if (item.paidBy === 'Parent 1') {
+                          p1Owes = item.amount;
+                       } else {
+                          p2Owes = item.amount;
+                       }
+                    } else {
+                       const p1Net = p1Share - p1Paid;
+                       const p2Net = p2Share - p2Paid;
+                       if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
+                       if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
+                    }
                   }
-
 
                   return (
                     <TableRow key={item.id}>
@@ -339,13 +364,13 @@ export function ExpensesCard({
                         ${p1Paid.toFixed(2)}
                       </TableCell>
                       <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
-                        ${p1Owes.toFixed(2)}
+                        {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="text-right">
                         ${p2Paid.toFixed(2)}
                       </TableCell>
                       <TableCell className={cn("text-right", p2Owes > 0 && "text-destructive font-semibold")}>
-                         ${p2Owes.toFixed(2)}
+                         {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
                           {item.type === 'expense' && item.receiptUrl && (
