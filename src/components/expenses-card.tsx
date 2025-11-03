@@ -125,48 +125,47 @@ export function ExpensesCard({
     let p2Paid = 0;
 
     filteredItems.forEach(item => {
-      let p1Net = 0;
-      let p2Net = 0;
+        let p1Net = 0;
+        let p2Net = 0;
 
-      if (item.type === 'expense') {
-        const expense = expenses.find(e => e.id === item.id)!;
-        let p1Share = 0;
-        let p2Share = 0;
-        
-        if (expense.paidBy === 'Parent 1') p1Paid += expense.amount;
-        if (expense.paidBy === 'Parent 2') p2Paid += expense.amount;
+        if (item.type === 'expense') {
+            const expense = expenses.find(e => e.id === item.id)!;
+            
+            if (expense.paidBy === 'Parent 1') p1Paid += expense.amount;
+            if (expense.paidBy === 'Parent 2') p2Paid += expense.amount;
 
-        if (expense.category === 'Reimbursement') {
-          if (expense.paidBy === 'Parent 1') { // P1 owes P2
-            p1Share = expense.amount;
-          } else { // P2 owes P1
-            p2Share = expense.amount;
-          }
-        } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-          p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-          p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
-        } else {
-          p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-          p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
+            let p1Share = 0;
+            let p2Share = 0;
+
+            if (expense.category === 'Reimbursement') {
+                if (expense.paidBy === 'Parent 1') p1Share = expense.amount;
+                else p2Share = expense.amount;
+            } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
+                p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
+            } else {
+                p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
+                p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
+            }
+            
+            const itemP1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+            const itemP2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+            
+            p1Net = p1Share - itemP1Paid;
+            p2Net = p2Share - itemP2Paid;
+
+        } else if (item.type === 'child_support') {
+            if (item.paidBy === 'Parent 1') {
+                p1Net = item.amount;
+                p1Paid += item.amount;
+            } else if (item.paidBy === 'Parent 2') {
+                p2Net = item.amount;
+                p2Paid += item.amount;
+            }
         }
         
-        const itemP1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-        const itemP2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-        
-        p1Net = p1Share - itemP1Paid;
-        p2Net = p2Share - itemP2Paid;
-        
-      } else if (item.type === 'child_support') {
-        if (item.paidBy === 'Parent 1') {
-          p1Net = item.amount;
-          p1Paid += item.amount;
-        } else if (item.paidBy === 'Parent 2') {
-          p2Net = item.amount;
-          p2Paid += item.amount;
-        }
-      }
-      p1Owes += p1Net > 0 ? p1Net : 0;
-      p2Owes += p2Net > 0 ? p2Net : 0;
+        if (p1Net > 0) p1Owes += p1Net;
+        if (p2Net > 0) p2Owes += p2Net;
     });
 
     return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes, parent1TotalPaid: p1Paid, parent2TotalPaid: p2Paid };
@@ -269,18 +268,16 @@ export function ExpensesCard({
                   let p2Owes = 0;
                   let p1Credit = 0;
                   let p2Credit = 0;
-                  let p1OwesMoney = false;
-                  let p2OwesMoney = false;
-
+                  
                   if (item.type === 'expense') {
                     const expense = expenses.find(e => e.id === item.id)!;
                     let p1Share = 0;
                     let p2Share = 0;
 
                     if (expense.category === 'Reimbursement') {
-                        if (expense.paidBy === 'Parent 1') { // P1 owes P2
+                        if (expense.paidBy === 'Parent 1') {
                             p1Share = expense.amount;
-                        } else { // P2 owes P1
+                        } else {
                             p2Share = expense.amount;
                         }
                     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
@@ -310,8 +307,10 @@ export function ExpensesCard({
                     }
                   }
                   
-                  p1OwesMoney = p1Owes > 0;
-                  p2OwesMoney = p2Owes > 0;
+                  const p1OwesMoney = p1Owes > 0;
+                  const p2OwesMoney = p2Owes > 0;
+                  
+                  const isTransfer = item.category === 'Child Support' || item.category === 'Reimbursement';
 
 
                   return (
@@ -342,10 +341,10 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p1Owes > 0 && !(item.category === 'Reimbursement' && p1Owes > 0 && p2Owes > 0) && "text-destructive")}>
+                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p1OwesMoney && (!isTransfer || p1Owes > 0) && "text-destructive")}>
                         {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p2Owes > 0 && !(item.category === 'Reimbursement' && p1Owes > 0 && p2Owes > 0) && "text-destructive")}>
+                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p2OwesMoney && (!isTransfer || p2Owes > 0) && "text-destructive")}>
                          {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
@@ -449,6 +448,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
-    
