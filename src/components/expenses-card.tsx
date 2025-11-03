@@ -118,9 +118,11 @@ export function ExpensesCard({
   const hasUnsettledItems = allItems.some(item => item.status === 'Unsettled');
   const hasSettledItems = allItems.some(item => item.status === 'Settled');
 
-  const { parent1TotalOwes, parent2TotalOwes } = useMemo(() => {
+  const { parent1TotalOwes, parent2TotalOwes, parent1TotalPaid, parent2TotalPaid } = useMemo(() => {
     let p1Owes = 0;
     let p2Owes = 0;
+    let p1Paid = 0;
+    let p2Paid = 0;
 
     filteredItems.forEach(item => {
       let p1Net = 0;
@@ -130,6 +132,9 @@ export function ExpensesCard({
         const expense = expenses.find(e => e.id === item.id)!;
         let p1Share = 0;
         let p2Share = 0;
+        
+        if (expense.paidBy === 'Parent 1') p1Paid += expense.amount;
+        if (expense.paidBy === 'Parent 2') p2Paid += expense.amount;
 
         if (expense.category === 'Reimbursement') {
           if (expense.paidBy === 'Parent 1') { // P1 owes P2
@@ -145,24 +150,26 @@ export function ExpensesCard({
           p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
         }
         
-        const p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-        const p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+        const itemP1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+        const itemP2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
         
-        p1Net = p1Share - p1Paid;
-        p2Net = p2Share - p2Paid;
+        p1Net = p1Share - itemP1Paid;
+        p2Net = p2Share - itemP2Paid;
         
       } else if (item.type === 'child_support') {
         if (item.paidBy === 'Parent 1') {
           p1Net = item.amount;
+          p1Paid += item.amount;
         } else if (item.paidBy === 'Parent 2') {
           p2Net = item.amount;
+          p2Paid += item.amount;
         }
       }
       p1Owes += p1Net > 0 ? p1Net : 0;
       p2Owes += p2Net > 0 ? p2Net : 0;
     });
 
-    return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes };
+    return { parent1TotalOwes: p1Owes, parent2TotalOwes: p2Owes, parent1TotalPaid: p1Paid, parent2TotalPaid: p2Paid };
   }, [filteredItems, expenses, expenseSplit, medicalExpenseSplit]);
 
   const totalExpenses = filteredItems
@@ -335,10 +342,10 @@ export function ExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p1OwesMoney && "text-destructive")}>
+                       <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p1Owes > 0 && !(item.category === 'Reimbursement' && p1Owes > 0 && p2Owes > 0) && "text-destructive")}>
                         {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p2OwesMoney && "text-destructive")}>
+                      <TableCell className={cn("text-right text-primary", item.status === 'Unsettled' && p2Owes > 0 && !(item.category === 'Reimbursement' && p1Owes > 0 && p2Owes > 0) && "text-destructive")}>
                          {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
@@ -417,6 +424,14 @@ export function ExpensesCard({
         )}
         <Separator/>
         <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">{parentNames['Parent 1']} Paid:</span>
+            <span className="font-medium">${parent1TotalPaid.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">{parentNames['Parent 2']} Paid:</span>
+            <span className="font-medium">${parent2TotalPaid.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between items-center mt-2">
           <span className="font-semibold text-primary">{parentNames['Parent 1']} Owes:</span>
           <span className="font-bold text-base text-primary">
             ${parent1TotalOwes.toFixed(2)}
