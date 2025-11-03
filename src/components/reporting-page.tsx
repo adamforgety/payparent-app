@@ -66,7 +66,7 @@ type EnrichedChildSupport = ChildSupport & {
 
 type Transaction = EnrichedExpense | EnrichedChildSupport;
 
-type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount' | 'parent1Share' | 'parent2Share';
+type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount' | 'parent1Paid' | 'parent2Paid';
 
 type SortConfig = {
   key: SortKey;
@@ -180,8 +180,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
             }
         }
     });
+
+    // Filter for settled items only for the reporting table
+    const settledTransactions = allTransactionsForPeriod.filter(t => t.status === 'Settled');
     
-    const allExpensesForPeriod = allTransactionsForPeriod.filter(t => t.category !== 'Child Support') as EnrichedExpense[];
+    const allExpensesForPeriod = settledTransactions.filter(t => t.category !== 'Child Support') as EnrichedExpense[];
 
     const aggregated: { [key in ExpenseCategory]?: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
@@ -202,14 +205,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       .filter((item) => item.amount > 0)
       .sort((a, b) => b.amount - a.amount);
       
-    allTransactionsForPeriod.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    settledTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
       availableMonths: monthsForSelectedYear,
       periodData: chartData,
       totalPeriodExpenses: total,
-      allTransactions: allTransactionsForPeriod,
+      allTransactions: settledTransactions, // Use settled transactions for the report
       parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
       reportTitle: reportTitleForMonth(selectedMonth),
       reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
@@ -223,19 +226,18 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     }
   }, [selectedYear, availableMonths, selectedMonth]);
   
-  const getShare = (transaction: Transaction, parent: Parent) => {
-    if (transaction.category === 'Reimbursement') {
-        const expense = transaction as EnrichedExpense;
-        return expense.paidBy === parent ? expense.amount : 0;
-    } else if (transaction.category !== 'Child Support') {
-        const expense = transaction as EnrichedExpense;
-        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-        return expense.amount * (split[parent] / 100);
-    } else { // Child Support
-        const isFutureMonth = isAfter(parse(transaction.date, 'yyyy-MM-dd', new Date()), startOfMonth(new Date()));
-        if (isFutureMonth) return 0;
-        return transaction.paidBy === parent ? transaction.amount : 0;
-    }
+  const getPaidAmount = (transaction: Transaction, parent: Parent) => {
+      if (transaction.status !== 'Settled') return 0;
+  
+      if (transaction.category === 'Child Support' || transaction.category === 'Reimbursement') {
+          // The parent who "Paid By" is responsible for the full amount
+          return transaction.paidBy === parent ? transaction.amount : 0;
+      }
+  
+      // For standard expenses, the "paid" amount is their share
+      const expense = transaction as EnrichedExpense;
+      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
+      return expense.amount * (split[parent] / 100);
   };
 
   const filteredTransactions = useMemo(() => {
@@ -252,14 +254,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       const description = transaction.description.toLowerCase();
       const category = transaction.category.toLowerCase();
       
-      const parent1Share = getShare(transaction, 'Parent 1');
-      const parent2Share = getShare(transaction, 'Parent 2');
+      const parent1Paid = getPaidAmount(transaction, 'Parent 1');
+      const parent2Paid = getPaidAmount(transaction, 'Parent 2');
 
       return paidByName.includes(lowercasedFilter) ||
              description.includes(lowercasedFilter) ||
              category.includes(lowercasedFilter) ||
-             parent1Share.toFixed(2).includes(lowercasedFilter) ||
-             parent2Share.toFixed(2).includes(lowercasedFilter);
+             parent1Paid.toFixed(2).includes(lowercasedFilter) ||
+             parent2Paid.toFixed(2).includes(lowercasedFilter);
     });
   }, [allTransactions, searchTerm]);
 
@@ -270,18 +272,18 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         let aValue: string | number;
         let bValue: string | number;
 
-        if (sortConfig.key === 'parent1Share') {
-          aValue = getShare(a, 'Parent 1');
-          bValue = getShare(b, 'Parent 1');
-        } else if (sortConfig.key === 'parent2Share') {
-          aValue = getShare(a, 'Parent 2');
-          bValue = getShare(b, 'Parent 2');
+        if (sortConfig.key === 'parent1Paid') {
+          aValue = getPaidAmount(a, 'Parent 1');
+          bValue = getPaidAmount(b, 'Parent 1');
+        } else if (sortConfig.key === 'parent2Paid') {
+          aValue = getPaidAmount(a, 'Parent 2');
+          bValue = getPaidAmount(b, 'Parent 2');
         } else if (sortConfig.key === 'paidBy') {
             aValue = a.paidBy === 'None' ? '' : a.parentNames[a.paidBy];
             bValue = b.paidBy === 'None' ? '' : b.parentNames[b.paidBy];
         } else {
-            aValue = a[sortConfig.key];
-            bValue = b[sortConfig.key];
+            aValue = a[sortConfig.key as keyof Transaction];
+            bValue = b[sortConfig.key as keyof Transaction];
         }
 
         if (typeof aValue === 'number' && typeof bValue === 'number') {
@@ -303,15 +305,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     return sortableItems;
   }, [filteredTransactions, sortConfig]);
 
-  const { totalAmount, totalParent1Owes, totalParent2Owes } = useMemo(() => {
+  const { totalAmount, totalParent1Paid, totalParent2Paid } = useMemo(() => {
     return sortedTransactions.reduce(
       (totals, transaction) => {
         totals.totalAmount += transaction.amount;
-        totals.totalParent1Owes += getShare(transaction, 'Parent 1');
-        totals.totalParent2Owes += getShare(transaction, 'Parent 2');
+        totals.totalParent1Paid += getPaidAmount(transaction, 'Parent 1');
+        totals.totalParent2Paid += getPaidAmount(transaction, 'Parent 2');
         return totals;
       },
-      { totalAmount: 0, totalParent1Owes: 0, totalParent2Owes: 0 }
+      { totalAmount: 0, totalParent1Paid: 0, totalParent2Paid: 0 }
     );
   }, [sortedTransactions]);
   
@@ -453,24 +455,24 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         Total Amount
                       </SortableHeader>
                       <SortableHeader
-                        sortKey="parent1Share"
+                        sortKey="parent1Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 1']} Owes
+                        {parentNamesForPeriod['Parent 1']} Paid
                       </SortableHeader>
                       <SortableHeader
-                        sortKey="parent2Share"
+                        sortKey="parent2Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 2']} Owes
+                        {parentNamesForPeriod['Parent 2']} Paid
                       </SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedTransactions.length > 0 ? (
                       sortedTransactions.map((transaction) => {
-                        const parent1Share = getShare(transaction, 'Parent 1');
-                        const parent2Share = getShare(transaction, 'Parent 2');
+                        const parent1Paid = getPaidAmount(transaction, 'Parent 1');
+                        const parent2Paid = getPaidAmount(transaction, 'Parent 2');
 
                         return (
                           <TableRow key={transaction.id}>
@@ -511,10 +513,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                               ${transaction.amount.toFixed(2)}
                             </TableCell>
                             <TableCell className="text-right">
-                              ${parent1Share.toFixed(2)}
+                              ${parent1Paid.toFixed(2)}
                             </TableCell>
                             <TableCell className="text-right">
-                              ${parent2Share.toFixed(2)}
+                              ${parent2Paid.toFixed(2)}
                             </TableCell>
                           </TableRow>
                         );
@@ -523,8 +525,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       <TableRow>
                         <TableCell colSpan={7} className="h-24 text-center">
                           {searchTerm
-                            ? `No transactions found for "${searchTerm}".`
-                            : 'No transactions in this period.'}
+                            ? `No settled transactions found for "${searchTerm}".`
+                            : 'No settled transactions in this period.'}
                         </TableCell>
                       </TableRow>
                     )}
@@ -537,10 +539,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                           ${totalAmount.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totalParent1Owes.toFixed(2)}
+                          ${totalParent1Paid.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totalParent2Owes.toFixed(2)}
+                          ${totalParent2Paid.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableFooter>
@@ -689,3 +691,4 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     
 
     
+

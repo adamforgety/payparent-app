@@ -38,28 +38,21 @@ export function ReportingExportButton({
   const handleExport = () => {
     const dataToExport = transactions
       .map((item) => {
-        let parent1Owes = 0;
-        let parent2Owes = 0;
+        let parent1Paid = 0;
+        let parent2Paid = 0;
 
-        if (item.category === 'Child Support') {
-          if (item.paidBy === 'Parent 1') {
-            parent1Owes = item.amount;
-          } else if (item.paidBy === 'Parent 2') {
-            parent2Owes = item.amount;
-          }
-        } else {
-          const expense = item as EnrichedExpense;
-          if (expense.category === 'Reimbursement') {
-            // The "Paid By" parent is the one who OWES.
-            if (expense.paidBy === 'Parent 1') {
-              parent1Owes = expense.amount;
-            } else {
-              parent2Owes = expense.amount;
+        if (item.status === 'Settled') {
+          if (item.category === 'Child Support' || item.category === 'Reimbursement') {
+            if (item.paidBy === 'Parent 1') {
+              parent1Paid = item.amount;
+            } else if (item.paidBy === 'Parent 2') {
+              parent2Paid = item.amount;
             }
           } else {
+            const expense = item as EnrichedExpense;
             const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-            parent1Owes = expense.amount * (split['Parent 1'] / 100);
-            parent2Owes = expense.amount * (split['Parent 2'] / 100);
+            parent1Paid = expense.amount * (split['Parent 1'] / 100);
+            parent2Paid = expense.amount * (split['Parent 2'] / 100);
           }
         }
 
@@ -69,12 +62,13 @@ export function ReportingExportButton({
           Category: item.category,
           'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
           Amount: item.amount,
-          [`${parentNames['Parent 1']} Owes`]: parent1Owes.toFixed(2),
-          [`${parentNames['Parent 2']} Owes`]: parent2Owes.toFixed(2),
+          [`${parentNames['Parent 1']} Paid`]: parent1Paid.toFixed(2),
+          [`${parentNames['Parent 2']} Paid`]: parent2Paid.toFixed(2),
+          Status: item.status,
         };
-      });
+      }).filter(item => item.Status === 'Settled');
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport.map(({Status, ...rest}) => rest)); // Remove Status from final export
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
     XLSX.writeFile(
