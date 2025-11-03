@@ -1,12 +1,13 @@
 'use client';
 
-import { Scale } from 'lucide-react';
+import { Scale, ArrowRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import type {
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { parse, isBefore, startOfDay, isAfter, startOfMonth } from 'date-fns';
+import { Button } from './ui/button';
 
 interface SettleBalanceCardProps {
   parent: Parent;
@@ -31,6 +33,7 @@ interface SettleBalanceCardProps {
   parentNames: ParentNames;
   appData: AppData;
   currentMonthId: string;
+  onGoToExpenses: () => void;
 }
 
 const calculateShare = (
@@ -65,6 +68,7 @@ export function SettleBalanceCard({
   parentNames,
   appData,
   currentMonthId,
+  onGoToExpenses,
 }: SettleBalanceCardProps) {
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
@@ -171,6 +175,12 @@ export function SettleBalanceCard({
           This balance includes all unsettled items from the current and prior months.
         </p>
       </CardContent>
+       <CardFooter>
+        <Button className="w-full" onClick={onGoToExpenses}>
+          View & Settle Expenses
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

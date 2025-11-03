@@ -286,6 +286,7 @@ function DashboardComponent() {
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
+                            onGoToExpenses={() => setActiveTab('expenses')}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -314,6 +315,7 @@ function DashboardComponent() {
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
+                            onGoToExpenses={() => setActiveTab('expenses')}
                         />
                       </div>
                       <div className="lg:col-span-2">
