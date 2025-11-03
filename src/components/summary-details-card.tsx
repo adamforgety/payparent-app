@@ -157,7 +157,7 @@ export function SummaryDetailsCard({
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {renderBalanceIcon(unsettledPaidByParent)}
-              <span className="text-sm">Expenses You Paid (Credit)</span>
+              <span className="text-sm">Expenses You Covered</span>
             </div>
             <span className={cn("font-medium", unsettledPaidByParent > 0 ? "text-green-600" : "text-muted-foreground")}>
               +${unsettledPaidByParent.toFixed(2)}
@@ -166,7 +166,7 @@ export function SummaryDetailsCard({
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {renderBalanceIcon(-parentExpenseShare)}
-              <span className="text-sm">Your Share of Expenses (Debit)</span>
+              <span className="text-sm">Your Share of Costs</span>
             </div>
             <span className={cn("font-medium", parentExpenseShare > 0 ? "text-destructive" : "text-muted-foreground")}>
               -${parentExpenseShare.toFixed(2)}
