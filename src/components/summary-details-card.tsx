@@ -129,7 +129,6 @@ export function SummaryDetailsCard({
 
   const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
   
-  const otherParentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, otherParent);
   const unsettledPaidByOtherParent = unsettledExpenses
     .filter(exp => exp.paidBy === otherParent)
     .reduce((sum, exp) => sum + exp.amount, 0);
@@ -154,8 +153,9 @@ export function SummaryDetailsCard({
     return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
   };
 
-  const amountOwedToYou = unsettledPaidByOtherParent - otherParentExpenseShare > 0 ? unsettledPaidByOtherParent - otherParentExpenseShare : 0;
   const amountYouOwe = parentExpenseShare - unsettledPaidByParent > 0 ? parentExpenseShare - unsettledPaidByParent : 0;
+  const amountOwedToYou = unsettledPaidByParent - parentExpenseShare > 0 ? unsettledPaidByParent - parentExpenseShare : 0;
+
 
   return (
     <Card className="h-full">
@@ -171,14 +171,14 @@ export function SummaryDetailsCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <ul className="space-y-4">
+        <ul className="space-y-4 text-lg">
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {renderBalanceIcon(amountOwedToYou)}
               <span className="text-base">{otherParentName} Owes You</span>
             </div>
-            <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-            <span className={cn("font-medium text-base", amountOwedToYou > 0 ? "text-green-600" : "text-muted-foreground")}>
+            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+            <span className={cn("font-semibold text-lg", amountOwedToYou > 0 ? "text-green-600" : "text-muted-foreground")}>
               +${amountOwedToYou.toFixed(2)}
             </span>
           </li>
@@ -187,8 +187,8 @@ export function SummaryDetailsCard({
               {renderBalanceIcon(-amountYouOwe)}
               <span className="text-base">You Owe {otherParentName}</span>
             </div>
-            <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-            <span className={cn("font-medium text-base", amountYouOwe > 0 ? "text-destructive" : "text-muted-foreground")}>
+            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+            <span className={cn("font-semibold text-lg", amountYouOwe > 0 ? "text-destructive" : "text-muted-foreground")}>
               -${amountYouOwe.toFixed(2)}
             </span>
           </li>
@@ -198,32 +198,34 @@ export function SummaryDetailsCard({
                 {renderBalanceIcon(childSupportBalance)}
                 <span className="text-base">Child Support</span>
               </div>
-              <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-              <span className={cn('font-medium text-base', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+              <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+              <span className={cn('font-semibold text-lg', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
                 {childSupportBalance < 0 ? `-$${Math.abs(childSupportBalance).toFixed(2)}` : `+$${childSupportBalance.toFixed(2)}`}
               </span>
             </li>
           )}
           {previousBalances.length > 0 && (
-             <li className="flex items-center justify-between">
+             <li className="w-full items-center justify-between">
                <Accordion type="single" collapsible className="w-full">
                  <AccordionItem value="item-1" className="border-b-0">
-                    <AccordionTrigger className="flex items-center justify-between w-full p-0 hover:no-underline [&>svg]:ml-2">
-                        <div className="flex items-center gap-3">
-                            {renderBalanceIcon(previousMonthsTotalBalance)}
-                            <span className="text-base">Balance from Prior Months</span>
+                    <AccordionTrigger className="flex w-full items-center p-0 text-base font-normal hover:no-underline [&>svg]:ml-2">
+                        <div className="flex flex-1 items-center justify-between">
+                          <div className="flex items-center gap-3">
+                              {renderBalanceIcon(previousMonthsTotalBalance)}
+                              <span className="text-base">Prior Balance</span>
+                          </div>
+                          <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                          <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                          {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+                          </span>
                         </div>
-                        <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-                        <span className={cn('font-medium text-base', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                        {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
-                        </span>
                     </AccordionTrigger>
                    <AccordionContent className="pt-2 pl-12 pr-4">
                      <div className="space-y-1">
                         {previousBalances.map(({ monthId, balance }) => (
                           <div key={monthId} className="flex items-center justify-between text-sm">
                             <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
-                            <div className="flex-grow border-b border-dotted border-border mx-4"></div>
+                            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
                             <p className={cn('font-medium', balance < 0 ? 'text-destructive' : 'text-green-600')}>
                               {balance < 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${balance.toFixed(2)}`}
                             </p>
@@ -239,7 +241,7 @@ export function SummaryDetailsCard({
         <Separator />
         <div className="flex items-center justify-between">
           <span className="font-semibold text-lg">Total Net Balance</span>
-           <span className={cn('text-xl font-bold', totalNetBalance < 0 ? 'text-destructive' : totalNetBalance > 0 ? 'text-green-600' : 'text-primary')}>
+           <span className={cn('text-2xl font-bold', totalNetBalance < 0 ? 'text-destructive' : totalNetBalance > 0 ? 'text-green-600' : 'text-primary')}>
                 {totalNetBalance < 0 ? `-$${Math.abs(totalNetBalance).toFixed(2)}` : `+$${totalNetBalance.toFixed(2)}`}
             </span>
         </div>
