@@ -234,8 +234,8 @@ export function AllUnsettledExpensesCard({
           <div>
             <CardTitle>All Unsettled Items</CardTitle>
             <CardDescription>
-              A complete ledger of all outstanding expenses and child support payments. 
-              Use the filters to narrow your view.
+              A ledger of all outstanding expenses and payments. 
+              The view is currently filtered; use the controls to adjust it.
             </CardDescription>
           </div>
         </div>
@@ -255,12 +255,11 @@ export function AllUnsettledExpensesCard({
               </SelectContent>
             </Select>
 
-           <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
+           <Select value={monthFilter === 'all' ? '' : monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by month" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Months</SelectItem>
               {availableMonths.map(month => (
                 <SelectItem key={month.value} value={month.value}>
                   {month.label}
@@ -268,6 +267,12 @@ export function AllUnsettledExpensesCard({
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={monthFilter === 'all' ? 'secondary' : 'outline'}
+            onClick={() => setMonthFilter('all')}
+            >
+            Show All
+          </Button>
         </div>
         <div className="rounded-md border">
           <Table>
