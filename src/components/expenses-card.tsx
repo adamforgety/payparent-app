@@ -130,61 +130,52 @@ export function ExpensesCard({
     let p2Paid = 0;
 
     filteredItems.forEach(item => {
-        let p1Net = 0;
-        let p2Net = 0;
+        let p1Share = 0;
+        let p2Share = 0;
 
+        // Step 1: Calculate each parent's share of the cost
         if (item.type === 'expense') {
             const expense = item as Expense;
-            let p1Share = 0;
-            let p2Share = 0;
-
             if (expense.category === 'Reimbursement') {
-                if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
-                else p1Share = expense.amount;
+                // The parent who did NOT pay owes 100%
+                if (expense.paidBy === 'Parent 1') {
+                  p2Share = expense.amount;
+                } else {
+                  p1Share = expense.amount;
+                }
             } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                p1Share = expense.amount * (medicalExpenseSplit['Parent 1'] / 100);
-                p2Share = expense.amount * (medicalExpenseSplit['Parent 2'] / 100);
+                p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
+                p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
             } else {
-                p1Share = expense.amount * (expenseSplit['Parent 1'] / 100);
-                p2Share = expense.amount * (expenseSplit['Parent 2'] / 100);
+                p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
+                p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
             }
-
-            const itemP1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-            const itemP2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-            
-            p1Net = p1Share - itemP1Paid;
-            p2Net = p2Share - itemP2Paid;
-
         } else if (item.type === 'child_support') {
-            if (item.paidBy === 'Parent 1') { // Parent 1 pays support, so they "owe" it initially
-                p1Net = item.amount; 
-            } else if (item.paidBy === 'Parent 2') {
-                p2Net = item.amount;
+            if (item.paidBy === 'Parent 1') { // Parent 1 is the payer
+                p1Share = item.amount;
+            } else { // Parent 2 is the payer
+                p2Share = item.amount;
             }
         }
 
-        // Accumulate "Owes" totals for UNSETTLED items
+        // Step 2: Calculate "Owed" and "Paid" based on status
         if (item.status === 'Unsettled') {
+            const p1InitialPaid = item.paidBy === 'Parent 1' ? item.amount : 0;
+            const p2InitialPaid = item.paidBy === 'Parent 2' ? item.amount : 0;
+
+            const p1Net = p1Share - p1InitialPaid;
+            const p2Net = p2Share - p2InitialPaid;
+
             if (p1Net > 0) p1Owes += p1Net;
             if (p2Net > 0) p2Owes += p2Net;
-        }
 
-        // Accumulate initial "Paid" totals
-        if (item.paidBy === 'Parent 1') {
-            p1Paid += item.amount;
-        } else if (item.paidBy === 'Parent 2') {
-            p2Paid += item.amount;
-        }
-        
-        // If an item is settled, the owed amount is considered "paid" by the one who owed it.
-        // This simulates the settlement transfer.
-        if (item.status === 'Settled') {
-            if (p1Net > 0) { // Parent 1 owed, so now they have "paid" this amount.
-                p1Paid += p1Net;
-            }
-             if (p2Net > 0) { // Parent 2 owed, so now they have "paid" this amount.
-                p2Paid += p2Net;
-            }
+            p1Paid += p1InitialPaid;
+            p2Paid += p2InitialPaid;
+        } else { // item.status === 'Settled'
+            // For settled items, the "Owed" is $0.
+            // The "Paid" amount reflects each parent's actual share of the cost.
+            p1Paid += p1Share;
+            p2Paid += p2Share;
         }
     });
 
@@ -301,8 +292,12 @@ export function ExpensesCard({
                     let p2Share = 0;
 
                     if (expense.category === 'Reimbursement') {
-                        if (expense.paidBy === 'Parent 1') p2Share = expense.amount;
-                        else p1Share = expense.amount;
+                        // The parent who did NOT pay owes 100%
+                        if (expense.paidBy === 'Parent 1') {
+                            p2Share = expense.amount;
+                        } else {
+                            p1Share = expense.amount;
+                        }
                     } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                         p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
                         p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
