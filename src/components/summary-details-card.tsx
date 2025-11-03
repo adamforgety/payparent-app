@@ -77,6 +77,8 @@ export function SummaryDetailsCard({
   appData,
   currentMonthId,
 }: SummaryDetailsCardProps) {
+  const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+  const otherParentName = parentNames[otherParent];
 
   // --- Calculate Balance from Previous Months ---
   const previousBalances = useMemo<PreviousBalance[]>(() => {
@@ -120,11 +122,18 @@ export function SummaryDetailsCard({
 
   // --- Calculate Current Month's Balance ---
   const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
+  
   const unsettledPaidByParent = unsettledExpenses
     .filter(exp => exp.paidBy === parent)
     .reduce((sum, exp) => sum + exp.amount, 0);
 
   const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
+  
+  const otherParentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, otherParent);
+  const unsettledPaidByOtherParent = unsettledExpenses
+    .filter(exp => exp.paidBy === otherParent)
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
 
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
@@ -145,6 +154,9 @@ export function SummaryDetailsCard({
     return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
   };
 
+  const amountOwedToYou = unsettledPaidByOtherParent - otherParentExpenseShare > 0 ? unsettledPaidByOtherParent - otherParentExpenseShare : 0;
+  const amountYouOwe = parentExpenseShare - unsettledPaidByParent > 0 ? parentExpenseShare - unsettledPaidByParent : 0;
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -162,22 +174,22 @@ export function SummaryDetailsCard({
         <ul className="space-y-4">
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {renderBalanceIcon(unsettledPaidByParent)}
-              <span className="text-base">Expenses You Covered</span>
+              {renderBalanceIcon(amountOwedToYou)}
+              <span className="text-base">{otherParentName} Owes You</span>
             </div>
             <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-            <span className={cn("font-medium text-base", unsettledPaidByParent > 0 ? "text-green-600" : "text-muted-foreground")}>
-              +${unsettledPaidByParent.toFixed(2)}
+            <span className={cn("font-medium text-base", amountOwedToYou > 0 ? "text-green-600" : "text-muted-foreground")}>
+              +${amountOwedToYou.toFixed(2)}
             </span>
           </li>
           <li className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {renderBalanceIcon(-parentExpenseShare)}
-              <span className="text-base">Your Share of Costs</span>
+              {renderBalanceIcon(-amountYouOwe)}
+              <span className="text-base">You Owe {otherParentName}</span>
             </div>
             <div className="flex-grow border-b border-dotted border-border mx-4"></div>
-            <span className={cn("font-medium text-base", parentExpenseShare > 0 ? "text-destructive" : "text-muted-foreground")}>
-              -${parentExpenseShare.toFixed(2)}
+            <span className={cn("font-medium text-base", amountYouOwe > 0 ? "text-destructive" : "text-muted-foreground")}>
+              -${amountYouOwe.toFixed(2)}
             </span>
           </li>
            {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
@@ -196,7 +208,7 @@ export function SummaryDetailsCard({
              <li className="flex items-center justify-between">
                <Accordion type="single" collapsible className="w-full">
                  <AccordionItem value="item-1" className="border-b-0">
-                    <AccordionTrigger className="flex items-center justify-between w-full p-0 hover:no-underline">
+                    <AccordionTrigger className="flex items-center justify-between w-full p-0 hover:no-underline [&>svg]:ml-2">
                         <div className="flex items-center gap-3">
                             {renderBalanceIcon(previousMonthsTotalBalance)}
                             <span className="text-base">Balance from Prior Months</span>
