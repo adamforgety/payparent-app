@@ -159,6 +159,7 @@ export function SummaryDetailsCard({
               {renderBalanceIcon(unsettledPaidByParent)}
               <span className="text-base">Expenses You Covered</span>
             </div>
+            <div className="flex-grow border-b border-dotted border-border mx-4"></div>
             <span className={cn("font-medium text-base", unsettledPaidByParent > 0 ? "text-green-600" : "text-muted-foreground")}>
               +${unsettledPaidByParent.toFixed(2)}
             </span>
@@ -168,6 +169,7 @@ export function SummaryDetailsCard({
               {renderBalanceIcon(-parentExpenseShare)}
               <span className="text-base">Your Share of Costs</span>
             </div>
+            <div className="flex-grow border-b border-dotted border-border mx-4"></div>
             <span className={cn("font-medium text-base", parentExpenseShare > 0 ? "text-destructive" : "text-muted-foreground")}>
               -${parentExpenseShare.toFixed(2)}
             </span>
@@ -178,6 +180,7 @@ export function SummaryDetailsCard({
                 {renderBalanceIcon(childSupportBalance)}
                 <span className="text-base">Child Support</span>
               </div>
+              <div className="flex-grow border-b border-dotted border-border mx-4"></div>
               <span className={cn('font-medium text-base', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
                 {childSupportBalance < 0 ? `-$${Math.abs(childSupportBalance).toFixed(2)}` : `+$${childSupportBalance.toFixed(2)}`}
               </span>
@@ -189,6 +192,7 @@ export function SummaryDetailsCard({
                 {renderBalanceIcon(previousMonthsTotalBalance)}
                 <span className="text-base">Balance from Prior Months</span>
               </div>
+              <div className="flex-grow border-b border-dotted border-border mx-4"></div>
               <span className={cn('font-medium text-base', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
                 {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
               </span>
