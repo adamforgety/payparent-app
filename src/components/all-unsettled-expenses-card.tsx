@@ -1,8 +1,8 @@
 'use client';
 
-import { format, isAfter, startOfMonth, parse, isBefore } from 'date-fns';
+import { format, isAfter, startOfMonth, parse, getYear } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
 import { Badge } from './ui/badge';
@@ -57,27 +57,48 @@ export function AllUnsettledExpensesCard({
   currentDate,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
-  const [monthFilter, setMonthFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState<string>(String(currentDate.getFullYear()));
+  const [monthFilter, setMonthFilter] = useState('all'); // 'all' or 'yyyy-MM'
 
-  const availableMonths = useMemo(() => {
-    if (!appData?.months) return [];
-    return Object.keys(appData.months)
+  const { availableYears, availableMonths } = useMemo(() => {
+    if (!appData?.months) return { availableYears: [], availableMonths: [] };
+
+    const years = new Set<string>();
+    Object.keys(appData.months).forEach(monthId => years.add(monthId.substring(0, 4)));
+    const sortedYears = Array.from(years).sort().reverse();
+
+    const months = Object.keys(appData.months)
+      .filter(monthId => monthId.startsWith(yearFilter))
       .sort()
       .reverse()
       .map(monthId => ({
         value: monthId,
-        label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy'),
+        label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM'),
       }));
-  }, [appData.months]);
+      
+    return { availableYears: sortedYears, availableMonths: months };
+  }, [appData.months, yearFilter]);
+
+  useEffect(() => {
+    // Reset month filter if it's not valid for the new year
+    if (monthFilter !== 'all' && !monthFilter.startsWith(yearFilter)) {
+      setMonthFilter('all');
+    }
+  }, [yearFilter, monthFilter]);
+
 
   const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
     let items: UnsettledItem[] = [];
     if (!appData?.months) return items;
+    
+    let monthIdsToProcess: string[] = [];
 
-    const monthIdsToProcess = monthFilter === 'all'
-        ? Object.keys(appData.months)
-        : [monthFilter];
-
+    if (monthFilter === 'all') {
+      monthIdsToProcess = Object.keys(appData.months).filter(m => m.startsWith(yearFilter));
+    } else {
+      monthIdsToProcess = [monthFilter];
+    }
+    
     for (const monthId of monthIdsToProcess) {
       if (!appData.months[monthId]) continue;
 
@@ -128,7 +149,7 @@ export function AllUnsettledExpensesCard({
 
     // Sort by date descending
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [appData.months, monthFilter]);
+  }, [appData.months, yearFilter, monthFilter]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -161,7 +182,6 @@ export function AllUnsettledExpensesCard({
         if (item.type === 'expense') {
           const expense = item.originalExpense!;
           if (expense.category === 'Reimbursement') {
-            // The parent who did NOT pay owes 100%
             if (expense.paidBy === 'Parent 1') {
                 p2Share = expense.amount;
             } else {
@@ -212,8 +232,21 @@ export function AllUnsettledExpensesCard({
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-2 mb-4">
-           <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+              <SelectTrigger className="w-full sm:w-[120px]">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+           <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by month" />
             </SelectTrigger>
             <SelectContent>
@@ -252,7 +285,6 @@ export function AllUnsettledExpensesCard({
                   if (item.type === 'expense') {
                       const expense = item.originalExpense!;
                       if (expense.category === 'Reimbursement') {
-                          // The parent who did NOT pay owes 100%
                           if (expense.paidBy === 'Parent 1') {
                             p2Share = expense.amount;
                           } else {
@@ -377,7 +409,7 @@ export function AllUnsettledExpensesCard({
                 <TableRow>
                   <TableCell colSpan={9} className="h-24 text-center">
                     {monthFilter === 'all'
-                      ? 'All items are settled. Great job!'
+                      ? `No unsettled items for ${yearFilter}.`
                       : 'No unsettled items for this month.'}
                   </TableCell>
                 </TableRow>
