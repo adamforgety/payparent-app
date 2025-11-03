@@ -205,15 +205,13 @@ export function AllUnsettledExpensesCard({
           }
           p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
           p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-
         } else if (item.type === 'child_support') {
-            if (item.paidBy === 'Parent 1') { // Parent 1 is the payer
-                p1Share = item.amount;
-            } else if (item.paidBy === 'Parent 2') { // Parent 2 is the payer
-                p2Share = item.amount;
+            if (item.paidBy === 'Parent 1') {
+                p1Owes += item.amount;
+            } else if (item.paidBy === 'Parent 2') {
+                p2Owes += item.amount;
             }
-            p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-            p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+            return; // Skip remaining calculation for child support
         }
         
         p1Owes += Math.max(0, p1Share - p1Paid);
@@ -255,7 +253,7 @@ export function AllUnsettledExpensesCard({
               </SelectContent>
             </Select>
 
-           <Select value={monthFilter === 'all' ? '' : monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
+           <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by month" />
             </SelectTrigger>
@@ -292,19 +290,21 @@ export function AllUnsettledExpensesCard({
             <TableBody>
               {allUnsettledItems.length > 0 ? (
                 allUnsettledItems.map((item) => {
-                  let p1Share = 0;
-                  let p2Share = 0;
-                  let p1Paid = 0;
-                  let p2Paid = 0;
+                  let p1OwesAmount = 0;
+                  let p2OwesAmount = 0;
+                  let isTransfer = false;
                   
                   if (item.type === 'expense') {
                       const expense = item.originalExpense!;
+                      let p1Share = 0;
+                      let p2Share = 0;
                       if (expense.category === 'Reimbursement') {
                           if (expense.paidBy === 'Parent 1') {
                             p2Share = expense.amount;
                           } else {
                             p1Share = expense.amount;
                           }
+                          isTransfer = true;
                       } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
                           p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
                           p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
@@ -313,27 +313,23 @@ export function AllUnsettledExpensesCard({
                           p2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
                       }
 
-                      p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                      p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                      const p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+                      const p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                      
+                      p1OwesAmount = Math.max(0, p1Share - p1Paid);
+                      p2OwesAmount = Math.max(0, p2Share - p2Paid);
+
                   } else if (item.type === 'child_support') {
                       if (item.paidBy === 'Parent 1') { // Parent 1 is the payer
-                          p1Share = item.amount;
+                          p1OwesAmount = item.amount;
                       } else if (item.paidBy === 'Parent 2') { // Parent 2 is the payer
-                          p2Share = item.amount;
+                          p2OwesAmount = item.amount;
                       }
-                      p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-                      p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+                      isTransfer = true;
                   }
 
-                  const p1Owes = p1Share - p1Paid;
-                  const p2Owes = p2Share - p2Paid;
-
-                  const p1OwesAmount = Math.max(0, p1Owes);
-                  const p2OwesAmount = Math.max(0, p2Owes);
-
-                  const isTransfer = item.category === 'Child Support' || item.category === 'Reimbursement';
-                  const p1OwesMoney = !isTransfer ? p1Owes > 0 : p1Share > 0;
-                  const p2OwesMoney = !isTransfer ? p2Owes > 0 : p2Share > 0;
+                  const p1OwesMoney = p1OwesAmount > 0;
+                  const p2OwesMoney = p2OwesAmount > 0;
 
                   return (
                     <TableRow key={item.id}>
@@ -361,10 +357,10 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", p1OwesMoney && p1OwesAmount > 0 && "text-destructive")}>
+                       <TableCell className={cn("text-right text-primary", p1OwesMoney && "text-destructive")}>
                         ${p1OwesAmount.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", p2OwesMoney && p2OwesAmount > 0 && "text-destructive")}>
+                      <TableCell className={cn("text-right text-primary", p2OwesMoney && "text-destructive")}>
                         ${p2OwesAmount.toFixed(2)}
                       </TableCell>
                       <TableCell className="no-print text-center">
@@ -425,7 +421,7 @@ export function AllUnsettledExpensesCard({
                   <TableCell colSpan={9} className="h-24 text-center">
                     {monthFilter === 'all'
                       ? `No unsettled items for ${yearFilter}.`
-                      : 'No unsettled items for this month.'}
+                      : `No unsettled items for ${format(parse(monthFilter, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`}
                   </TableCell>
                 </TableRow>
               )}
@@ -453,5 +449,3 @@ export function AllUnsettledExpensesCard({
     </Card>
   );
 }
-
-    
