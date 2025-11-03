@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { parse, isBefore, startOfDay, format, isAfter, startOfMonth } from 'date-fns';
-
 import {
   Card,
   CardContent,
@@ -27,7 +26,7 @@ import type {
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Info } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Info } from 'lucide-react';
 
 interface SummaryDetailsCardProps {
   parent: Parent;
@@ -126,7 +125,6 @@ export function SummaryDetailsCard({
     .reduce((sum, exp) => sum + exp.amount, 0);
 
   const parentExpenseShare = calculateShare(unsettledExpenses, expenseSplit, medicalExpenseSplit, parent);
-  const expenseBalance = unsettledPaidByParent - parentExpenseShare;
 
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
@@ -139,7 +137,7 @@ export function SummaryDetailsCard({
     }
   }
 
-  const currentMonthNetBalance = expenseBalance + childSupportBalance;
+  const totalNetBalance = previousMonthsTotalBalance + unsettledPaidByParent - parentExpenseShare + childSupportBalance;
   
   return (
     <Card className="h-full">
@@ -155,66 +153,59 @@ export function SummaryDetailsCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2 rounded-md bg-muted/50 p-3">
-          <h4 className="font-medium text-sm underline">This Month's Unsettled Balance</h4>
-          <div className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
-            <p className="text-muted-foreground">Your Share of Expenses</p>
-            <p className="font-semibold text-right">-${parentExpenseShare.toFixed(2)}</p>
-          </div>
-          <div className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
-            <p className="text-muted-foreground">Expenses You Paid</p>
-            <p className="font-semibold text-green-600 text-right">
-              +${unsettledPaidByParent.toFixed(2)}
-            </p>
-          </div>
-          {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
-            <div className="grid grid-cols-[auto_1fr] gap-x-4 text-sm">
-              <p className="text-muted-foreground">Child Support</p>
-              <p className={cn('font-semibold text-right', childSupportBalance > 0 && 'text-green-600', childSupportBalance < 0 && 'text-destructive')}>
-                {childSupportBalance >= 0 ? `+$${childSupportBalance.toFixed(2)}` : `-$${Math.abs(childSupportBalance).toFixed(2)}`}
-              </p>
+        <ul className="space-y-3">
+          <li className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowUpCircle className="h-5 w-5 text-green-500" />
+              <span className="text-sm">Expenses You Paid (Credit)</span>
             </div>
+            <span className="font-medium text-green-600">+${unsettledPaidByParent.toFixed(2)}</span>
+          </li>
+          <li className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowDownCircle className="h-5 w-5 text-destructive" />
+              <span className="text-sm">Your Share of Expenses (Debit)</span>
+            </div>
+            <span className="font-medium text-destructive">-${parentExpenseShare.toFixed(2)}</span>
+          </li>
+           {childSupport.amount > 0 && childSupport.status === 'Unsettled' && !isCurrentMonthFuture && (
+            <li className="flex items-center justify-between">
+               <div className="flex items-center gap-2">
+                {childSupportBalance < 0 ? (
+                    <ArrowDownCircle className="h-5 w-5 text-destructive" />
+                ) : (
+                    <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                )}
+                <span className="text-sm">Child Support</span>
+              </div>
+              <span className={cn('font-medium', childSupportBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                {childSupportBalance < 0 ? `-$${Math.abs(childSupportBalance).toFixed(2)}` : `+$${childSupportBalance.toFixed(2)}`}
+              </span>
+            </li>
           )}
-          <Separator />
-          <div className="grid grid-cols-[auto_1fr] gap-x-4 font-medium">
-            <p className="text-muted-foreground">Net for this Month</p>
-            <p className={cn("text-right", currentMonthNetBalance > 0 && 'text-green-600', currentMonthNetBalance < 0 && 'text-destructive')}>
-              {currentMonthNetBalance >= 0 ? `+$${currentMonthNetBalance.toFixed(2)}` : `-$${Math.abs(currentMonthNetBalance).toFixed(2)}`}
-            </p>
-          </div>
+          {previousBalances.length > 0 && (
+             <li className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {previousMonthsTotalBalance < 0 ? (
+                    <ArrowDownCircle className="h-5 w-5 text-destructive" />
+                ) : (
+                    <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                )}
+                <span className="text-sm">Balance from Prior Months</span>
+              </div>
+              <span className={cn('font-medium', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+              </span>
+            </li>
+          )}
+        </ul>
+        <Separator />
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">Total Net Balance</span>
+           <span className={cn('text-lg font-bold', totalNetBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                {totalNetBalance < 0 ? `-$${Math.abs(totalNetBalance).toFixed(2)}` : `+$${totalNetBalance.toFixed(2)}`}
+            </span>
         </div>
-
-        {previousBalances.length > 0 && (
-          <div className="space-y-2 rounded-md bg-muted/50 p-3">
-             <h4 className="font-medium text-sm underline">Unsettled Balance from Previous Months</h4>
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="item-1" className="border-b-0">
-                <AccordionTrigger className="text-sm py-2 hover:no-underline">
-                  <div className="grid grid-cols-[auto_1fr] gap-x-4 w-full pr-4 font-medium">
-                    <span className="text-muted-foreground text-left">Total from Past Months</span>
-                    <span className={cn('font-semibold text-right', previousMonthsTotalBalance > 0 && 'text-green-600', previousMonthsTotalBalance < 0 && 'text-destructive')}>
-                      {previousMonthsTotalBalance >= 0 ? `+$${previousMonthsTotalBalance.toFixed(2)}` : `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-1 pl-2 pr-1 pt-2 border-t mt-2">
-                    {previousBalances.map(({ monthId, balance }) => (
-                      <div key={monthId} className="grid grid-cols-[auto_1fr] gap-x-4 text-xs">
-                        <p className="text-muted-foreground text-left">
-                          {format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}
-                        </p>
-                        <p className={cn('font-medium text-right', balance > 0 && 'text-green-600', balance < 0 && 'text-destructive')}>
-                          {balance >= 0 ? `+$${balance.toFixed(2)}` : `-$${Math.abs(balance).toFixed(2)}`}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
