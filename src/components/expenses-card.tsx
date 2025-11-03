@@ -135,39 +135,33 @@ export function ExpensesCard({
             expTotal += item.amount;
         }
 
-        if (item.status === 'Settled') {
-            let p1Share = 0;
-            let p2Share = 0;
-            if (item.type === 'expense') {
-                const expense = item as Expense;
-                if (expense.category === 'Reimbursement') {
-                    if (expense.paidBy === 'Parent 1') { // Parent 1 paid, Parent 2 reimburses
-                        p2Share = expense.amount;
-                    } else { // Parent 2 paid, Parent 1 reimburses
-                        p1Share = expense.amount;
-                    }
-                } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                    p1Share = item.amount * (medicalExpenseSplit['Parent 1'] / 100);
-                    p2Share = item.amount * (medicalExpenseSplit['Parent 2'] / 100);
-                } else {
-                    p1Share = item.amount * (expenseSplit['Parent 1'] / 100);
-                    p2Share = item.amount * (expenseSplit['Parent 2'] / 100);
-                }
-            } else { // Child Support
-                if (item.paidBy === 'Parent 1') { // Payer is Parent 1
-                    p1Share = item.amount;
-                } else { // Payer is Parent 2
-                    p2Share = item.amount;
-                }
-            }
-            totalPaidP1 += p1Share;
-            totalPaidP2 += p2Share;
-        } else { // Unsettled items
-            if (item.type === 'child_support') {
+        if (item.type === 'child_support') {
+            if (item.status === 'Settled') {
+                if (item.paidBy === 'Parent 1') totalPaidP1 += item.amount;
+                if (item.paidBy === 'Parent 2') totalPaidP2 += item.amount;
+            } else { // Unsettled child support
                 if (item.paidBy === 'Parent 1') totalOwedP1 += item.amount;
                 if (item.paidBy === 'Parent 2') totalOwedP2 += item.amount;
-            } else {
-                const expense = item as Expense;
+            }
+        } else { // It's an expense
+            const expense = item as Expense;
+            if (item.status === 'Settled') {
+                 let p1Share = 0;
+                 let p2Share = 0;
+                 if (expense.category === 'Reimbursement') {
+                     if (expense.paidBy === 'Parent 1') { // Parent 1 paid, Parent 2 reimburses
+                         p2Share = expense.amount;
+                     } else { // Parent 2 paid, Parent 1 reimburses
+                         p1Share = expense.amount;
+                     }
+                 } else {
+                     const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+                     p1Share = item.amount * (split['Parent 1'] / 100);
+                     p2Share = item.amount * (split['Parent 2'] / 100);
+                 }
+                 totalPaidP1 += p1Share;
+                 totalPaidP2 += p2Share;
+            } else { // Unsettled expense
                 const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
                 const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
                 totalPaidP1 += p1InitialPaid;
@@ -281,11 +275,11 @@ export function ExpensesCard({
                 <TableHead>Category</TableHead>
                 <TableHead>Paid By</TableHead>
                 <TableHead className="w-[120px]">Settlement Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">{parentNames['Parent 1']} Paid</TableHead>
-                <TableHead className="text-right">{parentNames['Parent 1']} Owes</TableHead>
-                <TableHead className="text-right">{parentNames['Parent 2']} Paid</TableHead>
-                <TableHead className="text-right">{parentNames['Parent 2']} Owes</TableHead>
+                <TableHead className="text-right w-[100px]">Total</TableHead>
+                <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
+                <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
+                <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Paid</TableHead>
+                <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
               </TableRow>
@@ -301,12 +295,12 @@ export function ExpensesCard({
                   let p2Credit = 0;
 
                   if (item.type === 'child_support') {
-                    if (item.status === 'Settled') {
-                      p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-                      p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+                     if (item.status === 'Settled') {
+                        if (item.paidBy === 'Parent 1') p1Paid = item.amount;
+                        if (item.paidBy === 'Parent 2') p2Paid = item.amount;
                     } else { // Unsettled
-                      p1Owes = item.paidBy === 'Parent 1' ? item.amount : 0;
-                      p2Owes = item.paidBy === 'Parent 2' ? item.amount : 0;
+                        if (item.paidBy === 'Parent 1') p1Owes = item.amount;
+                        if (item.paidBy === 'Parent 2') p2Owes = item.amount;
                     }
                   } else { // It's an expense
                     const expense = item as Expense;
