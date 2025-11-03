@@ -32,6 +32,7 @@ function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [expensesSubTab, setExpensesSubTab] = useState('monthly');
   const { toast } = useToast();
 
   const monthId = format(currentDate, 'yyyy-MM');
@@ -116,6 +117,11 @@ function DashboardComponent() {
       return;
     }
     setActiveTab(value);
+  };
+
+  const handleGoToUnsettled = () => {
+    setActiveTab('expenses');
+    setExpensesSubTab('unsettled');
   };
 
   const handleDeleteExpense = (expenseId: string, expenseMonthId: string) => {
@@ -286,7 +292,7 @@ function DashboardComponent() {
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
-                            onGoToExpenses={() => setActiveTab('expenses')}
+                            onGoToExpenses={handleGoToUnsettled}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -315,7 +321,7 @@ function DashboardComponent() {
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
-                            onGoToExpenses={() => setActiveTab('expenses')}
+                            onGoToExpenses={handleGoToUnsettled}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -337,7 +343,7 @@ function DashboardComponent() {
             </TabsContent>
             <TabsContent value="expenses">
                <div className="mt-6">
-                 <Tabs defaultValue="monthly" className="w-full">
+                 <Tabs value={expensesSubTab} onValueChange={setExpensesSubTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="monthly">Monthly Ledger</TabsTrigger>
                       <TabsTrigger value="unsettled">All Unsettled</TabsTrigger>
