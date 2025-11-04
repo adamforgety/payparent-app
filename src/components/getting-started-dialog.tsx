@@ -19,7 +19,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from './ui/carousel';
-import { Users, FilePlus, Link2, ArrowRight, Settings } from 'lucide-react';
+import { Users, FilePlus, Link2, ArrowRight, Settings, LayoutDashboard } from 'lucide-react';
 
 interface GettingStartedDialogProps {
   children?: React.ReactNode;
@@ -71,8 +71,19 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
       image: '/images/tutorial-step-2.png',
     },
     {
+      icon: LayoutDashboard,
+      title: 'Step 3: Understand the Dashboard',
+      description: (
+        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
+          <li>The <strong>Settle Balance</strong> card shows the final amount of who owes whom.</li>
+          <li>The <strong>Balance Details</strong> card provides a complete breakdown of how that balance was calculated.</li>
+        </ul>
+      ),
+      image: '/images/tutorial-step-3.png',
+    },
+    {
       icon: Link2,
-      title: 'Step 3: Link With Your Co-Parent',
+      title: 'Step 4: Link With Your Co-Parent',
       description:
         'Head to Settings > Account to find your unique Co-Parent Code. Share it with your co-parent to link accounts and share financial data seamlessly.',
       image: '/images/tutorial-step-3.png',
