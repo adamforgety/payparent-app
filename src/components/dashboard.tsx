@@ -401,6 +401,7 @@ function DashboardComponent() {
                         onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
                         currentDate={currentDate}
                         parentNames={currentMonthData.parentNames}
+                        appData={appData}
                       >
                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
                         <ImportExpensesDialog onImport={addImportedExpenses} parentNames={currentMonthData.parentNames} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { format, startOfMonth, isAfter } from 'date-fns';
+import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
 import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
@@ -28,7 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit, AppData } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
@@ -54,6 +54,7 @@ interface ExpensesCardProps {
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
+  appData: AppData;
 }
 
 type DisplayItem = {
@@ -76,6 +77,25 @@ type SortConfig = {
   direction: 'ascending' | 'descending';
 } | null;
 
+const calculateShare = (
+  expenses: Expense[],
+  split: ExpenseSplit,
+  medicalSplit: MedicalExpenseSplit,
+  p: Parent
+): number => {
+  let totalShare = 0;
+  for (const expense of expenses) {
+    if (expense.category === 'Medical' || expense.category === 'Child Care') {
+      const medicalParentSplitPercent = medicalSplit[p] / 100;
+      totalShare += expense.amount * medicalParentSplitPercent;
+    } else {
+      const parentSplitPercent = split[p] / 100;
+      totalShare += expense.amount * parentSplitPercent;
+    }
+  }
+  return totalShare;
+};
+
 export function ExpensesCard({
   expenses,
   childSupport,
@@ -89,6 +109,7 @@ export function ExpensesCard({
   children,
   currentDate,
   parentNames,
+  appData,
 }: ExpensesCardProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [localItems, setLocalItems] = useState<DisplayItem[]>([]);
@@ -233,6 +254,65 @@ export function ExpensesCard({
 
     return { totalOwedParent1: totalOwedP1, totalOwedParent2: totalOwedP2, totalPaidParent1: totalPaidP1, totalPaidParent2: totalPaidP2, totalExpenses: expTotal };
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
+
+  const { settleBalance, whoOwes, whoIsOwed } = useMemo(() => {
+    let parent1Net = 0;
+    let parent2Net = 0;
+
+    // Calculate balance from previous months
+    Object.keys(appData.months)
+      .filter((mId) => {
+        const monthDate = parse(mId, 'yyyy-MM', new Date());
+        const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
+        return isBefore(startOfDay(monthDate), startOfDay(currentMonthDate));
+      })
+      .forEach((mId) => {
+        const monthData = appData.months[mId];
+        if (!monthData) return;
+
+        const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
+        const p1Paid = unsettledExpenses.filter(e => e.paidBy === 'Parent 1').reduce((sum, e) => sum + e.amount, 0);
+        const p2Paid = unsettledExpenses.filter(e => e.paidBy === 'Parent 2').reduce((sum, e) => sum + e.amount, 0);
+        const p1Share = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, 'Parent 1');
+        const p2Share = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, 'Parent 2');
+        
+        parent1Net += p1Paid - p1Share;
+        parent2Net += p2Paid - p2Share;
+
+        const monthDate = parse(mId, 'yyyy-MM', new Date());
+        const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+
+        if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
+          if (monthData.childSupport.paidBy === 'Parent 1') parent1Net -= monthData.childSupport.amount;
+          else parent2Net -= monthData.childSupport.amount;
+        }
+      });
+      
+      // Add current month's balance
+      const currentUnsettled = expenses.filter(e => e.status === 'Unsettled');
+      const p1CurrentPaid = currentUnsettled.filter(e => e.paidBy === 'Parent 1').reduce((sum, e) => sum + e.amount, 0);
+      const p2CurrentPaid = currentUnsettled.filter(e => e.paidBy === 'Parent 2').reduce((sum, e) => sum + e.amount, 0);
+      const p1CurrentShare = calculateShare(currentUnsettled, expenseSplit, medicalExpenseSplit, 'Parent 1');
+      const p2CurrentShare = calculateShare(currentUnsettled, expenseSplit, medicalExpenseSplit, 'Parent 2');
+
+      parent1Net += p1CurrentPaid - p1CurrentShare;
+      parent2Net += p2CurrentPaid - p2CurrentShare;
+      
+      const isCurrentMonthFuture = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
+      if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
+          if (childSupport.paidBy === 'Parent 1') parent1Net -= childSupport.amount;
+          else parent2Net -= childSupport.amount;
+      }
+      
+      if (parent1Net > parent2Net) {
+          return { settleBalance: parent1Net - parent2Net, whoOwes: parentNames['Parent 2'], whoIsOwed: parentNames['Parent 1'] };
+      } else if (parent2Net > parent1Net) {
+          return { settleBalance: parent2Net - parent1Net, whoOwes: parentNames['Parent 1'], whoIsOwed: parentNames['Parent 2'] };
+      }
+      
+      return { settleBalance: 0, whoOwes: null, whoIsOwed: null };
+
+  }, [appData, monthId, expenses, childSupport, expenseSplit, medicalExpenseSplit, parentNames, currentDate]);
 
   const handleStatusToggle = (itemToToggle: DisplayItem) => {
     const newStatus: PaymentStatus = itemToToggle.status === 'Settled' ? 'Unsettled' : 'Settled';
@@ -524,6 +604,7 @@ export function ExpensesCard({
             <span className="text-muted-foreground">{parentNames['Parent 2']} Paid:</span>
             <span className="font-medium">${totalPaidParent2.toFixed(2)}</span>
         </div>
+        <Separator/>
         <div className="flex justify-between items-center mt-2">
           <span className="font-semibold text-primary">{parentNames['Parent 1']} Owes:</span>
           <span className="font-bold text-base text-destructive">
@@ -536,6 +617,19 @@ export function ExpensesCard({
             ${totalOwedParent2.toFixed(2)}
           </span>
         </div>
+        {settleBalance > 0.01 && whoOwes && (
+          <>
+            <Separator />
+            <div className="flex justify-between items-center text-base mt-2">
+              <span className="font-semibold">
+                Settle Balance: <span className="font-bold text-destructive">{whoOwes}</span> Owes <span className="font-bold text-green-600">{whoIsOwed}</span>
+              </span>
+              <span className="font-bold text-lg">
+                ${settleBalance.toFixed(2)}
+              </span>
+            </div>
+          </>
+        )}
       </CardFooter>
     </Card>
   );
