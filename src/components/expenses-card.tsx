@@ -367,9 +367,9 @@ export function ExpensesCard({
             <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
           </div>
         </div>
-        <div className="rounded-md border">
+        <div className="rounded-md border relative max-h-[60vh] overflow-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
