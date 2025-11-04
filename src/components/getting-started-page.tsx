@@ -51,7 +51,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
             The <strong className="text-primary">Settle Balance</strong> card
             shows the final amount of who owes whom.
           </li>
-           <li>Click the <strong className="text-primary">View & Settle Expenses</strong> button to settle all unsettled expenses.</li>
+           <li>Click the <strong className="text-primary">View & Settle Expenses</strong> button to settle all outstanding expenses.</li>
           <li>
             The <strong className="text-primary">Balance Details</strong> card
             provides a complete balance breakdown.
