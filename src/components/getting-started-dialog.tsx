@@ -93,7 +93,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
   return (
     <Dialog open={dialogOpen} onOpenChange={dialogOnOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg p-10" hideCloseButton>
+      <DialogContent className="sm:max-w-lg py-10 px-16" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Welcome to PayParent!</DialogTitle>
           <DialogDescription>
