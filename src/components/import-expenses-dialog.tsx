@@ -404,20 +404,20 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
   const handleRetryFailedRow = (index: number) => {
     const rowToRetry = failedImports[index];
     const { errors, parsedExpense } = validateRow(rowToRetry.data);
-
+  
     if (parsedExpense) {
       // Move from failed to successful
       setSuccessfulImports(prev => [...prev, parsedExpense]);
       setFailedImports(prev => prev.filter((_, i) => i !== index));
     } else {
-      // Update errors
+      // Update errors and give feedback
       const updatedFailedImports = [...failedImports];
       updatedFailedImports[index].errors = errors;
       setFailedImports(updatedFailedImports);
       toast({
         variant: 'destructive',
         title: 'Validation Failed',
-        description: 'Please fix the errors before retrying.',
+        description: 'Please fix the highlighted errors before retrying.',
       });
     }
   };
