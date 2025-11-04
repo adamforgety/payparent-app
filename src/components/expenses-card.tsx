@@ -39,6 +39,7 @@ import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
+import { Separator } from './ui/separator';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -301,6 +302,47 @@ export function ExpensesCard({
     </TableHead>
   );
 
+  const renderItemDetails = (item: DisplayItem) => {
+        let p1Paid = 0;
+        let p2Paid = 0;
+        let p1Owes = 0;
+        let p2Owes = 0;
+        let p1Credit = 0;
+        let p2Credit = 0;
+
+        if (item.type === 'child_support') {
+            if (item.status === 'Settled') {
+                if (item.paidBy === 'Parent 1') p1Paid = item.amount;
+                if (item.paidBy === 'Parent 2') p2Paid = item.amount;
+            } else {
+                if (item.paidBy === 'Parent 1') p1Owes = item.amount;
+                if (item.paidBy === 'Parent 2') p2Owes = item.amount;
+            }
+        } else {
+            const expense = item as Expense;
+            const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+            const p1Share = item.amount * (split['Parent 1'] / 100);
+            const p2Share = item.amount * (split['Parent 2'] / 100);
+
+            if (item.status === 'Settled') {
+                p1Paid = p1Share;
+                p2Paid = p2Share;
+            } else {
+                const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+                const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                p1Paid = p1InitialPaid;
+                p2Paid = p2InitialPaid;
+
+                const p1Net = p1Share - p1InitialPaid;
+                const p2Net = p2Share - p2InitialPaid;
+
+                if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
+                if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
+            }
+        }
+        return { p1Paid, p2Paid, p1Owes, p2Owes, p1Credit, p2Credit };
+  };
+
 
   return (
     <Card>
@@ -366,8 +408,9 @@ export function ExpensesCard({
             <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
           </div>
         </div>
-          <div className="overflow-x-auto">
-            <Table className="min-w-[1200px]">
+        {/* Desktop Table View */}
+          <div className="overflow-x-auto hidden md:block">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <SortableHeader sortKey="description">Description</SortableHeader>
@@ -386,44 +429,7 @@ export function ExpensesCard({
               <TableBody>
                 {filteredAndSortedItems.length > 0 ? (
                   filteredAndSortedItems.map((item) => {
-                    let p1Paid = 0;
-                    let p2Paid = 0;
-                    let p1Owes = 0;
-                    let p2Owes = 0;
-                    let p1Credit = 0;
-                    let p2Credit = 0;
-
-                    if (item.type === 'child_support') {
-                      if (item.status === 'Settled') {
-                          if (item.paidBy === 'Parent 1') p1Paid = item.amount;
-                          if (item.paidBy === 'Parent 2') p2Paid = item.amount;
-                      } else { // Unsettled
-                          if (item.paidBy === 'Parent 1') p1Owes = item.amount;
-                          if (item.paidBy === 'Parent 2') p2Owes = item.amount;
-                      }
-                    } else { // It's an expense
-                      const expense = item as Expense;
-                      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                      const p1Share = item.amount * (split['Parent 1'] / 100);
-                      const p2Share = item.amount * (split['Parent 2'] / 100);
-
-                      if (item.status === 'Settled') {
-                        p1Paid = p1Share;
-                        p2Paid = p2Share;
-                      } else { // Unsettled
-                        const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                        const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-                        p1Paid = p1InitialPaid;
-                        p2Paid = p2InitialPaid;
-
-                        const p1Net = p1Share - p1InitialPaid;
-                        const p2Net = p2Share - p2InitialPaid;
-
-                        if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
-                        if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
-                      }
-                    }
-
+                    const { p1Paid, p2Paid, p1Owes, p2Owes, p1Credit, p2Credit } = renderItemDetails(item);
 
                     return (
                       <TableRow key={item.id}>
@@ -440,12 +446,12 @@ export function ExpensesCard({
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Switch
-                              id={`settle-switch-${item.id}`}
+                              id={`settle-switch-desktop-${item.id}`}
                               checked={item.status === 'Settled'}
                               onCheckedChange={() => handleStatusToggle(item)}
                               aria-label={`Settle payment for ${item.description}`}
                             />
-                            <Label htmlFor={`settle-switch-${item.id}`}>
+                            <Label htmlFor={`settle-switch-desktop-${item.id}`}>
                               {item.status}
                             </Label>
                           </div>
@@ -528,7 +534,7 @@ export function ExpensesCard({
               </TableBody>
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
-                   <TableRow>
+                  <TableRow>
                     <TableCell colSpan={5}></TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
@@ -541,7 +547,7 @@ export function ExpensesCard({
                     <TableCell className="text-right">
                       ${totals.totalP1Paid.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right">
+                     <TableCell className="text-right">
                       ${totals.totalP2Paid.toFixed(2)}
                     </TableCell>
                     <TableCell className={cn("text-right", totals.totalP1Owes > 0 && "text-destructive")}>
@@ -556,11 +562,93 @@ export function ExpensesCard({
               )}
             </Table>
           </div>
+
+          {/* Mobile Card View */}
+        <div className="space-y-4 md:hidden">
+            {filteredAndSortedItems.length > 0 ? (
+                filteredAndSortedItems.map((item) => {
+                    const { p1Paid, p2Paid, p1Owes, p2Owes, p1Credit, p2Credit } = renderItemDetails(item);
+                    return (
+                        <Card key={item.id} className="overflow-hidden">
+                            <div className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{item.description}</p>
+                                        <p className="text-sm text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 -mr-2">
+                                        {item.type === 'expense' && (
+                                            <>
+                                            <EditExpenseDialog
+                                                expense={item as Expense}
+                                                onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)}
+                                                parentNames={parentNames}
+                                                monthId={monthId}
+                                            />
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(item.id)}>
+                                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Delete</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between text-sm">
+                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                                    <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
+                                </div>
+
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Paid By</span>
+                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                     <span className="text-muted-foreground">Status</span>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id={`settle-switch-mobile-${item.id}`}
+                                            checked={item.status === 'Settled'}
+                                            onCheckedChange={() => handleStatusToggle(item)}
+                                            aria-label={`Settle payment for ${item.description}`}
+                                        />
+                                        <Label htmlFor={`settle-switch-mobile-${item.id}`}>{item.status}</Label>
+                                    </div>
+                                </div>
+                            </div>
+                            {(p1Owes > 0 || p2Owes > 0 || p1Credit > 0 || p2Credit > 0) && (
+                                <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
+                                    <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
+                                     <div className="flex justify-between">
+                                        <span className="text-muted-foreground">{parentNames['Parent 1']} Owes</span>
+                                        <span className={cn(p1Owes > 0 && "text-destructive font-semibold")}>${p1Owes.toFixed(2)}</span>
+                                     </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">{parentNames['Parent 2']} Owes</span>
+                                        <span className={cn(p2Owes > 0 && "text-destructive font-semibold")}>${p2Owes.toFixed(2)}</span>
+                                     </div>
+                                </div>
+                            )}
+                        </Card>
+                    );
+                })
+            ) : (
+                <div className="h-32 text-center flex flex-col justify-center items-center">
+                    <p className="text-muted-foreground">
+                        {searchTerm ? `No results for "${searchTerm}".` : `No ${statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.`}
+                    </p>
+                </div>
+            )}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
