@@ -59,7 +59,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
           <li>Go to the <strong className="text-primary">Reporting</strong> tab to see year-to-date expenses.</li>
           <li>Export your data for taxes or other financial needs.</li>
-          <li>View the summary for a breakdown of all expenses by category.</li>
+          <li>View the <strong className="text-primary">Summary</strong> for a breakdown of all expenses by category.</li>
         </ul>
       ),
     },
