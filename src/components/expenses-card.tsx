@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -39,6 +39,7 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Input } from './ui/input';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -68,6 +69,12 @@ type DisplayItem = {
     receiptFilename?: string | null;
 };
 
+type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'status' | 'amount';
+
+type SortConfig = {
+  key: SortKey;
+  direction: 'ascending' | 'descending';
+} | null;
 
 export function ExpensesCard({
   expenses,
@@ -87,6 +94,8 @@ export function ExpensesCard({
   const [localItems, setLocalItems] = useState<DisplayItem[]>([]);
   const { toast } = useToast();
   const monthId = format(currentDate, 'yyyy-MM');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
 
   useEffect(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
@@ -112,13 +121,67 @@ export function ExpensesCard({
   }, [expenses, childSupport, currentDate]);
 
 
-  const filteredItems = useMemo(() => {
-    if (statusFilter === 'all') {
-      return localItems;
+  const filteredAndSortedItems = useMemo(() => {
+    let items = [...localItems];
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      const filterStatus: PaymentStatus = statusFilter === 'settled' ? 'Settled' : 'Unsettled';
+      items = items.filter(item => item.status === filterStatus);
     }
-    const filterStatus: PaymentStatus = statusFilter === 'settled' ? 'Settled' : 'Unsettled';
-    return localItems.filter(item => item.status === filterStatus);
-  }, [localItems, statusFilter]);
+    
+    // Search filter
+    const lowercasedFilter = searchTerm.toLowerCase();
+    if (lowercasedFilter) {
+        items = items.filter(item => {
+            const paidByName = item.paidBy && item.paidBy !== 'None' ? parentNames[item.paidBy].toLowerCase() : '';
+            return item.description.toLowerCase().includes(lowercasedFilter) ||
+                   item.category.toLowerCase().includes(lowercasedFilter) ||
+                   paidByName.includes(lowercasedFilter);
+        });
+    }
+
+    // Sorting
+    if (sortConfig !== null) {
+      items.sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        if (sortConfig.key === 'paidBy') {
+            aValue = a.paidBy === 'None' ? '' : parentNames[a.paidBy];
+            bValue = b.paidBy === 'None' ? '' : parentNames[b.paidBy];
+        } else {
+             aValue = a[sortConfig.key as keyof DisplayItem];
+             bValue = b[sortConfig.key as keyof DisplayItem];
+        }
+
+        if (sortConfig.key === 'date') {
+          const dateA = new Date(aValue).getTime();
+          const dateB = new Date(bValue).getTime();
+          if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+          return 0;
+        }
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return sortConfig.direction === 'ascending'
+                ? aValue.localeCompare(bValue)
+                : bValue.localeCompare(aValue);
+        }
+
+        return 0;
+      });
+    }
+
+
+    return items;
+  }, [localItems, statusFilter, searchTerm, sortConfig, parentNames]);
   
   const hasUnsettledItems = localItems.some(item => item.status === 'Unsettled');
   const hasSettledItems = localItems.some(item => item.status === 'Settled');
@@ -130,7 +193,7 @@ export function ExpensesCard({
     let totalPaidP2 = 0;
     let expTotal = 0;
 
-    filteredItems.forEach(item => {
+    filteredAndSortedItems.forEach(item => {
         if (item.type === 'expense') {
             expTotal += item.amount;
         }
@@ -169,7 +232,7 @@ export function ExpensesCard({
     });
 
     return { totalOwedParent1: totalOwedP1, totalOwedParent2: totalOwedP2, totalPaidParent1: totalPaidP1, totalPaidParent2: totalPaidP2, totalExpenses: expTotal };
-  }, [filteredItems, expenseSplit, medicalExpenseSplit]);
+  }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
 
   const handleStatusToggle = (itemToToggle: DisplayItem) => {
     const newStatus: PaymentStatus = itemToToggle.status === 'Settled' ? 'Unsettled' : 'Settled';
@@ -196,6 +259,23 @@ export function ExpensesCard({
       description: `"${itemToToggle.description}" has been updated.`,
     });
   };
+
+  const requestSort = (key: SortKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
+        {children}
+        {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />}
+      </Button>
+    </TableHead>
+  );
 
 
   return (
@@ -246,19 +326,31 @@ export function ExpensesCard({
       </CardHeader>
       <CardContent>
         <div className="no-print flex items-center gap-2 mb-4">
-          <Button variant={statusFilter === 'all' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All ({localItems.length})</Button>
-          <Button variant={statusFilter === 'unsettled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('unsettled')}>Unsettled ({localItems.filter(i => i.status === 'Unsettled').length})</Button>
-          <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
+          <div className="relative flex-grow">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant={statusFilter === 'all' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All ({localItems.length})</Button>
+            <Button variant={statusFilter === 'unsettled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('unsettled')}>Unsettled ({localItems.filter(i => i.status === 'Unsettled').length})</Button>
+            <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
+          </div>
         </div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-[140px]">Category</TableHead>
-                <TableHead className="w-[120px]">Paid By</TableHead>
-                <TableHead className="w-[150px]">Settlement Status</TableHead>
-                <TableHead className="text-right w-[100px]">Total</TableHead>
+                <SortableHeader sortKey="description">Description</SortableHeader>
+                <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
+                <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
+                <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
+                <SortableHeader sortKey="amount" className="text-right w-[100px]">Total</SortableHeader>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Paid</TableHead>
@@ -268,8 +360,8 @@ export function ExpensesCard({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.length > 0 ? (
-                filteredItems.map((item) => {
+              {filteredAndSortedItems.length > 0 ? (
+                filteredAndSortedItems.map((item) => {
                   let p1Paid = 0;
                   let p2Paid = 0;
                   let p1Owes = 0;
@@ -400,7 +492,7 @@ export function ExpensesCard({
               ) : (
                 <TableRow>
                   <TableCell colSpan={11} className="h-24 text-center">
-                    No {statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.
+                    {searchTerm ? `No results for "${searchTerm}".` : `No ${statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.`}
                   </TableCell>
                 </TableRow>
               )}
@@ -450,3 +542,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
