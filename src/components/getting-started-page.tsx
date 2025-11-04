@@ -48,7 +48,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       description: (
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
           <li>The <strong>Settle Balance</strong> card shows the final amount of who owes whom.</li>
-          <li>The <strong>Balance Details</strong> card provides a complete breakdown of how that balance was calculated.</li>
+          <li>The <strong>Balance Details</strong> card provides a complete balance breakdown.</li>
         </ul>
       ),
     },
