@@ -229,10 +229,11 @@ export function ExpensesCard({
             }
         } else { // It's an expense
             const expense = item as Expense;
+            const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+            const p1Share = item.amount * (split['Parent 1'] / 100);
+            const p2Share = item.amount * (split['Parent 2'] / 100);
+
             if (item.status === 'Settled') {
-                 const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                 const p1Share = item.amount * (split['Parent 1'] / 100);
-                 const p2Share = item.amount * (split['Parent 2'] / 100);
                  totalPaidP1 += p1Share;
                  totalPaidP2 += p2Share;
             } else { // Unsettled expense
@@ -241,9 +242,6 @@ export function ExpensesCard({
                 totalPaidP1 += p1InitialPaid;
                 totalPaidP2 += p2InitialPaid;
 
-                const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                const p1Share = item.amount * (split['Parent 1'] / 100);
-                const p2Share = item.amount * (split['Parent 2'] / 100);
                 const p1Net = p1Share - p1InitialPaid;
                 const p2Net = p2Share - p2InitialPaid;
                 if (p1Net > 0) totalOwedP1 += p1Net;
@@ -636,6 +634,8 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
 
     
 
