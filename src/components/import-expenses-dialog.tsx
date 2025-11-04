@@ -293,7 +293,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         jsonData.forEach((row, index) => {
             const normalizedRow: {[key: string]: any} = {};
             for (const key in row) {
-              normalizedRow[key.toLowerCase().replace(/[^a-z0-9]/gi, '')] = row[key];
+              normalizedRow[key.toLowerCase().replace(/\s+/g, '')] = row[key];
             }
 
             const rowData: RowData = {
