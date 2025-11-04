@@ -19,7 +19,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from './ui/carousel';
-import { Users, FilePlus, Link2, ArrowRight } from 'lucide-react';
+import { Users, FilePlus, Link2, ArrowRight, Settings } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 interface GettingStartedDialogProps {
@@ -46,10 +46,10 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
 
   const tutorialSteps = [
     {
-      icon: Users,
-      title: 'Step 1: Set Your Names',
+      icon: Settings,
+      title: 'Step 1: Configure Your Settings',
       description:
-        'Go to the Settings tab and customize the names for "Parent 1" and "Parent 2". This will make the app easier to use.',
+        'Go to the Settings tab to customize the app. You can set parent names, enter the monthly child support amount, adjust expense divisions, and update your email or password.',
       image: '/images/tutorial-step-1.png',
     },
     {
