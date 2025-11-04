@@ -36,9 +36,9 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       title: 'Step 2: Log Your First Expense',
       description: (
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>Click the <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground"><Plus className="w-3 h-3" /></div> button to add a single expense.</li>
-          <li>Go to the <strong className="text-primary">Expenses</strong> tab to log, view, and settle expenses.</li>
-          <li>Use the <strong className="text-primary">Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
+            <li>Click the <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground"><Plus className="w-3 h-3" /></div> button to add a single expense.</li>
+            <li>Go to the <strong className="text-primary">Expenses</strong> tab to log, view, and settle expenses.</li>
+            <li>Use the <strong className="text-primary">Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
         </ul>
       ),
     },
@@ -87,7 +87,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
           </p>
         </header>
 
-        <Carousel className="w-full px-12">
+        <Carousel opts={{ loop: true }} className="w-full px-12">
           <CarouselContent>
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
