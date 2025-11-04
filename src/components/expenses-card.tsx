@@ -366,198 +366,198 @@ export function ExpensesCard({
             <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
           </div>
         </div>
-          <Table className="border-collapse border">
-            <TableHeader className="sticky top-0 z-10 bg-background border-b">
-              <TableRow>
-                <SortableHeader sortKey="description">Description</SortableHeader>
-                <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
-                <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
-                <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
-                <SortableHeader sortKey="amount" className="text-right w-[100px]">Total</SortableHeader>
-                <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
-                <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Paid</TableHead>
-                <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
-                <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Owes</TableHead>
-                <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
-                <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedItems.length > 0 ? (
-                filteredAndSortedItems.map((item) => {
-                  let p1Paid = 0;
-                  let p2Paid = 0;
-                  let p1Owes = 0;
-                  let p2Owes = 0;
-                  let p1Credit = 0;
-                  let p2Credit = 0;
+          <div className="overflow-x-auto">
+            <Table className="border-collapse border min-w-[1200px]">
+              <TableHeader className="sticky top-0 z-10 bg-background border-b">
+                <TableRow>
+                  <SortableHeader sortKey="description">Description</SortableHeader>
+                  <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
+                  <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
+                  <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
+                  <SortableHeader sortKey="amount" className="text-right w-[100px]">Total</SortableHeader>
+                  <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
+                  <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Paid</TableHead>
+                  <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
+                  <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Owes</TableHead>
+                  <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
+                  <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedItems.length > 0 ? (
+                  filteredAndSortedItems.map((item) => {
+                    let p1Paid = 0;
+                    let p2Paid = 0;
+                    let p1Owes = 0;
+                    let p2Owes = 0;
+                    let p1Credit = 0;
+                    let p2Credit = 0;
 
-                  if (item.type === 'child_support') {
-                     if (item.status === 'Settled') {
-                        if (item.paidBy === 'Parent 1') p1Paid = item.amount;
-                        if (item.paidBy === 'Parent 2') p2Paid = item.amount;
-                    } else { // Unsettled
-                        if (item.paidBy === 'Parent 1') p1Owes = item.amount;
-                        if (item.paidBy === 'Parent 2') p2Owes = item.amount;
+                    if (item.type === 'child_support') {
+                      if (item.status === 'Settled') {
+                          if (item.paidBy === 'Parent 1') p1Paid = item.amount;
+                          if (item.paidBy === 'Parent 2') p2Paid = item.amount;
+                      } else { // Unsettled
+                          if (item.paidBy === 'Parent 1') p1Owes = item.amount;
+                          if (item.paidBy === 'Parent 2') p2Owes = item.amount;
+                      }
+                    } else { // It's an expense
+                      const expense = item as Expense;
+                      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+                      const p1Share = item.amount * (split['Parent 1'] / 100);
+                      const p2Share = item.amount * (split['Parent 2'] / 100);
+
+                      if (item.status === 'Settled') {
+                        p1Paid = p1Share;
+                        p2Paid = p2Share;
+                      } else { // Unsettled
+                        const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+                        const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                        p1Paid = p1InitialPaid;
+                        p2Paid = p2InitialPaid;
+
+                        const p1Net = p1Share - p1InitialPaid;
+                        const p2Net = p2Share - p2InitialPaid;
+
+                        if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
+                        if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
+                      }
                     }
-                  } else { // It's an expense
-                    const expense = item as Expense;
-                    const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-                    const p1Share = item.amount * (split['Parent 1'] / 100);
-                    const p2Share = item.amount * (split['Parent 2'] / 100);
-
-                    if (item.status === 'Settled') {
-                      p1Paid = p1Share;
-                      p2Paid = p2Share;
-                    } else { // Unsettled
-                      const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                      const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-                      p1Paid = p1InitialPaid;
-                      p2Paid = p2InitialPaid;
-
-                      const p1Net = p1Share - p1InitialPaid;
-                      const p2Net = p2Share - p2InitialPaid;
-
-                      if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
-                      if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
-                    }
-                  }
 
 
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.description}
-                        <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`settle-switch-${item.id}`}
-                            checked={item.status === 'Settled'}
-                            onCheckedChange={() => handleStatusToggle(item)}
-                            aria-label={`Settle payment for ${item.description}`}
-                          />
-                          <Label htmlFor={`settle-switch-${item.id}`}>
-                            {item.status}
-                          </Label>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        ${item.amount.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${p1Paid.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${p2Paid.toFixed(2)}
-                      </TableCell>
-                      <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
-                        {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
-                      </TableCell>
-                      <TableCell className={cn("text-right", p2Owes > 0 && "text-destructive font-semibold")}>
-                         {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
-                      </TableCell>
-                      <TableCell className="no-print text-center">
-                          {item.type === 'expense' && item.receiptUrl && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      asChild
-                                    >
-                                      <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                          <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                      </a>
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>View Receipt</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                      </TableCell>
-                      <TableCell className="no-print text-right">
-                        <div className="flex justify-end gap-1 h-8 w-full">
-                          {item.type === 'expense' && (
-                            <>
-                                <EditExpenseDialog expense={item as Expense} onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)} parentNames={parentNames} monthId={monthId} />
-                                <TooltipProvider>
-                                    <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">
+                          {item.description}
+                          <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`settle-switch-${item.id}`}
+                              checked={item.status === 'Settled'}
+                              onCheckedChange={() => handleStatusToggle(item)}
+                              aria-label={`Settle payment for ${item.description}`}
+                            />
+                            <Label htmlFor={`settle-switch-${item.id}`}>
+                              {item.status}
+                            </Label>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          ${item.amount.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${p1Paid.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${p2Paid.toFixed(2)}
+                        </TableCell>
+                        <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
+                          {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
+                        </TableCell>
+                        <TableCell className={cn("text-right", p2Owes > 0 && "text-destructive font-semibold")}>
+                          {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
+                        </TableCell>
+                        <TableCell className="no-print text-center">
+                            {item.type === 'expense' && item.receiptUrl && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Button
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8"
-                                        onClick={() => onDelete(item.id)}
-                                        >
-                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Delete</TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center">
-                    {searchTerm ? `No results for "${searchTerm}".` : `No ${statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.`}
-                  </TableCell>
-                </TableRow>
+                                        asChild
+                                      >
+                                        <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                            <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                        </a>
+                                      </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View Receipt</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                        </TableCell>
+                        <TableCell className="no-print text-right">
+                          <div className="flex justify-end gap-1 h-8 w-full">
+                            {item.type === 'expense' && (
+                              <>
+                                  <EditExpenseDialog expense={item as Expense} onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)} parentNames={parentNames} monthId={monthId} />
+                                  <TooltipProvider>
+                                      <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() => onDelete(item.id)}
+                                          >
+                                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                          </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Delete</TooltipContent>
+                                      </Tooltip>
+                                  </TooltipProvider>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={11} className="h-24 text-center">
+                      {searchTerm ? `No results for "${searchTerm}".` : `No ${statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.`}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+              {filteredAndSortedItems.length > 0 && (
+                <TableFooter className="sticky bottom-0 bg-background">
+                  <TableRow>
+                    <TableCell colSpan={4}>Totals</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">Total</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Owes</TableCell>
+                    <TableCell colSpan={2}></TableCell>
+                  </TableRow>
+                  <TableRow className="bg-secondary/50 font-bold">
+                    <TableCell colSpan={4}></TableCell>
+                    <TableCell className="text-right">
+                      ${totals.totalAmount.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      ${totals.totalP1Paid.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      ${totals.totalP2Paid.toFixed(2)}
+                    </TableCell>
+                    <TableCell className={cn("text-right", totals.totalP1Owes > 0 && "text-destructive")}>
+                      ${totals.totalP1Owes.toFixed(2)}
+                    </TableCell>
+                    <TableCell className={cn("text-right", totals.totalP2Owes > 0 && "text-destructive")}>
+                      ${totals.totalP2Owes.toFixed(2)}
+                    </TableCell>
+                    <TableCell colSpan={2}></TableCell>
+                  </TableRow>
+                </TableFooter>
               )}
-            </TableBody>
-            {filteredAndSortedItems.length > 0 && (
-              <TableFooter className="sticky bottom-0 bg-background">
-                <TableRow>
-                  <TableCell colSpan={4}>Totals</TableCell>
-                  <TableCell className="text-right text-xs font-medium text-muted-foreground">Total</TableCell>
-                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
-                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
-                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
-                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Owes</TableCell>
-                  <TableCell colSpan={2}></TableCell>
-                </TableRow>
-                <TableRow className="bg-secondary/50 font-bold">
-                  <TableCell colSpan={4}></TableCell>
-                  <TableCell className="text-right">
-                    ${totals.totalAmount.toFixed(2)}
-                  </TableCell>
-                   <TableCell className="text-right">
-                    ${totals.totalP1Paid.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    ${totals.totalP2Paid.toFixed(2)}
-                  </TableCell>
-                  <TableCell className={cn("text-right", totals.totalP1Owes > 0 && "text-destructive")}>
-                    ${totals.totalP1Owes.toFixed(2)}
-                  </TableCell>
-                   <TableCell className={cn("text-right", totals.totalP2Owes > 0 && "text-destructive")}>
-                    ${totals.totalP2Owes.toFixed(2)}
-                  </TableCell>
-                  <TableCell colSpan={2}></TableCell>
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
+            </Table>
+          </div>
       </CardContent>
     </Card>
   );
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
