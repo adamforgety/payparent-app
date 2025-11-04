@@ -61,8 +61,13 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
     {
       icon: FilePlus,
       title: 'Step 2: Log Your First Expense',
-      description:
-        'Click the big "+" button to add an expense. You can also go to the "Monthly Ledger" on the Expenses tab and use the "Import" button. Follow the instructions to bulk import expenses from a file.',
+      description: (
+        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
+          <li>Click the big <strong>+</strong> button to add a single expense.</li>
+          <li>Go to the <strong>Expenses</strong> tab to find the <strong>Monthly Ledger</strong>.</li>
+          <li>Use the <strong>Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
+        </ul>
+      ),
       image: '/images/tutorial-step-2.png',
     },
     {
@@ -89,7 +94,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                  <div className="flex flex-col gap-4 text-center items-center justify-center p-6">
+                  <div className="flex aspect-square flex-col gap-4 text-center items-center justify-center p-6">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <step.icon className="h-6 w-6" />
                     </div>
