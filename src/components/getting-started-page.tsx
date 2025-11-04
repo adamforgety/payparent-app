@@ -35,11 +35,9 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       icon: FilePlus,
       title: 'Step 2: Log Your First Expense',
       description: (
-        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>Click the big <strong>+</strong> button to add a single expense.</li>
-          <li>Go to the <strong>Expenses</strong> tab to find the <strong>Monthly Ledger</strong>.</li>
-          <li>Use the <strong>Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
-        </ul>
+        <p className="text-left text-sm text-muted-foreground">
+          Click the round <strong>+</strong> button to add a single expense. Go to the <strong>Expenses</strong> tab to log expenses, view all logged expenses and settle expenses. Use the <strong>Import</strong> button to bulk upload expenses from a file and follow the instructions.
+        </p>
       ),
     },
     {
