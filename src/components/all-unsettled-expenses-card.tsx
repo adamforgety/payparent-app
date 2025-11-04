@@ -1,7 +1,7 @@
 'use client';
 
 import { format, isAfter, startOfMonth, parse } from 'date-fns';
-import { ReceiptText, Trash2, Paperclip } from 'lucide-react';
+import { ReceiptText, Trash2, Paperclip, Edit } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
 import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
@@ -216,6 +216,39 @@ export function AllUnsettledExpensesCard({
 
   }, [allUnsettledItems]);
 
+  const renderItemDetails = (item: UnsettledItem) => {
+      let p1OwesAmount = 0;
+      let p2OwesAmount = 0;
+      
+      if (item.type === 'expense') {
+          const expense = item.originalExpense!;
+          let p1Share = 0;
+          let p2Share = 0;
+          if (expense.category === 'Medical' || expense.category === 'Child Care') {
+              p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
+              p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
+          } else {
+              p1Share = item.amount * (item.expenseSplit['Parent 1'] / 100);
+              p2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
+          }
+
+          const p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+          const p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+          
+          p1OwesAmount = Math.max(0, p1Share - p1Paid);
+          p2OwesAmount = Math.max(0, p2Share - p2Paid);
+
+      } else if (item.type === 'child_support') {
+          if (item.paidBy === 'Parent 1') { // Parent 1 is the payer
+              p1OwesAmount = item.amount;
+          } else if (item.paidBy === 'Parent 2') { // Parent 2 is the payer
+              p2OwesAmount = item.amount;
+          }
+      }
+      return { p1OwesAmount, p2OwesAmount };
+  }
+
+
   return (
     <Card>
       <CardHeader>
@@ -266,7 +299,9 @@ export function AllUnsettledExpensesCard({
             Show All
           </Button>
         </div>
-        <div className="rounded-md border overflow-x-auto">
+        
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto rounded-md border">
           <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
@@ -284,35 +319,7 @@ export function AllUnsettledExpensesCard({
             <TableBody>
               {allUnsettledItems.length > 0 ? (
                 allUnsettledItems.map((item) => {
-                  let p1OwesAmount = 0;
-                  let p2OwesAmount = 0;
-                  
-                  if (item.type === 'expense') {
-                      const expense = item.originalExpense!;
-                      let p1Share = 0;
-                      let p2Share = 0;
-                      if (expense.category === 'Medical' || expense.category === 'Child Care') {
-                          p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
-                          p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
-                      } else {
-                          p1Share = item.amount * (item.expenseSplit['Parent 1'] / 100);
-                          p2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
-                      }
-
-                      const p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                      const p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-                      
-                      p1OwesAmount = Math.max(0, p1Share - p1Paid);
-                      p2OwesAmount = Math.max(0, p2Share - p2Paid);
-
-                  } else if (item.type === 'child_support') {
-                      if (item.paidBy === 'Parent 1') { // Parent 1 is the payer
-                          p1OwesAmount = item.amount;
-                      } else if (item.paidBy === 'Parent 2') { // Parent 2 is the payer
-                          p2OwesAmount = item.amount;
-                      }
-                  }
-
+                  const { p1OwesAmount, p2OwesAmount } = renderItemDetails(item);
                   const p1OwesMoney = p1OwesAmount > 0;
                   const p2OwesMoney = p2OwesAmount > 0;
 
@@ -331,12 +338,12 @@ export function AllUnsettledExpensesCard({
                        <TableCell>
                         <div className="flex items-center space-x-2">
                           <Switch
-                            id={`settle-switch-${item.id}`}
+                            id={`settle-switch-desktop-${item.id}`}
                             checked={false} // Always unsettled in this view
                             onCheckedChange={() => handleStatusToggle(item)}
                             aria-label={`Settle payment for ${item.description}`}
                           />
-                          <Label htmlFor={`settle-switch-${item.id}`}>Unsettled</Label>
+                          <Label htmlFor={`settle-switch-desktop-${item.id}`}>Unsettled</Label>
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
@@ -430,6 +437,106 @@ export function AllUnsettledExpensesCard({
             )}
           </Table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className="space-y-4 md:hidden">
+            {allUnsettledItems.length > 0 ? (
+                allUnsettledItems.map((item) => {
+                    const { p1OwesAmount, p2OwesAmount } = renderItemDetails(item);
+                    return (
+                        <Card key={item.id} className="overflow-hidden">
+                            <div className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{item.description}</p>
+                                        <p className="text-sm text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 -mr-2">
+                                        {item.type === 'expense' && item.receiptUrl && (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                                        <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                                            <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                                        </a>
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>View Receipt</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )}
+                                        {item.type === 'expense' && item.originalExpense && (
+                                            <>
+                                            <EditExpenseDialog
+                                                expense={item.originalExpense}
+                                                onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)}
+                                                parentNames={item.parentNames}
+                                                monthId={item.monthId}
+                                            />
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDeleteExpense(item.id, item.monthId)}>
+                                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Delete</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between text-sm">
+                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                                    <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Paid By</span>
+                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                     <span className="text-muted-foreground">Status</span>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id={`settle-switch-mobile-${item.id}`}
+                                            checked={false}
+                                            onCheckedChange={() => handleStatusToggle(item)}
+                                            aria-label={`Settle payment for ${item.description}`}
+                                        />
+                                        <Label htmlFor={`settle-switch-mobile-${item.id}`}>Unsettled</Label>
+                                    </div>
+                                </div>
+                            </div>
+                            {(p1OwesAmount > 0 || p2OwesAmount > 0) && (
+                                <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
+                                    <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
+                                     <div className="flex justify-between">
+                                        <span className="text-muted-foreground">{item.parentNames['Parent 1']} Owes</span>
+                                        <span className={cn(p1OwesAmount > 0 && "text-destructive font-semibold")}>${p1OwesAmount.toFixed(2)}</span>
+                                     </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">{item.parentNames['Parent 2']} Owes</span>
+                                        <span className={cn(p2OwesAmount > 0 && "text-destructive font-semibold")}>${p2OwesAmount.toFixed(2)}</span>
+                                     </div>
+                                </div>
+                            )}
+                        </Card>
+                    );
+                })
+            ) : (
+                <div className="h-32 text-center flex flex-col justify-center items-center">
+                    <p className="text-muted-foreground">
+                        {monthFilter === 'all'
+                        ? `No unsettled items for ${yearFilter}.`
+                        : `No unsettled items for ${format(parse(monthFilter, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`}
+                    </p>
+                </div>
+            )}
+        </div>
+
       </CardContent>
     </Card>
   );
