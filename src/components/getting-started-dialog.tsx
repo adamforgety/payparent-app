@@ -93,7 +93,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
   return (
     <Dialog open={dialogOpen} onOpenChange={dialogOnOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-md" hideCloseButton>
+      <DialogContent className="sm:max-w-lg" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Welcome to PayParent!</DialogTitle>
           <DialogDescription>
