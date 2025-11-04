@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -490,22 +490,27 @@ export function ExpensesCard({
                           <div className="flex justify-end gap-1 h-8 w-full">
                             {item.type === 'expense' && (
                               <>
-                                  <EditExpenseDialog expense={item as Expense} onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)} parentNames={parentNames} monthId={monthId} />
-                                  <TooltipProvider>
-                                      <Tooltip>
-                                      <TooltipTrigger asChild>
-                                          <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8"
-                                          onClick={() => onDelete(item.id)}
-                                          >
-                                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                          </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Delete</TooltipContent>
-                                      </Tooltip>
-                                  </TooltipProvider>
+                                <EditExpenseDialog
+                                  expense={item as Expense}
+                                  onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)}
+                                  parentNames={parentNames}
+                                  monthId={monthId}
+                                />
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => onDelete(item.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Delete</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </>
                             )}
                           </div>
@@ -523,9 +528,8 @@ export function ExpensesCard({
               </TableBody>
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
-                  <TableRow>
-                    <TableCell colSpan={4}>Totals</TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">Total</TableCell>
+                   <TableRow>
+                    <TableCell colSpan={5}></TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
@@ -533,8 +537,8 @@ export function ExpensesCard({
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
                   <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={4}></TableCell>
-                    <TableCell className="text-right">
+                    <TableCell colSpan={4}>Totals</TableCell>
+                     <TableCell className="text-right">
                       ${totals.totalAmount.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -561,3 +565,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
