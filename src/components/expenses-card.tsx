@@ -349,7 +349,7 @@ export function ExpensesCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 max-h-[60vh] overflow-auto">
+      <CardContent className="space-y-4 overflow-y-auto max-h-[60vh]">
         <div className="no-print flex items-center gap-2">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
