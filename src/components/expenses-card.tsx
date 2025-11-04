@@ -521,7 +521,7 @@ export function ExpensesCard({
               )}
             </TableBody>
             {filteredAndSortedItems.length > 0 && (
-              <TableFooter className="bg-secondary/50 border-t">
+              <TableFooter className="sticky bottom-0 z-10 bg-secondary border-t">
                 <TableRow>
                   <TableCell colSpan={4} className="font-semibold">
                     Totals
@@ -552,3 +552,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
