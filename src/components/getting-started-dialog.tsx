@@ -100,7 +100,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
             Here’s a quick guide to get you started.
           </DialogDescription>
         </DialogHeader>
-        <Carousel className="w-full">
+        <Carousel className="w-full px-12">
           <CarouselContent>
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
