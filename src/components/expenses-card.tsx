@@ -348,7 +348,7 @@ export function ExpensesCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="overflow-y-auto max-h-[60vh]">
+      <CardContent className="overflow-y-auto">
         <div className="no-print flex items-center gap-2 mb-4">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -367,7 +367,7 @@ export function ExpensesCard({
           </div>
         </div>
           <Table className="border-collapse border">
-            <TableHeader className="sticky top-0 z-10 bg-secondary border-b">
+            <TableHeader className="sticky top-0 z-10 bg-background border-b">
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
@@ -521,7 +521,7 @@ export function ExpensesCard({
               )}
             </TableBody>
             {filteredAndSortedItems.length > 0 && (
-              <TableFooter className="sticky bottom-0 z-10 bg-secondary border-t">
+              <TableFooter className="sticky bottom-0 z-10 bg-background border-t">
                 <TableRow>
                   <TableCell colSpan={4} className="font-semibold">
                     Totals

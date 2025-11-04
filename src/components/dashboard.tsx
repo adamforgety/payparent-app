@@ -248,7 +248,7 @@ function DashboardComponent() {
           totalExpenses={totalExpenses}
           onShowGettingStarted={() => setShowGettingStarted(true)}
         />
-        <main className="container mx-auto p-4 pb-24 md:p-8">
+        <main className="container mx-auto p-4 md:p-8">
           <div className="mb-8 hidden print-only">
             <div className="print-header flex items-center justify-between">
               <Logo />
