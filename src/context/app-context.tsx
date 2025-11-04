@@ -11,11 +11,12 @@ import React, {
 } from 'react';
 import type { AppData, ChildSupport, Expense, UserDoc } from '@/lib/types';
 import { useFirebase } from '@/firebase';
-import { getUserData, saveUserData } from '@/lib/data-service';
+import { saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
 import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
-import { doc, onSnapshot, getDoc, FirestoreError } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, FirestoreError, setDoc } from 'firebase/firestore';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
+import { initialData } from '@/lib/data';
 
 interface AppContextType {
   appData: AppData | null;
@@ -74,15 +75,37 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       // 1. Listener for the current user's document to get coParent and dataOwner info
       userUnsubscribe = onSnapshot(userDocRef, 
         async (userDocSnap) => {
-          if (!userDocSnap.exists()) {
-            setIsLoading(false);
-            return;
-          }
+          let userDocData = userDocSnap.data() as UserDoc | undefined;
 
-          const userDocData = userDocSnap.data() as UserDoc;
-          
+          // --- Self-healing: Create user document if it doesn't exist ---
+          if (!userDocSnap.exists()) {
+            console.log('User document not found for UID:', user.uid, 'Creating a new one.');
+            const newUserDocPayload: UserDoc = {
+              id: user.uid,
+              email: user.email,
+              appData: JSON.parse(JSON.stringify(initialData)),
+              coParentId: null,
+              dataOwnerId: user.uid,
+            };
+            
+            try {
+              await setDoc(userDocRef, newUserDocPayload);
+              userDocData = newUserDocPayload; // Use the new data immediately
+            } catch (error) {
+               const permissionError = new FirestorePermissionError({
+                  path: userDocRef.path,
+                  operation: 'create',
+                  requestResourceData: newUserDocPayload,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                setIsLoading(false);
+                return; // Stop if we can't create the doc
+            }
+          }
+          // --- End Self-healing ---
+
           // Determine the target document for app data
-          const dataOwnerId = userDocData.dataOwnerId || user.uid;
+          const dataOwnerId = userDocData?.dataOwnerId || user.uid;
           const dataDocRef = doc(firestore, 'users', dataOwnerId);
           
           // Set up or update the listener for the shared appData
@@ -91,7 +114,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
             (dataDocSnap) => {
               if (dataDocSnap.exists()) {
                 const dataDoc = dataDocSnap.data() as UserDoc;
-                setAppData(dataDoc.appData);
+                if (dataDoc.appData) {
+                  setAppData(dataDoc.appData);
+                } else {
+                  // Self-healing: If appData field is missing, fix it.
+                  console.warn("User document is missing 'appData'. Re-initializing.");
+                  saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
+                }
               }
               setIsLoading(false);
             },
@@ -104,7 +133,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           );
           
           // Fetch co-parent's profile info if they are linked
-          if (userDocData.coParentId) {
+          if (userDocData?.coParentId) {
             const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
             const coParentSnap = await getDoc(coParentDocRef);
             if (coParentSnap.exists()) {
@@ -394,3 +423,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    
