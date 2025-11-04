@@ -106,3 +106,36 @@
 body > svg:last-of-type {
   display: none !important;
 }
+
+/* Carousel dots */
+.embla__dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.embla__dot {
+  background-color: transparent;
+  cursor: pointer;
+  position: relative;
+  height: 1.5rem;
+  width: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+}
+
+.embla__dot:after {
+  background-color: hsl(var(--muted));
+  border-radius: 9999px;
+  width: 0.5rem;
+  height: 0.5rem;
+  content: "";
+  transition: background-color 0.2s;
+}
+
+.embla__dot--selected:after {
+  background-color: hsl(var(--primary));
+}

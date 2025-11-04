@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import type { EmblaCarouselType } from 'embla-carousel-react';
 import { Button } from './ui/button';
 import {
   Carousel,
@@ -11,12 +12,17 @@ import {
 } from './ui/carousel';
 import { Settings, FilePlus, LayoutDashboard, Link2, ArrowRight, Plus, BarChart } from 'lucide-react';
 import { Logo } from './logo';
+import { cn } from '@/lib/utils';
 
 interface GettingStartedPageProps {
   onFinish: () => void;
 }
 
 export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
+  const [emblaApi, setEmblaApi] = useState<EmblaCarouselType | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+
   const tutorialSteps = [
     {
       icon: Settings,
@@ -80,6 +86,23 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       )
     },
   ];
+  
+  useEffect(() => {
+    if (!emblaApi) return;
+    setScrollSnaps(emblaApi.scrollSnapList());
+    const onSelect = () => {
+      setSelectedIndex(emblaApi.selectedScrollSnap());
+    };
+    emblaApi.on('select', onSelect);
+    onSelect(); // Set initial selected index
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi]);
+
+  const scrollTo = (index: number) => {
+    emblaApi?.scrollTo(index);
+  };
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
@@ -94,12 +117,12 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
           </p>
         </header>
 
-        <Carousel opts={{ loop: true }} className="w-full px-12">
+        <Carousel opts={{ loop: true }} setApi={setEmblaApi} className="w-full px-12">
           <CarouselContent>
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                  <div className="text-center space-y-4 p-4">
+                  <div className="text-center space-y-4 p-4 min-h-[280px]">
                     <div className="flex justify-center">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                             <step.icon className="h-6 w-6" />
@@ -117,6 +140,18 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
           <CarouselPrevious className="bg-primary text-primary-foreground hover:bg-primary/90" />
           <CarouselNext className="bg-primary text-primary-foreground hover:bg-primary/90" />
         </Carousel>
+        
+        <div className="flex justify-center gap-2 mt-4">
+            {scrollSnaps.map((_, index) => (
+                <button
+                    key={index}
+                    onClick={() => scrollTo(index)}
+                    className={cn('h-2 w-2 rounded-full transition-colors', 
+                        index === selectedIndex ? 'bg-primary' : 'bg-muted'
+                    )}
+                />
+            ))}
+        </div>
 
         <footer className="mt-8 flex justify-center">
             <Button onClick={onFinish}>
