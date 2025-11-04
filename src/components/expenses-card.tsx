@@ -33,7 +33,6 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
 import { EditExpenseDialog } from './edit-expense-dialog';
-import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
@@ -228,7 +227,7 @@ export function ExpensesCard({
           if (item.status === 'Settled') {
             p1Paid = p1Share;
             p2Paid = p2Share;
-          } else {
+          } else { // Unsettled
             const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
             const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
             p1Paid = p1InitialPaid;
