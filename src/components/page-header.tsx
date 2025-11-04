@@ -19,9 +19,10 @@ import { useRouter } from 'next/navigation';
 
 interface PageHeaderProps {
   totalExpenses: number;
+  onShowGettingStarted: () => void;
 }
 
-export function PageHeader({ totalExpenses }: PageHeaderProps) {
+export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderProps) {
   const auth = useAuth();
   const { user } = useFirebase();
   const router = useRouter();
@@ -58,7 +59,7 @@ export function PageHeader({ totalExpenses }: PageHeaderProps) {
                   <p className='text-xs text-muted-foreground font-normal'>{user.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { /* Logic to show guide will be handled by a parent state */ }}>
+                <DropdownMenuItem onClick={onShowGettingStarted}>
                   <HelpCircle className="mr-2 h-4 w-4" />
                   <span>Getting Started</span>
                 </DropdownMenuItem>

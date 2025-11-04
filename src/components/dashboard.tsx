@@ -246,6 +246,7 @@ function DashboardComponent() {
       <div className="flex flex-col">
         <PageHeader
           totalExpenses={totalExpenses}
+          onShowGettingStarted={() => setShowGettingStarted(true)}
         />
         <main className="container mx-auto p-4 pb-24 md:p-8">
           <div className="mb-8 hidden print-only">
