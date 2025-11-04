@@ -340,45 +340,24 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
   };
   
  const handleConfirmImport = () => {
-    // Re-validate all failed imports to see if user fixed them
-    const newlySuccessful: ParsedExpense[] = [];
-    const stillFailing: FailedImport[] = [];
-
-    failedImports.forEach(failedItem => {
-      const { errors, parsedExpense } = validateRow(failedItem.data);
-      if (parsedExpense) {
-        newlySuccessful.push(parsedExpense);
-      } else {
-        stillFailing.push({ ...failedItem, errors });
-      }
-    });
-
-    const finalSuccessfulImports = [...successfulImports, ...newlySuccessful];
-
-    if (finalSuccessfulImports.length > 0) {
-      onImport(finalSuccessfulImports);
+    if (successfulImports.length > 0) {
+      onImport(successfulImports);
     }
     
-    // Update the state with the remaining failed imports
-    setFailedImports(stillFailing);
-    setSuccessfulImports(finalSuccessfulImports);
-
-
-    if (stillFailing.length > 0) {
-      const totalFailed = stillFailing.length;
+    if (failedImports.length > 0) {
+      const totalFailed = failedImports.length;
       toast({
-        variant: finalSuccessfulImports.length > 0 ? 'default' : 'destructive',
-        title: `Import Complete: ${finalSuccessfulImports.length} added, ${totalFailed} failed.`,
-        description: `Skipped rows can be corrected and re-tried.`,
+        variant: successfulImports.length > 0 ? 'default' : 'destructive',
+        title: `Import Partially Complete: ${successfulImports.length} added, ${totalFailed} failed.`,
+        description: `Skipped rows remain in the dialog for correction.`,
       });
-      if (finalSuccessfulImports.length > 0) {
-        // If some were successful, we can close the dialog and let them know some failed.
-         handleOpenChange(false);
+      if (successfulImports.length > 0) {
+        handleOpenChange(false);
       }
-    } else if (finalSuccessfulImports.length > 0) {
+    } else if (successfulImports.length > 0) {
        toast({
         title: 'Import Successful',
-        description: `${finalSuccessfulImports.length} expenses were added.`,
+        description: `${successfulImports.length} expenses were added.`,
       });
        handleOpenChange(false);
     } else {
@@ -392,33 +371,18 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
 
   const handleFailedRowChange = (index: number, field: keyof RowData, value: string) => {
     const updatedFailedImports = [...failedImports];
-    updatedFailedImports[index].data[field] = value;
+    const itemToUpdate = { ...updatedFailedImports[index] };
+    itemToUpdate.data[field] = value;
 
-    // Live re-validation
-    const { errors } = validateRow(updatedFailedImports[index].data);
-    updatedFailedImports[index].errors = errors;
-    
-    setFailedImports(updatedFailedImports);
-  };
+    const { errors, parsedExpense } = validateRow(itemToUpdate.data);
 
-  const handleRetryFailedRow = (index: number) => {
-    const rowToRetry = failedImports[index];
-    const { errors, parsedExpense } = validateRow(rowToRetry.data);
-  
     if (parsedExpense) {
-      // Move from failed to successful
       setSuccessfulImports(prev => [...prev, parsedExpense]);
       setFailedImports(prev => prev.filter((_, i) => i !== index));
     } else {
-      // Update errors and give feedback
-      const updatedFailedImports = [...failedImports];
-      updatedFailedImports[index].errors = errors;
+      itemToUpdate.errors = errors;
+      updatedFailedImports[index] = itemToUpdate;
       setFailedImports(updatedFailedImports);
-      toast({
-        variant: 'destructive',
-        title: 'Validation Failed',
-        description: 'Please fix the highlighted errors before retrying.',
-      });
     }
   };
 
@@ -627,7 +591,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                     <TableHead className="w-[150px]">Category</TableHead>
                                     <TableHead className="w-[180px]">Paid By</TableHead>
                                     <TableHead className="w-[130px]">Amount</TableHead>
-                                    <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                    <TableHead className="w-[50px] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -687,24 +651,6 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end">
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleRetryFailedRow(i)}
-                                                                disabled={Object.keys(fail.errors).length > 0}
-                                                                className="h-8 w-8"
-                                                            >
-                                                                <Check className={cn("h-4 w-4", Object.keys(fail.errors).length === 0 && "text-green-600")} />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>Validate Row</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeFailedRow(i)}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -721,7 +667,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 <Button variant="outline" onClick={() => setStep('upload')}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
                 </Button>
-                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && failedImports.every(f => Object.keys(f.errors).length > 0)}>
+                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0}>
                   Confirm Import ({successfulImports.length})
                 </Button>
             </DialogFooter>
