@@ -366,9 +366,8 @@ export function ExpensesCard({
             <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
           </div>
         </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-secondary/50">
+          <Table className="rounded-md border border-collapse">
+            <TableHeader className="sticky top-0 z-10 bg-secondary/50 border-b">
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
@@ -522,7 +521,7 @@ export function ExpensesCard({
               )}
             </TableBody>
             {filteredAndSortedItems.length > 0 && (
-              <TableFooter>
+              <TableFooter className="sticky bottom-0 z-10 bg-secondary/50 border-t">
                 <TableRow>
                   <TableCell colSpan={4} className="font-semibold">
                     Totals
@@ -547,7 +546,6 @@ export function ExpensesCard({
               </TableFooter>
             )}
           </Table>
-        </div>
       </CardContent>
     </Card>
   );
