@@ -367,7 +367,7 @@ export function ExpensesCard({
           </div>
         </div>
           <Table className="border-collapse border">
-            <TableHeader className="sticky top-0 z-10 bg-secondary/50 border-b">
+            <TableHeader className="sticky top-0 z-10 bg-secondary border-b">
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
