@@ -368,7 +368,7 @@ export function ExpensesCard({
         </div>
           <div className="overflow-x-auto">
             <Table className="min-w-[1200px]">
-              <TableHeader className="sticky top-0 z-10 bg-background">
+              <TableHeader>
                 <TableRow>
                   <SortableHeader sortKey="description">Description</SortableHeader>
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
@@ -561,5 +561,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
