@@ -349,8 +349,8 @@ export function ExpensesCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 overflow-y-auto max-h-[60vh]">
-        <div className="no-print flex items-center gap-2">
+      <CardContent className="overflow-y-auto max-h-[60vh]">
+        <div className="no-print flex items-center gap-2 mb-4">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -369,7 +369,7 @@ export function ExpensesCard({
         </div>
         <div className="rounded-md border">
           <Table>
-            <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+            <TableHeader className="sticky top-0 z-10 bg-secondary/50 backdrop-blur-sm">
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
