@@ -348,7 +348,7 @@ export function ExpensesCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="overflow-y-auto">
+      <CardContent>
         <div className="no-print flex items-center gap-2 mb-4">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -521,24 +521,31 @@ export function ExpensesCard({
               )}
             </TableBody>
             {filteredAndSortedItems.length > 0 && (
-              <TableFooter className="sticky bottom-0 z-10 bg-background border-t">
+              <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={4} className="font-semibold">
-                    Totals
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">
+                  <TableCell colSpan={4}>Totals</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">Total</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Owes</TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                </TableRow>
+                <TableRow className="bg-secondary/50 font-bold">
+                  <TableCell colSpan={4}></TableCell>
+                  <TableCell className="text-right">
                     ${totals.totalAmount.toFixed(2)}
                   </TableCell>
-                   <TableCell className="text-right font-semibold">
+                   <TableCell className="text-right">
                     ${totals.totalP1Paid.toFixed(2)}
                   </TableCell>
-                  <TableCell className={cn("text-right font-semibold", totals.totalP1Owes > 0 && "text-destructive")}>
+                  <TableCell className={cn("text-right", totals.totalP1Owes > 0 && "text-destructive")}>
                     ${totals.totalP1Owes.toFixed(2)}
                   </TableCell>
-                   <TableCell className="text-right font-semibold">
+                   <TableCell className="text-right">
                     ${totals.totalP2Paid.toFixed(2)}
                   </TableCell>
-                   <TableCell className={cn("text-right font-semibold", totals.totalP2Owes > 0 && "text-destructive")}>
+                   <TableCell className={cn("text-right", totals.totalP2Owes > 0 && "text-destructive")}>
                     ${totals.totalP2Owes.toFixed(2)}
                   </TableCell>
                   <TableCell colSpan={2}></TableCell>
