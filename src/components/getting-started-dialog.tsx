@@ -93,7 +93,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
   return (
     <Dialog open={dialogOpen} onOpenChange={dialogOnOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg py-10 px-16" hideCloseButton>
+      <DialogContent className="sm:max-w-lg py-10 px-12" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Welcome to PayParent!</DialogTitle>
           <DialogDescription>
@@ -123,7 +123,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
           <CarouselPrevious />
           <CarouselNext />
         </Carousel>
-        <DialogFooter className="sm:justify-between items-center">
+        <DialogFooter className="sm:justify-between items-center pt-4">
             <p className="text-xs text-muted-foreground hidden sm:block">You can access this guide again from the account menu.</p>
             <Button onClick={() => dialogOnOpenChange(false)}>
                 Got it!
