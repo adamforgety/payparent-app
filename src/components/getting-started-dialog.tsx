@@ -20,7 +20,6 @@ import {
   CarouselPrevious,
 } from './ui/carousel';
 import { Users, FilePlus, Link2, ArrowRight, Settings } from 'lucide-react';
-import { Separator } from './ui/separator';
 
 interface GettingStartedDialogProps {
   children?: React.ReactNode;
@@ -48,8 +47,15 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
     {
       icon: Settings,
       title: 'Step 1: Configure Your Settings',
-      description:
-        'Go to the Settings tab to customize the app. You can set parent names, enter the monthly child support amount, adjust expense divisions, and update your email or password.',
+      description: (
+        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
+          <li>Go to the <strong>Settings</strong> tab to customize the app.</li>
+          <li>Set parent names to personalize your dashboard.</li>
+          <li>Enter the monthly child support amount.</li>
+          <li>Adjust expense percentages for general and medical costs.</li>
+          <li>Update your account email or password.</li>
+        </ul>
+      ),
       image: '/images/tutorial-step-1.png',
     },
     {
@@ -83,14 +89,14 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                  <div className="flex aspect-square items-center justify-center p-6 flex-col gap-4 text-center">
+                  <div className="flex flex-col gap-4 text-center items-center justify-center p-6">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <step.icon className="h-6 w-6" />
                     </div>
                     <h3 className="text-lg font-semibold">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground">
                       {step.description}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </CarouselItem>
