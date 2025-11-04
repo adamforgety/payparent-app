@@ -257,60 +257,52 @@ export function ExpensesCard({
     let parent1Net = 0;
     let parent2Net = 0;
 
-    // Calculate balance from previous months
-    Object.keys(appData.months)
-      .filter((mId) => {
-        const monthDate = parse(mId, 'yyyy-MM', new Date());
-        const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
-        return isBefore(startOfDay(monthDate), startOfDay(currentMonthDate));
-      })
-      .forEach((mId) => {
-        const monthData = appData.months[mId];
-        if (!monthData) return;
+    // Iterate over all months to calculate total net balance from unsettled items
+    Object.keys(appData.months).forEach((mId) => {
+      const monthData = appData.months[mId];
+      if (!monthData) return;
 
-        const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-        const p1Paid = unsettledExpenses.filter(e => e.paidBy === 'Parent 1').reduce((sum, e) => sum + e.amount, 0);
-        const p2Paid = unsettledExpenses.filter(e => e.paidBy === 'Parent 2').reduce((sum, e) => sum + e.amount, 0);
-        const p1Share = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, 'Parent 1');
-        const p2Share = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, 'Parent 2');
-        
-        parent1Net += p1Paid - p1Share;
-        parent2Net += p2Paid - p2Share;
+      const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
+      
+      const p1PaidForMonth = unsettledExpenses
+        .filter((exp) => exp.paidBy === 'Parent 1')
+        .reduce((sum, exp) => sum + exp.amount, 0);
+      
+      const p2PaidForMonth = unsettledExpenses
+        .filter((exp) => exp.paidBy === 'Parent 2')
+        .reduce((sum, exp) => sum + exp.amount, 0);
 
-        const monthDate = parse(mId, 'yyyy-MM', new Date());
-        const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+      const p1ShareForMonth = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, 'Parent 1');
+      const p2ShareForMonth = calculateShare(unsettledExpenses, monthData.expenseSplit, monthData.medicalExpenseSplit, 'Parent 2');
 
-        if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
-          if (monthData.childSupport.paidBy === 'Parent 1') parent1Net -= monthData.childSupport.amount;
-          else parent2Net -= monthData.childSupport.amount;
+      parent1Net += p1PaidForMonth - p1ShareForMonth;
+      parent2Net += p2PaidForMonth - p2ShareForMonth;
+
+      const monthDate = parse(mId, 'yyyy-MM', new Date());
+      const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+
+      if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
+        if (monthData.childSupport.paidBy === 'Parent 1') {
+          // Parent 1 paid, so Parent 2 owes them. This is a credit for P1.
+          parent1Net += monthData.childSupport.amount;
+          parent2Net -= monthData.childSupport.amount;
+        } else { // Parent 2 paid
+          // Parent 2 paid, so Parent 1 owes them. This is a credit for P2.
+          parent2Net += monthData.childSupport.amount;
+          parent1Net -= monthData.childSupport.amount;
         }
-      });
-      
-      // Add current month's balance
-      const currentUnsettled = expenses.filter(e => e.status === 'Unsettled');
-      const p1CurrentPaid = currentUnsettled.filter(e => e.paidBy === 'Parent 1').reduce((sum, e) => sum + e.amount, 0);
-      const p2CurrentPaid = currentUnsettled.filter(e => e.paidBy === 'Parent 2').reduce((sum, e) => sum + e.amount, 0);
-      const p1CurrentShare = calculateShare(currentUnsettled, expenseSplit, medicalExpenseSplit, 'Parent 1');
-      const p2CurrentShare = calculateShare(currentUnsettled, expenseSplit, medicalExpenseSplit, 'Parent 2');
-
-      parent1Net += p1CurrentPaid - p1CurrentShare;
-      parent2Net += p2CurrentPaid - p2CurrentShare;
-      
-      const isCurrentMonthFuture = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
-      if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
-          if (childSupport.paidBy === 'Parent 1') parent1Net -= childSupport.amount;
-          else parent2Net -= childSupport.amount;
       }
-      
-      if (parent1Net > parent2Net) {
-          return { settleBalance: parent1Net - parent2Net, whoOwes: parentNames['Parent 2'], whoIsOwed: parentNames['Parent 1'] };
-      } else if (parent2Net > parent1Net) {
-          return { settleBalance: parent2Net - parent1Net, whoOwes: parentNames['Parent 1'], whoIsOwed: parentNames['Parent 2'] };
-      }
-      
-      return { settleBalance: 0, whoOwes: null, whoIsOwed: null };
+    });
 
-  }, [appData, monthId, expenses, childSupport, expenseSplit, medicalExpenseSplit, parentNames, currentDate]);
+    if (parent1Net > parent2Net) {
+        return { settleBalance: parent1Net - parent2Net, whoOwes: parentNames['Parent 2'], whoIsOwed: parentNames['Parent 1'] };
+    } else if (parent2Net > parent1Net) {
+        return { settleBalance: parent2Net - parent1Net, whoOwes: parentNames['Parent 1'], whoIsOwed: parentNames['Parent 2'] };
+    }
+    
+    return { settleBalance: 0, whoOwes: null, whoIsOwed: null };
+
+  }, [appData.months, parentNames]);
 
   const handleStatusToggle = (itemToToggle: DisplayItem) => {
     const newStatus: PaymentStatus = itemToToggle.status === 'Settled' ? 'Unsettled' : 'Settled';
