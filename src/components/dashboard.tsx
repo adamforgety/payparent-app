@@ -27,7 +27,7 @@ import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SummaryDetailsCard } from './summary-details-card';
 import { CoParentLinkCard } from './co-parent-link-card';
-import { GettingStartedDialog } from './getting-started-dialog';
+import { GettingStartedPage } from './getting-started-page';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser } = useAppContext();
@@ -213,6 +213,10 @@ function DashboardComponent() {
     }
   };
   
+  if (showGettingStarted) {
+    return <GettingStartedPage onFinish={() => setShowGettingStarted(false)} />;
+  }
+
   if (isLoading || !appData || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
@@ -239,7 +243,6 @@ function DashboardComponent() {
       onUpdateExpense={handleUpdateExpense}
       onUpdateChildSupport={updateChildSupportForSingleMonth}
     >
-      <GettingStartedDialog open={showGettingStarted} onOpenChange={setShowGettingStarted} />
       <div className="flex flex-col">
         <PageHeader
           totalExpenses={totalExpenses}
@@ -484,7 +487,7 @@ function DashboardComponent() {
 }
 
 export function Dashboard() {
-  const { isLoading } = useAppContext();
+  const { isLoading, isNewUser } = useAppContext();
 
   if (isLoading) {
      return (
@@ -503,5 +506,3 @@ export function Dashboard() {
 
   return <DashboardComponent />;
 }
-
-    

@@ -1,16 +1,6 @@
-
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import {
   Carousel,
@@ -19,30 +9,14 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from './ui/carousel';
-import { Users, FilePlus, Link2, ArrowRight, Settings, LayoutDashboard } from 'lucide-react';
+import { Settings, FilePlus, LayoutDashboard, Link2, ArrowRight } from 'lucide-react';
+import { Logo } from './logo';
 
-interface GettingStartedDialogProps {
-  children?: React.ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+interface GettingStartedPageProps {
+  onFinish: () => void;
 }
 
-export function GettingStartedDialog({ children, open, onOpenChange }: GettingStartedDialogProps) {
-  const [internalOpen, setInternalOpen] = useState(false);
-  
-  const handleOpenChange = (isOpen: boolean) => {
-    setInternalOpen(isOpen);
-    onOpenChange?.(isOpen);
-    // Mark as seen when closed
-    if (!isOpen) {
-      localStorage.setItem('hasSeenGettingStarted', 'true');
-    }
-  };
-
-  const isControlled = open !== undefined && onOpenChange !== undefined;
-  const dialogOpen = isControlled ? open : internalOpen;
-  const dialogOnOpenChange = isControlled ? handleOpenChange : setInternalOpen;
-
+export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
   const tutorialSteps = [
     {
       icon: Settings,
@@ -56,19 +30,17 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
           <li>Update your account email or password.</li>
         </ul>
       ),
-      image: '/images/tutorial-step-1.png',
     },
     {
       icon: FilePlus,
       title: 'Step 2: Log Your First Expense',
       description: (
-         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
+        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
           <li>Click the big <strong>+</strong> button to add a single expense.</li>
           <li>Go to the <strong>Expenses</strong> tab to find the <strong>Monthly Ledger</strong>.</li>
           <li>Use the <strong>Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
         </ul>
       ),
-      image: '/images/tutorial-step-2.png',
     },
     {
       icon: LayoutDashboard,
@@ -79,28 +51,29 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
           <li>The <strong>Balance Details</strong> card provides a complete breakdown of how that balance was calculated.</li>
         </ul>
       ),
-      image: '/images/tutorial-step-3.png',
     },
     {
       icon: Link2,
       title: 'Step 4: Link With Your Co-Parent',
       description:
         'Head to Settings > Account to find your unique Co-Parent Code. Share it with your co-parent to link accounts and share financial data seamlessly.',
-      image: '/images/tutorial-step-3.png',
     },
   ];
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={dialogOnOpenChange}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg py-10 px-12" hideCloseButton>
-        <DialogHeader>
-          <DialogTitle>Welcome to PayParent!</DialogTitle>
-          <DialogDescription>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
+      <div className="w-full max-w-2xl">
+        <header className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+                <Logo />
+            </div>
+          <h1 className="text-2xl font-semibold">Welcome to PayParent!</h1>
+          <p className="text-muted-foreground">
             Here’s a quick guide to get you started.
-          </DialogDescription>
-        </DialogHeader>
-        <Carousel className="w-full">
+          </p>
+        </header>
+
+        <Carousel className="w-full px-12">
           <CarouselContent>
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
@@ -123,14 +96,14 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
           <CarouselPrevious />
           <CarouselNext />
         </Carousel>
-        <DialogFooter className="sm:justify-between items-center pt-4">
-            <p className="text-xs text-muted-foreground hidden sm:block">You can access this guide again from the account menu.</p>
-            <Button onClick={() => dialogOnOpenChange(false)}>
-                Got it!
+
+        <footer className="mt-8 flex justify-center">
+            <Button onClick={onFinish}>
+                Get Started
                 <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </footer>
+      </div>
+    </div>
   );
 }

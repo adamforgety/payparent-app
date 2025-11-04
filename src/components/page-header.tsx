@@ -16,7 +16,6 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
-import { GettingStartedDialog } from './getting-started-dialog';
 
 interface PageHeaderProps {
   totalExpenses: number;
@@ -59,12 +58,10 @@ export function PageHeader({ totalExpenses }: PageHeaderProps) {
                   <p className='text-xs text-muted-foreground font-normal'>{user.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <GettingStartedDialog>
-                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Getting Started</span>
-                  </DropdownMenuItem>
-                </GettingStartedDialog>
+                <DropdownMenuItem onClick={() => { /* Logic to show guide will be handled by a parent state */ }}>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  <span>Getting Started</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
