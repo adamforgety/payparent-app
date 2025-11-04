@@ -105,9 +105,11 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                  <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <step.icon className="h-6 w-6" />
+                  <div className="text-center space-y-4 p-4">
+                    <div className="flex justify-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <step.icon className="h-6 w-6" />
+                        </div>
                     </div>
                     <h3 className="text-lg font-semibold">{step.title}</h3>
                     <div className="text-sm text-muted-foreground">
