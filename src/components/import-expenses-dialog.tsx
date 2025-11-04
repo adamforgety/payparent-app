@@ -293,7 +293,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         jsonData.forEach((row, index) => {
             const normalizedRow: {[key: string]: any} = {};
             for (const key in row) {
-              normalizedRow[key.toLowerCase().replace(/\s+/g, '')] = row[key];
+              normalizedRow[key.toLowerCase().replace(/\s/g, '')] = row[key];
             }
 
             const rowData: RowData = {
@@ -339,35 +339,56 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     reader.readAsArrayBuffer(file);
   };
   
-  const handleConfirmImport = () => {
-    if (successfulImports.length > 0) {
-      onImport(successfulImports);
-    }
+ const handleConfirmImport = () => {
+    // Re-validate all failed imports to see if user fixed them
+    const newlySuccessful: ParsedExpense[] = [];
+    const stillFailing: FailedImport[] = [];
 
-    if (failedImports.length > 0) {
-        const totalFailed = failedImports.length;
-        toast({
-          variant: successfulImports.length > 0 ? 'default' : 'destructive',
-          title: `Import Complete: ${successfulImports.length} added, ${totalFailed} failed.`,
-          description: `Skipped rows can be corrected and re-tried.`,
-        });
-        if(successfulImports.length > 0) {
-          handleOpenChange(false);
-        }
-      } else if (successfulImports.length > 0) {
-         toast({
-          title: 'Import Successful',
-          description: `${successfulImports.length} expenses were added.`,
-        });
-         handleOpenChange(false);
+    failedImports.forEach(failedItem => {
+      const { errors, parsedExpense } = validateRow(failedItem.data);
+      if (parsedExpense) {
+        newlySuccessful.push(parsedExpense);
       } else {
-          toast({
-            variant: 'destructive',
-            title: 'Import Failed',
-            description: 'No valid expenses found in the file. Please check the format and data.',
-          });
+        stillFailing.push({ ...failedItem, errors });
       }
-  }
+    });
+
+    const finalSuccessfulImports = [...successfulImports, ...newlySuccessful];
+
+    if (finalSuccessfulImports.length > 0) {
+      onImport(finalSuccessfulImports);
+    }
+    
+    // Update the state with the remaining failed imports
+    setFailedImports(stillFailing);
+    setSuccessfulImports(finalSuccessfulImports);
+
+
+    if (stillFailing.length > 0) {
+      const totalFailed = stillFailing.length;
+      toast({
+        variant: finalSuccessfulImports.length > 0 ? 'default' : 'destructive',
+        title: `Import Complete: ${finalSuccessfulImports.length} added, ${totalFailed} failed.`,
+        description: `Skipped rows can be corrected and re-tried.`,
+      });
+      if (finalSuccessfulImports.length > 0) {
+        // If some were successful, we can close the dialog and let them know some failed.
+         handleOpenChange(false);
+      }
+    } else if (finalSuccessfulImports.length > 0) {
+       toast({
+        title: 'Import Successful',
+        description: `${finalSuccessfulImports.length} expenses were added.`,
+      });
+       handleOpenChange(false);
+    } else {
+        toast({
+          variant: 'destructive',
+          title: 'Import Failed',
+          description: 'No valid expenses found. Please check the data and try again.',
+        });
+    }
+  };
 
   const handleFailedRowChange = (index: number, field: keyof RowData, value: string) => {
     const updatedFailedImports = [...failedImports];
@@ -700,7 +721,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 <Button variant="outline" onClick={() => setStep('upload')}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
                 </Button>
-                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0}>
+                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && failedImports.every(f => Object.keys(f.errors).length > 0)}>
                   Confirm Import ({successfulImports.length})
                 </Button>
             </DialogFooter>
