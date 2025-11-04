@@ -105,7 +105,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
             {tutorialSteps.map((step, index) => (
               <CarouselItem key={index}>
                 <div className="p-1">
-                  <div className="flex aspect-square flex-col gap-4 text-center items-center justify-center p-6">
+                  <div className="flex flex-col gap-4 text-center items-center justify-center p-6">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <step.icon className="h-6 w-6" />
                     </div>
