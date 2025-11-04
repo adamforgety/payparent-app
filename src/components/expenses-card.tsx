@@ -659,6 +659,38 @@ export function ExpensesCard({
                     </p>
                 </div>
             )}
+             {filteredAndSortedItems.length > 0 && (
+                <Card className="bg-secondary/50">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Totals</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2 text-sm">
+                            <h4 className="font-medium">{parentNames['Parent 1']}</h4>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Paid</span>
+                                <span>${totals.totalP1Paid.toFixed(2)}</span>
+                            </div>
+                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">Owes</span>
+                                <span className={cn(totals.totalP1Owes > 0 && "text-destructive font-semibold")}>${totals.totalP1Owes.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <Separator />
+                        <div className="space-y-2 text-sm">
+                            <h4 className="font-medium">{parentNames['Parent 2']}</h4>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Paid</span>
+                                <span>${totals.totalP2Paid.toFixed(2)}</span>
+                            </div>
+                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">Owes</span>
+                                <span className={cn(totals.totalP2Owes > 0 && "text-destructive font-semibold")}>${totals.totalP2Owes.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+             )}
         </div>
       </CardContent>
     </Card>
@@ -666,3 +698,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
