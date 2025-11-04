@@ -537,10 +537,7 @@ export function ExpensesCard({
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
                   <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={4}>Totals</TableCell>
-                     <TableCell className="text-right">
-                      ${totals.totalAmount.toFixed(2)}
-                    </TableCell>
+                    <TableCell colSpan={5}>Totals</TableCell>
                     <TableCell className="text-right">
                       ${totals.totalP1Paid.toFixed(2)}
                     </TableCell>
