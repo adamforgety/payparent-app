@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload, Download, ArrowLeft, Check, Trash2 } from 'lucide-react';
+import { Upload, Download, ArrowLeft, Check, Trash2, Info } from 'lucide-react';
 
 import {
   Dialog,
@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Textarea } from './ui/textarea';
+import { Alert, AlertDescription } from './ui/alert';
 
 const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -448,8 +449,26 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             {step === 'upload' ? 'Import Expenses from Excel' : 'Preview Import'}
           </DialogTitle>
            {step === 'upload' ? (
-            <DialogDescription>
-             Upload an Excel file with columns for Date, Description, Category, Amount, and "Paid By". The "Paid By" name must match "{parentNames['Parent 1']}" or "{parentNames['Parent 2']}". Add only the total amount paid; the system will auto-calculate the percentage split.
+            <DialogDescription asChild>
+              <div className="space-y-4 pt-2 text-sm text-muted-foreground">
+                <p>Upload an Excel file with the required columns to bulk-add expenses.</p>
+                <Alert variant="default" className="bg-secondary/50">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <ul className="list-disc list-inside space-y-2">
+                       <li>
+                         Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, <strong className="text-foreground">Category</strong>, <strong className="text-foreground">Amount</strong>, and <strong className="text-foreground">Paid By</strong>.
+                      </li>
+                      <li>
+                        The "Paid By" value must exactly match one of your set parent names: "<strong className="text-foreground">{parentNames['Parent 1']}</strong>" or "<strong className="text-foreground">{parentNames['Parent 2']}</strong>".
+                      </li>
+                      <li>
+                        The system will automatically calculate each parent's share based on your split percentages. Do not pre-calculate splits in the file.
+                      </li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              </div>
             </DialogDescription>
           ) : (
             <DialogDescription>
@@ -677,3 +696,5 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     </Dialog>
   );
 }
+
+    
