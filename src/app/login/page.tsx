@@ -33,6 +33,7 @@ import {
 import { handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
+import { Separator } from '@/components/ui/separator';
 
 const signupSchema = z
   .object({
@@ -84,6 +85,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [isDemoPending, startDemoTransition] = useTransition();
   const [isResetPending, startResetTransition] = useTransition();
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
@@ -157,6 +159,41 @@ export default function LoginPage() {
           description: getErrorMessage(error),
         });
       }
+    });
+  };
+
+  const onDemoLogin = () => {
+    startDemoTransition(async () => {
+        const email = 'payparentdemo@gmail.com';
+        const password = 'Demo#123';
+
+        try {
+            // First, try to sign in
+            await signInWithEmailAndPassword(auth, email, password);
+            toast({ title: 'Demo Login Successful', description: 'Welcome to the demo!' });
+            router.push(next);
+            router.refresh();
+        } catch (error: any) {
+            if (error.code === AuthErrorCodes.USER_NOT_FOUND) {
+                // If user does not exist, create it
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email);
+                    if (actionResult.success) {
+                        toast({ title: 'Demo Account Created', description: 'Welcome to the demo!' });
+                        router.push(next);
+                        router.refresh();
+                    } else {
+                        toast({ variant: 'destructive', title: 'Demo Setup Failed', description: actionResult.error });
+                    }
+                } catch (createError: any) {
+                    toast({ variant: 'destructive', title: 'Demo Creation Failed', description: getErrorMessage(createError) });
+                }
+            } else {
+                // Handle other login errors
+                toast({ variant: 'destructive', title: 'Demo Login Failed', description: getErrorMessage(error) });
+            }
+        }
     });
   };
 
@@ -294,6 +331,15 @@ export default function LoginPage() {
                   </Button>
                 </form>
               </Form>
+              <div className="my-4 flex items-center">
+                  <Separator className="flex-1" />
+                  <span className="mx-4 text-xs uppercase text-muted-foreground">Or</span>
+                  <Separator className="flex-1" />
+              </div>
+               <Button variant="outline" className="w-full" onClick={onDemoLogin} disabled={isDemoPending}>
+                    {isDemoPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Try a Demo
+                </Button>
             </TabsContent>
             <TabsContent value="signup">
               <Form {...signupForm}>
