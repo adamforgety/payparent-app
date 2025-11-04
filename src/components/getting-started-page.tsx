@@ -9,7 +9,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from './ui/carousel';
-import { Settings, FilePlus, LayoutDashboard, Link2, ArrowRight, Plus } from 'lucide-react';
+import { Settings, FilePlus, LayoutDashboard, Link2, ArrowRight, Plus, BarChart } from 'lucide-react';
 import { Logo } from './logo';
 
 interface GettingStartedPageProps {
@@ -53,8 +53,19 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       ),
     },
     {
+      icon: BarChart,
+      title: 'Step 4: View Reports',
+      description: (
+        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
+          <li>Go to the <strong className="text-primary">Reporting</strong> tab to see year-to-date expenses.</li>
+          <li>Export your data for taxes or other financial needs.</li>
+          <li>View the summary for a breakdown of all expenses by category.</li>
+        </ul>
+      ),
+    },
+    {
       icon: Link2,
-      title: 'Step 4: Link With Your Co-Parent',
+      title: 'Step 5: Link With Your Co-Parent',
       description: (
         <p className="text-sm text-muted-foreground">
           Head to <strong className="text-primary">Settings</strong> &gt; <strong className="text-primary">Account</strong> to find your unique <strong className="text-primary">Co-Parent Code</strong>. Share it with your co-parent to link accounts and share financial data seamlessly.
