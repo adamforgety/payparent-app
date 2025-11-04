@@ -349,8 +349,8 @@ export function ExpensesCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="no-print flex items-center gap-2 mb-4">
+      <CardContent className="space-y-4 max-h-[60vh] overflow-auto">
+        <div className="no-print flex items-center gap-2">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -367,7 +367,7 @@ export function ExpensesCard({
             <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
           </div>
         </div>
-        <div className="rounded-md border relative max-h-[60vh] overflow-auto">
+        <div className="rounded-md border">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
               <TableRow>
