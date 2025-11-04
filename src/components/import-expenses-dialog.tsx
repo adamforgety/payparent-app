@@ -119,13 +119,13 @@ function flexibleDateParse(dateString: string): Date | null {
   ];
 
   for (const fmt of formats) {
-    const parsedDate = parse(dateString, fmt, new Date());
+    const parsedDate = parse(dateString.split(' ')[0], fmt, new Date()); // Handle 'MM/DD/YYYY HH:mm'
     if (isValid(parsedDate)) {
       // Check for two-digit year ambiguity
-      if (fmt.endsWith('yy') && parsedDate.getFullYear() < 100) {
-        const twoDigitYear = parsedDate.getFullYear();
-        // Sliding window: years < 70 are 21st century, >= 70 are 20th.
-        parsedDate.setFullYear(twoDigitYear + (twoDigitYear < 70 ? 2000 : 1900));
+      if (fmt.endsWith('yy')) {
+         const twoDigitYear = parsedDate.getFullYear() % 100;
+         // Sliding window: years < 70 are 21st century, >= 70 are 20th.
+         parsedDate.setFullYear(twoDigitYear + (twoDigitYear < 70 ? 2000 : 1900));
       }
       return parsedDate;
     }
