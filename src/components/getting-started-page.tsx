@@ -47,8 +47,15 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       title: 'Step 3: Understand the Dashboard',
       description: (
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>The <strong className="text-primary">Settle Balance</strong> card shows the final amount of who owes whom. Click the View & Settle Expenses button to settle all unsettled expenses.</li>
-          <li>The <strong className="text-primary">Balance Details</strong> card provides a complete balance breakdown.</li>
+          <li>
+            The <strong className="text-primary">Settle Balance</strong> card
+            shows the final amount of who owes whom.
+          </li>
+           <li>Click the <strong className="text-primary">View & Settle Expenses</strong> button to settle all unsettled expenses.</li>
+          <li>
+            The <strong className="text-primary">Balance Details</strong> card
+            provides a complete balance breakdown.
+          </li>
         </ul>
       ),
     },
