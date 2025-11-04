@@ -375,8 +375,8 @@ export function ExpensesCard({
                 <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
                 <SortableHeader sortKey="amount" className="text-right w-[100px]">Total</SortableHeader>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
-                <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Paid</TableHead>
+                <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
                 <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
@@ -455,11 +455,11 @@ export function ExpensesCard({
                       <TableCell className="text-right">
                         ${p1Paid.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
-                        {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
-                      </TableCell>
                       <TableCell className="text-right">
                         ${p2Paid.toFixed(2)}
+                      </TableCell>
+                      <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
+                        {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className={cn("text-right", p2Owes > 0 && "text-destructive font-semibold")}>
                          {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
@@ -521,13 +521,13 @@ export function ExpensesCard({
               )}
             </TableBody>
             {filteredAndSortedItems.length > 0 && (
-              <TableFooter>
+              <TableFooter className="sticky bottom-0 bg-background">
                 <TableRow>
                   <TableCell colSpan={4}>Totals</TableCell>
                   <TableCell className="text-right text-xs font-medium text-muted-foreground">Total</TableCell>
                   <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
-                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
                   <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
                   <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Owes</TableCell>
                   <TableCell colSpan={2}></TableCell>
                 </TableRow>
@@ -539,11 +539,11 @@ export function ExpensesCard({
                    <TableCell className="text-right">
                     ${totals.totalP1Paid.toFixed(2)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    ${totals.totalP2Paid.toFixed(2)}
+                  </TableCell>
                   <TableCell className={cn("text-right", totals.totalP1Owes > 0 && "text-destructive")}>
                     ${totals.totalP1Owes.toFixed(2)}
-                  </TableCell>
-                   <TableCell className="text-right">
-                    ${totals.totalP2Paid.toFixed(2)}
                   </TableCell>
                    <TableCell className={cn("text-right", totals.totalP2Owes > 0 && "text-destructive")}>
                     ${totals.totalP2Owes.toFixed(2)}
