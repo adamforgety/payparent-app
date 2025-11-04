@@ -367,8 +367,8 @@ export function ExpensesCard({
           </div>
         </div>
           <div className="overflow-x-auto">
-            <Table className="border-collapse border min-w-[1200px]">
-              <TableHeader className="sticky top-0 z-10 bg-background border-b">
+            <Table className="min-w-[1200px]">
+              <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow>
                   <SortableHeader sortKey="description">Description</SortableHeader>
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
@@ -522,7 +522,7 @@ export function ExpensesCard({
                 )}
               </TableBody>
               {filteredAndSortedItems.length > 0 && (
-                <TableFooter className="sticky bottom-0 bg-background">
+                <TableFooter>
                   <TableRow>
                     <TableCell colSpan={4}>Totals</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">Total</TableCell>
@@ -561,3 +561,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
