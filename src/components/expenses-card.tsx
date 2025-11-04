@@ -10,7 +10,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -21,6 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from '@/components/ui/table';
 import {
   Tooltip,
@@ -203,6 +203,58 @@ export function ExpensesCard({
 
     return items;
   }, [localItems, statusFilter, searchTerm, sortConfig, parentNames]);
+
+  const totals = useMemo(() => {
+    return filteredAndSortedItems.reduce(
+      (acc, item) => {
+        acc.totalAmount += item.amount;
+
+        let p1Paid = 0, p2Paid = 0, p1Owes = 0, p2Owes = 0, p1Credit = 0, p2Credit = 0;
+
+        if (item.type === 'child_support') {
+          if (item.status === 'Settled') {
+            if (item.paidBy === 'Parent 1') p1Paid = item.amount;
+            if (item.paidBy === 'Parent 2') p2Paid = item.amount;
+          } else {
+            if (item.paidBy === 'Parent 1') p1Owes = item.amount;
+            if (item.paidBy === 'Parent 2') p2Owes = item.amount;
+          }
+        } else {
+          const expense = item as Expense;
+          const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+          const p1Share = item.amount * (split['Parent 1'] / 100);
+          const p2Share = item.amount * (split['Parent 2'] / 100);
+
+          if (item.status === 'Settled') {
+            p1Paid = p1Share;
+            p2Paid = p2Share;
+          } else {
+            const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+            const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+            p1Paid = p1InitialPaid;
+            p2Paid = p2InitialPaid;
+
+            const p1Net = p1Share - p1InitialPaid;
+            const p2Net = p2Share - p2InitialPaid;
+
+            if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
+            if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
+          }
+        }
+
+        acc.totalP1Paid += p1Paid;
+        acc.totalP2Paid += p2Paid;
+        acc.totalP1Owes += p1Owes;
+        acc.totalP2Owes += p2Owes;
+        acc.totalP1Credit += p1Credit;
+        acc.totalP2Credit += p2Credit;
+        
+        return acc;
+      },
+      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0, totalP1Credit: 0, totalP2Credit: 0 }
+    );
+  }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
+
   
   const hasUnsettledItems = localItems.some(item => item.status === 'Unsettled');
   const hasSettledItems = localItems.some(item => item.status === 'Settled');
@@ -470,6 +522,31 @@ export function ExpensesCard({
                 </TableRow>
               )}
             </TableBody>
+            {filteredAndSortedItems.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4} className="font-semibold">
+                    Totals
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">
+                    ${totals.totalAmount.toFixed(2)}
+                  </TableCell>
+                   <TableCell className="text-right font-semibold">
+                    ${totals.totalP1Paid.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={cn("text-right font-semibold", totals.totalP1Owes > 0 && "text-destructive")}>
+                    ${totals.totalP1Owes.toFixed(2)}
+                  </TableCell>
+                   <TableCell className="text-right font-semibold">
+                    ${totals.totalP2Paid.toFixed(2)}
+                  </TableCell>
+                   <TableCell className={cn("text-right font-semibold", totals.totalP2Owes > 0 && "text-destructive")}>
+                    ${totals.totalP2Owes.toFixed(2)}
+                  </TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </div>
       </CardContent>
@@ -478,9 +555,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
-
-    
-
-    
