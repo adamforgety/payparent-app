@@ -23,7 +23,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       title: 'Step 1: Configure Your Settings',
       description: (
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>Go to the <strong>Settings</strong> tab to customize the app.</li>
+          <li>Go to the <strong className="text-primary">Settings</strong> tab to customize the app.</li>
           <li>Set parent names to personalize your dashboard.</li>
           <li>Enter the monthly child support amount.</li>
           <li>Adjust expense percentages for general and medical costs.</li>
@@ -57,7 +57,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       title: 'Step 4: Link With Your Co-Parent',
       description: (
         <p className="text-sm text-muted-foreground">
-          Head to <strong>Settings</strong> &gt; <strong>Account</strong> to find your unique <strong>Co-Parent Code</strong>. Share it with your co-parent to link accounts and share financial data seamlessly.
+          Head to <strong className="text-primary">Settings</strong> &gt; <strong className="text-primary">Account</strong> to find your unique <strong className="text-primary">Co-Parent Code</strong>. Share it with your co-parent to link accounts and share financial data seamlessly.
         </p>
       )
     },
