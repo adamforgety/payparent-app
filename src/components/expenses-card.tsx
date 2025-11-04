@@ -391,7 +391,7 @@ export function ExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="no-print flex items-center gap-2 mb-4">
+        <div className="no-print flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
           <div className="relative flex-grow">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -402,14 +402,14 @@ export function ExpensesCard({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end flex-wrap">
             <Button variant={statusFilter === 'all' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('all')}>All ({localItems.length})</Button>
             <Button variant={statusFilter === 'unsettled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('unsettled')}>Unsettled ({localItems.filter(i => i.status === 'Unsettled').length})</Button>
             <Button variant={statusFilter === 'settled' ? 'secondary' : 'outline'} size="sm" onClick={() => setStatusFilter('settled')}>Settled ({localItems.filter(i => i.status === 'Settled').length})</Button>
           </div>
         </div>
         {/* Desktop Table View */}
-          <div className="overflow-x-auto hidden md:block">
+          <div className="overflow-x-auto hidden md:block rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -418,10 +418,10 @@ export function ExpensesCard({
                   <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
                   <SortableHeader sortKey="amount" className="text-right w-[100px]">Total</SortableHeader>
-                  <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Paid</TableHead>
-                  <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Paid</TableHead>
-                  <TableHead className="text-right w-[110px]">{parentNames['Parent 1']} Owes</TableHead>
-                  <TableHead className="text-right w-[110px]">{parentNames['Parent 2']} Owes</TableHead>
+                  <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Paid</TableHead>
+                  <TableHead className="text-right w-[120px]">{parentNames['Parent 2']} Paid</TableHead>
+                  <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Owes</TableHead>
+                  <TableHead className="text-right w-[120px]">{parentNames['Parent 2']} Owes</TableHead>
                   <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                   <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
                 </TableRow>
@@ -576,7 +576,21 @@ export function ExpensesCard({
                                         <p className="font-semibold">{item.description}</p>
                                         <p className="text-sm text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</p>
                                     </div>
-                                    <div className="flex items-center gap-2 -mr-2">
+                                    <div className="flex items-center gap-1 -mr-2">
+                                        {item.type === 'expense' && item.receiptUrl && (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                                        <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                                            <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                                        </a>
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>View Receipt</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )}
                                         {item.type === 'expense' && (
                                             <>
                                             <EditExpenseDialog
