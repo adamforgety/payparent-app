@@ -56,7 +56,7 @@ export function GettingStartedDialog({ children, open, onOpenChange }: GettingSt
       icon: FilePlus,
       title: 'Step 2: Log Your First Expense',
       description:
-        'Click the big "+" button in the bottom corner to add your first child-related expense. You can categorize it and specify who paid.',
+        'Click the big "+" button to add an expense. You can also go to the "Monthly Ledger" on the Expenses tab and use the "Import" button. Follow the instructions to bulk import expenses from a file.',
       image: '/images/tutorial-step-2.png',
     },
     {
