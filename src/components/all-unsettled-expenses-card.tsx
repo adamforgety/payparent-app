@@ -266,8 +266,8 @@ export function AllUnsettledExpensesCard({
             Show All
           </Button>
         </div>
-        <div className="rounded-md border">
-          <Table>
+        <div className="rounded-md border overflow-x-auto">
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Description</TableHead>
