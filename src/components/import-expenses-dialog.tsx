@@ -116,10 +116,12 @@ function flexibleDateParse(dateString: string): Date | null {
     'yyyy/MM/dd',
     'MM/dd/yy',
     'M/d/yy',
+    'yyyy-MM-dd HH:mm:ss',
+    'yyyy-MM-ddTHH:mm:ss.SSSZ',
   ];
 
   for (const fmt of formats) {
-    const parsedDate = parse(dateString.split(' ')[0], fmt, new Date()); // Handle 'MM/DD/YYYY HH:mm'
+    const parsedDate = parse(dateString, fmt, new Date());
     if (isValid(parsedDate)) {
       // Check for two-digit year ambiguity
       if (fmt.endsWith('yy')) {
@@ -139,6 +141,7 @@ function flexibleDateParse(dateString: string): Date | null {
 
   return null;
 }
+
 
 const ResizingTextarea = (props: React.ComponentProps<typeof Textarea>) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -229,10 +232,16 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         errors.paidBy = 'Missing';
     } else if (typeof paidBy === 'string') {
         const paidByLower = paidBy.toLowerCase();
-        if (paidByLower === parentNames['Parent 1'].toLowerCase()) {
-            paidByParent = 'Parent 1';
-        } else if (paidByLower === parentNames['Parent 2'].toLowerCase()) {
-            paidByParent = 'Parent 2';
+        if (
+          paidByLower === parentNames['Parent 1'].toLowerCase() ||
+          paidByLower === 'parent 1'
+        ) {
+          paidByParent = 'Parent 1';
+        } else if (
+          paidByLower === parentNames['Parent 2'].toLowerCase() ||
+          paidByLower === 'parent 2'
+        ) {
+          paidByParent = 'Parent 2';
         } else {
             errors.paidBy = 'Unrecognized';
         }
