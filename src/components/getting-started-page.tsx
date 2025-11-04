@@ -55,8 +55,11 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
     {
       icon: Link2,
       title: 'Step 4: Link With Your Co-Parent',
-      description:
-        'Head to Settings > Account to find your unique Co-Parent Code. Share it with your co-parent to link accounts and share financial data seamlessly.',
+      description: (
+        <p className="text-sm text-muted-foreground">
+          Head to <strong>Settings</strong> &gt; <strong>Account</strong> to find your unique <strong>Co-Parent Code</strong>. Share it with your co-parent to link accounts and share financial data seamlessly.
+        </p>
+      )
     },
   ];
 
