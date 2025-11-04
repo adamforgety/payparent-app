@@ -30,6 +30,7 @@ interface AppContextType {
   updateExpense: (updatedExpense: Expense, originalMonthId: string) => void;
   updateChildSupport: (updatedChildSupport: ChildSupport, monthId: string) => void;
   coParentData: UserDoc | null;
+  isNewUser: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -42,6 +43,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const [appData, setAppData] = useState<AppData | null>(null);
   const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // Effect to load initial data and set up listeners
   useEffect(() => {
@@ -80,6 +82,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           // --- Self-healing: Create user document if it doesn't exist ---
           if (!userDocSnap.exists()) {
             console.log('User document not found for UID:', user.uid, 'Creating a new one.');
+            setIsNewUser(true);
             const newUserDocPayload: UserDoc = {
               id: user.uid,
               email: user.email,
@@ -101,6 +104,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
                 setIsLoading(false);
                 return; // Stop if we can't create the doc
             }
+          } else {
+              setIsNewUser(false);
           }
           // --- End Self-healing ---
 
@@ -397,9 +402,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       updateExpense,
       updateChildSupport,
       coParentData,
+      isNewUser,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [appData, updateAppData, isLoading, coParentData]
+    [appData, updateAppData, isLoading, coParentData, isNewUser]
   );
 
   if (isLoading) {
@@ -423,5 +429,3 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
-
-    

@@ -27,14 +27,16 @@ import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SummaryDetailsCard } from './summary-details-card';
 import { CoParentLinkCard } from './co-parent-link-card';
+import { GettingStartedDialog } from './getting-started-dialog';
 
 function DashboardComponent() {
-  const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense } = useAppContext();
+  const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser } = useAppContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
   const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(null);
   const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(null);
+  const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
   const { toast } = useToast();
 
   const monthId = format(currentDate, 'yyyy-MM');
@@ -237,6 +239,7 @@ function DashboardComponent() {
       onUpdateExpense={handleUpdateExpense}
       onUpdateChildSupport={updateChildSupportForSingleMonth}
     >
+      <GettingStartedDialog open={showGettingStarted} onOpenChange={setShowGettingStarted} />
       <div className="flex flex-col">
         <PageHeader
           totalExpenses={totalExpenses}
