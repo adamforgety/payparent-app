@@ -37,8 +37,8 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       description: (
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
           <li>Click the <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground"><Plus className="w-3 h-3" /></div> button to add a single expense.</li>
-          <li>Go to the <strong>Expenses</strong> tab to log, view, and settle expenses.</li>
-          <li>Use the <strong>Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
+          <li>Go to the <strong className="text-primary">Expenses</strong> tab to log, view, and settle expenses.</li>
+          <li>Use the <strong className="text-primary">Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
         </ul>
       ),
     },
@@ -47,8 +47,8 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
       title: 'Step 3: Understand the Dashboard',
       description: (
         <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>The <strong>Settle Balance</strong> card shows the final amount of who owes whom.</li>
-          <li>The <strong>Balance Details</strong> card provides a complete balance breakdown.</li>
+          <li>The <strong className="text-primary">Settle Balance</strong> card shows the final amount of who owes whom.</li>
+          <li>The <strong className="text-primary">Balance Details</strong> card provides a complete balance breakdown.</li>
         </ul>
       ),
     },
