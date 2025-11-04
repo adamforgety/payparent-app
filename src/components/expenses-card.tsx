@@ -622,7 +622,7 @@ export function ExpensesCard({
             <Separator />
             <div className="flex justify-between items-center text-base mt-2">
               <span className="font-semibold">
-                Settle Balance: <span className="font-bold text-destructive">{whoOwes}</span> Owes <span className="font-bold text-green-600">{whoIsOwed}</span>
+                Settle Balance: <span className="font-bold text-destructive">{whoOwes}</span> owes <span className="font-bold text-green-600">{whoIsOwed}</span>
               </span>
               <span className="font-bold text-lg">
                 ${settleBalance.toFixed(2)}
@@ -636,5 +636,7 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
 
     
