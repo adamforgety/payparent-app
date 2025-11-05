@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -287,7 +289,7 @@ export function AllUnsettledExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               <Select value={yearFilter} onValueChange={setYearFilter}>
                 <SelectTrigger className="w-full sm:w-[120px]">
@@ -316,7 +318,7 @@ export function AllUnsettledExpensesCard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 sm:pt-0">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:pt-0">
               <Button
                 variant={monthFilter === 'all' ? 'secondary' : 'outline'}
                 onClick={() => setMonthFilter('all')}
@@ -371,7 +373,14 @@ export function AllUnsettledExpensesCard({
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
                       </TableCell>
                        <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>Settle</Button>
+                         <div className="flex items-center space-x-2">
+                           <Switch
+                             id={`status-switch-all-${item.id}`}
+                             checked={false} // Always off for unsettled items
+                             onCheckedChange={() => handleStatusToggle(item)}
+                           />
+                           <Label htmlFor={`status-switch-all-${item.id}`} className="text-muted-foreground">Unsettled</Label>
+                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
@@ -526,7 +535,14 @@ export function AllUnsettledExpensesCard({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <span className="text-muted-foreground">Status</span>
-                                    <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>Settle</Button>
+                                    <div className="flex items-center space-x-2">
+                                       <Switch
+                                         id={`status-switch-all-mobile-${item.id}`}
+                                         checked={false} // Always off for unsettled items
+                                         onCheckedChange={() => handleStatusToggle(item)}
+                                       />
+                                       <Label htmlFor={`status-switch-all-mobile-${item.id}`} className="text-muted-foreground">Unsettled</Label>
+                                     </div>
                                 </div>
                             </div>
                             {(p1OwesAmount > 0 || p2OwesAmount > 0) && (

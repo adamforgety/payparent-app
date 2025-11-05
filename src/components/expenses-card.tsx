@@ -38,6 +38,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { Separator } from './ui/separator';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -461,9 +463,16 @@ export function ExpensesCard({
                           {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>
-                            {item.status === 'Settled' ? 'Unsettle' : 'Settle'}
-                          </Button>
+                           <div className="flex items-center space-x-2">
+                            <Switch
+                              id={`status-switch-${item.id}`}
+                              checked={item.status === 'Settled'}
+                              onCheckedChange={() => handleStatusToggle(item)}
+                            />
+                            <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Settled' ? 'text-foreground' : 'text-muted-foreground')}>
+                              {item.status}
+                            </Label>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
@@ -666,9 +675,14 @@ export function ExpensesCard({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <span className="text-muted-foreground">Status</span>
-                                    <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>
-                                      {item.status === 'Settled' ? 'Unsettle' : 'Settle'}
-                                    </Button>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                        id={`status-switch-mobile-${item.id}`}
+                                        checked={item.status === 'Settled'}
+                                        onCheckedChange={() => handleStatusToggle(item)}
+                                        />
+                                        <Label htmlFor={`status-switch-mobile-${item.id}`}>{item.status}</Label>
+                                    </div>
                                 </div>
                             </div>
                             {(p1Owes > 0 || p2Owes > 0 || p1Credit > 0 || p2Credit > 0) && (
