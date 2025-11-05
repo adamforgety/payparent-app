@@ -30,6 +30,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
   const handleSignOut = async () => {
     await signOut(auth);
     router.push('/login');
+    router.refresh();
   };
 
   const getInitials = (email: string | null | undefined) => {
