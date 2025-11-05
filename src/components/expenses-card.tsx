@@ -347,7 +347,7 @@ export function ExpensesCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
               <ReceiptText className="h-5 w-5 text-secondary-foreground" />
@@ -359,53 +359,57 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex items-center justify-start sm:justify-end gap-2">
-            {children}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button variant="outline" size="icon" onClick={onMarkAllAsSettled} disabled={!hasUnsettledItems}>
-                      <CheckCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>Mark All Settled</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="no-print flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {children}
+            </div>
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button variant="outline" size="icon" onClick={onMarkAllAsSettled} disabled={!hasUnsettledItems}>
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Mark All Settled</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button variant="outline" size="icon" onClick={onMarkAllAsUnsettled} disabled={!hasSettledItems}>
-                      <CircleDot className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>Mark All Unsettled</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                  <span className="sr-only">More actions</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                 <ExportButton
-                  expenses={expenses}
-                  childSupport={childSupport}
-                  currentDate={currentDate}
-                  parentNames={parentNames}
-                  expenseSplit={expenseSplit}
-                  medicalExpenseSplit={medicalExpenseSplit}
-                  asChild
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button variant="outline" size="icon" onClick={onMarkAllAsUnsettled} disabled={!hasSettledItems}>
+                        <CircleDot className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Mark All Unsettled</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">More actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <ExportButton
+                    expenses={expenses}
+                    childSupport={childSupport}
+                    currentDate={currentDate}
+                    parentNames={parentNames}
+                    expenseSplit={expenseSplit}
+                    medicalExpenseSplit={medicalExpenseSplit}
+                    asChild
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </CardHeader>
