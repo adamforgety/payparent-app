@@ -38,7 +38,7 @@ import {
 import { ExportButton } from './export-button';
 
 function DashboardComponent() {
-  const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser } = useAppContext();
+  const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser, batchUpdateMonths } = useAppContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
@@ -292,7 +292,7 @@ function DashboardComponent() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <h2 className="text-lg font-semibold text-center">
+                <h2 className="text-lg font-semibold text-center text-primary">
                   Showing data for {format(currentDate, 'MMMM yyyy')}
                 </h2>
               </>
