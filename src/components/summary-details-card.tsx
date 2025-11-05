@@ -214,7 +214,7 @@ export function SummaryDetailsCard({
                     {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
                     </span>
                 </div>
-                <div className="pt-2 pl-8 pr-4 space-y-1">
+                <div className="pt-2 pl-8 space-y-1">
                     {previousBalances.map(({ monthId, balance }) => (
                       <div key={monthId} className="flex items-center justify-between text-sm">
                         <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
