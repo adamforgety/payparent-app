@@ -50,7 +50,7 @@ const calculateShare = (
     if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
-    } else {
+    } else if (expense.category !== 'Reimbursement') {
       const parentSplitPercent = split[p] / 100;
       totalShare += expense.amount * parentSplitPercent;
     }
@@ -88,6 +88,14 @@ export function SummaryDetailsCard({
       .map((monthId) => {
         const monthData = appData.months[monthId];
         if (!monthData) return { monthId, balance: 0 };
+        
+        const hasUnsettledItems = 
+            monthData.expenses.some(e => e.status === 'Unsettled') || 
+            (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
+
+        if (!hasUnsettledItems) {
+            return { monthId, balance: 0 };
+        }
 
         const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
         
@@ -201,36 +209,28 @@ export function SummaryDetailsCard({
             </span>
           </li>
           {previousBalances.length > 0 && (
-             <li className="w-full items-center justify-between">
-               <Accordion type="single" collapsible className="w-full">
-                 <AccordionItem value="item-1" className="border-b-0">
-                    <AccordionTrigger className="flex w-full items-center p-0 text-base font-normal hover:no-underline [&>svg]:ml-2">
-                        <div className="flex flex-1 items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              {renderBalanceIcon(previousMonthsTotalBalance)}
-                              <span className="text-base">Prior Balance</span>
-                          </div>
-                          <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                          <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                          {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
-                          </span>
-                        </div>
-                    </AccordionTrigger>
-                   <AccordionContent className="pt-2 pl-12 pr-4">
-                     <div className="space-y-1">
-                        {previousBalances.map(({ monthId, balance }) => (
-                          <div key={monthId} className="flex items-center justify-between text-sm">
-                            <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
-                            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                            <p className={cn('font-medium', balance < 0 ? 'text-destructive' : 'text-green-600')}>
-                              {balance < 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${balance.toFixed(2)}`}
-                            </p>
-                          </div>
-                        ))}
-                     </div>
-                   </AccordionContent>
-                 </AccordionItem>
-               </Accordion>
+             <li className="w-full items-center justify-between pl-8">
+                <div className="flex flex-1 items-center justify-between text-base font-normal">
+                    <div className="flex items-center gap-3">
+                        {renderBalanceIcon(previousMonthsTotalBalance)}
+                        <span className="text-base">Prior Balance</span>
+                    </div>
+                    <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                    <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                    {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+                    </span>
+                </div>
+                <div className="pt-2 pl-8 pr-4 space-y-1">
+                    {previousBalances.map(({ monthId, balance }) => (
+                      <div key={monthId} className="flex items-center justify-between text-sm">
+                        <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
+                        <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                        <p className={cn('font-medium', balance < 0 ? 'text-destructive' : 'text-green-600')}>
+                          {balance < 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${balance.toFixed(2)}`}
+                        </p>
+                      </div>
+                    ))}
+                </div>
             </li>
           )}
         </ul>
