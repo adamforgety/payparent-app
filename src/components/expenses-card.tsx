@@ -359,11 +359,8 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
+          <div className="no-print flex flex-wrap items-center gap-2">
               {children}
-            </div>
-            <div className="flex items-center gap-2">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -409,7 +406,6 @@ export function ExpensesCard({
                   />
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
           </div>
         </div>
       </CardHeader>
