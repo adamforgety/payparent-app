@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { useAppContext } from '@/context/app-context';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -61,6 +62,7 @@ export function AllUnsettledExpensesCard({
   initialMonthFilter,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
+  const { batchUpdateMonths } = useAppContext();
   const [yearFilter, setYearFilter] = useState<string>(initialYearFilter || String(currentDate.getFullYear()));
   const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter || 'all');
 
@@ -183,20 +185,44 @@ export function AllUnsettledExpensesCard({
       });
       return;
     }
-    
+
+    const monthUpdates: { [monthId: string]: { expenses: Expense[], childSupport: ChildSupport } } = {};
+
     allUnsettledItems.forEach(item => {
-        if (item.type === 'expense' && item.originalExpense) {
-            onUpdateExpense({ ...item.originalExpense, status: 'Settled' }, item.monthId);
-        } else if (item.type === 'child_support' && item.originalChildSupport) {
-            onUpdateChildSupport({ ...item.originalChildSupport, status: 'Settled' }, item.monthId);
+      const { monthId } = item;
+
+      // Initialize month update if not present
+      if (!monthUpdates[monthId]) {
+        monthUpdates[monthId] = {
+          expenses: [...(appData.months[monthId]?.expenses || [])],
+          childSupport: { ...(appData.months[monthId]?.childSupport || { amount: 0, paidBy: 'None', status: 'Unsettled' }) }
+        };
+      }
+
+      if (item.type === 'expense' && item.originalExpense) {
+        const expenseIndex = monthUpdates[monthId].expenses.findIndex(e => e.id === item.id);
+        if (expenseIndex !== -1) {
+          monthUpdates[monthId].expenses[expenseIndex] = {
+            ...monthUpdates[monthId].expenses[expenseIndex],
+            status: 'Settled'
+          };
         }
+      } else if (item.type === 'child_support' && item.originalChildSupport) {
+        monthUpdates[monthId].childSupport = {
+          ...monthUpdates[monthId].childSupport,
+          status: 'Settled'
+        };
+      }
     });
 
+    batchUpdateMonths(monthUpdates);
+
     toast({
-        title: 'All Items Marked as Settled',
-        description: `${allUnsettledItems.length} items have been updated.`,
+      title: 'All Items Marked as Settled',
+      description: `${allUnsettledItems.length} items have been updated.`,
     });
   };
+
 
   const { totalAmount, totalParent1Owes, totalParent2Owes } = useMemo(() => {
      let amount = 0;
