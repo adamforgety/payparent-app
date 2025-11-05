@@ -289,51 +289,56 @@ export function AllUnsettledExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap items-center space-x-2 mb-4">
-            <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-full sm:w-[120px] mb-2 sm:mb-0">
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger className="w-full sm:w-[120px]">
+                  <SelectValue placeholder="Select Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-           <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
-            <SelectTrigger className="w-full sm:w-[180px] mb-2 sm:mb-0">
-              <SelectValue placeholder="Filter by month" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableMonths.map(month => (
-                <SelectItem key={month.value} value={month.value}>
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={monthFilter === 'all' ? 'secondary' : 'outline'}
-            onClick={() => setMonthFilter('all')}
-            >
-            Show All
-          </Button>
-          <div className="flex-grow" />
-          <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                <div>
-                  <Button variant="outline" size="icon" onClick={handleMarkAllSettled} disabled={allUnsettledItems.length === 0}>
-                    <CheckCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-                </TooltipTrigger>
-                <TooltipContent>Mark All Settled</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  {availableMonths.map(month => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={monthFilter === 'all' ? 'secondary' : 'outline'}
+                onClick={() => setMonthFilter('all')}
+                className="w-full sm:w-auto"
+                >
+                Show All
+              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                    <div>
+                      <Button variant="outline" size="icon" onClick={handleMarkAllSettled} disabled={allUnsettledItems.length === 0}>
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Mark All Settled</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
         </div>
         
         {/* Desktop Table View */}
