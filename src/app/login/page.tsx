@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Info } from 'lucide-react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -34,17 +33,7 @@ import { handleNewUser } from './actions';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { Separator } from '@/components/ui/separator';
-
-const signupSchema = z
-  .object({
-    email: z.string().email({ message: 'Please enter a valid email address.' }),
-    password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
-    path: ['confirmPassword'],
-  });
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -88,7 +77,6 @@ export default function LoginPage() {
   const [isDemoPending, startDemoTransition] = useTransition();
   const [isResetPending, startResetTransition] = useTransition();
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [isResetDialogOpen, setResetDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/';
@@ -97,11 +85,6 @@ export default function LoginPage() {
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
-  });
-
-  const signupForm = useForm<z.infer<typeof signupSchema>>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '' },
   });
 
   const passwordResetForm = useForm<z.infer<typeof passwordResetSchema>>({
@@ -123,39 +106,6 @@ export default function LoginPage() {
         toast({
           variant: 'destructive',
           title: 'Login Failed',
-          description: getErrorMessage(error),
-        });
-      }
-    });
-  };
-
-  const onSignupSubmit = (values: z.infer<typeof signupSchema>) => {
-    startTransition(async () => {
-      try {
-        // 1. Create the user with email and password
-        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-        
-        // 2. Create the user document in Firestore
-        const actionResult = await handleNewUser(userCredential.user.uid, userCredential.user.email);
-        
-        if (actionResult.success) {
-            toast({ title: 'Sign-up Successful', description: 'Welcome! You are now logged in.' });
-            router.push(next);
-            router.refresh();
-        } else {
-           // This handles errors from the server action (e.g., Firestore permissions)
-           toast({
-            variant: 'destructive',
-            title: 'Sign-up Failed',
-            description: actionResult.error,
-          });
-        }
-
-      } catch (error) {
-        // This handles errors from createUserWithEmailAndPassword (e.g., email already exists)
-        toast({
-          variant: 'destructive',
-          title: 'Sign-up Failed',
           description: getErrorMessage(error),
         });
       }
@@ -229,115 +179,118 @@ export default function LoginPage() {
           <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4 mt-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="you@example.com" 
+            <Alert className="mb-6">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Account Creation is Not Available</AlertTitle>
+                <AlertDescription>
+                    We are not accepting new sign-ups at this time. Please use the demo account to explore the app.
+                </AlertDescription>
+            </Alert>
+            <Form {...loginForm}>
+            <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                <FormField
+                control={loginForm.control}
+                name="email"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                        <Input 
+                        placeholder="you@example.com" 
+                        {...field}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={loginForm.control}
+                name="password"
+                render={({ field }) => (
+                    <FormItem>
+                    <div className="flex items-center justify-between">
+                        <FormLabel>Password</FormLabel>
+                            <Dialog open={isResetDialogOpen} onOpenChange={setResetDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="link" type="button" className="p-0 h-auto text-xs">
+                                    Forgot password?
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Reset Password</DialogTitle>
+                                    <DialogDescription>
+                                        Enter your account's email address and we will send you a link to reset your password.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Form {...passwordResetForm}>
+                                    <form onSubmit={passwordResetForm.handleSubmit(onPasswordResetSubmit)} className="space-y-4">
+                                        <FormField
+                                            control={passwordResetForm.control}
+                                            name="email"
+                                            render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Email</FormLabel>
+                                                <FormControl>
+                                                <Input placeholder="you@example.com" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                        <DialogFooter>
+                                            <Button type="submit" disabled={isResetPending}>
+                                                {isResetPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Send Reset Link
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                    <FormControl>
+                        <div className="relative">
+                        <Input
+                            type={showLoginPassword ? 'text' : 'password'}
+                            placeholder="••••••••"
                             {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center justify-between">
-                            <FormLabel>Password</FormLabel>
-                             <Dialog open={isResetDialogOpen} onOpenChange={setResetDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="link" type="button" className="p-0 h-auto text-xs">
-                                        Forgot password?
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Reset Password</DialogTitle>
-                                        <DialogDescription>
-                                            Enter your account's email address and we will send you a link to reset your password.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <Form {...passwordResetForm}>
-                                        <form onSubmit={passwordResetForm.handleSubmit(onPasswordResetSubmit)} className="space-y-4">
-                                            <FormField
-                                                control={passwordResetForm.control}
-                                                name="email"
-                                                render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Email</FormLabel>
-                                                    <FormControl>
-                                                    <Input placeholder="you@example.com" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                                )}
-                                            />
-                                            <DialogFooter>
-                                                <Button type="submit" disabled={isResetPending}>
-                                                    {isResetPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Send Reset Link
-                                                </Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </Form>
-                                </DialogContent>
-                            </Dialog>
+                        />
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                            onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        >
+                            {showLoginPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                            ) : (
+                            <Eye className="h-4 w-4" />
+                            )}
+                        </Button>
                         </div>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showLoginPassword ? 'text' : 'password'}
-                              placeholder="••••••••"
-                              {...field}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                              onClick={() => setShowLoginPassword(!showLoginPassword)}
-                            >
-                              {showLoginPassword ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isPending}>
-                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Login
-                  </Button>
-                </form>
-              </Form>
-              <div className="my-4 flex items-center">
-                  <Separator className="flex-1" />
-                  <span className="mx-4 text-xs uppercase text-muted-foreground">Or</span>
-                  <Separator className="flex-1" />
-              </div>
-               <Button variant="outline" className="w-full" onClick={onDemoLogin} disabled={isDemoPending}>
-                    {isDemoPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Try a Demo
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Login
                 </Button>
-            </TabsContent>
-          </Tabs>
+            </form>
+            </Form>
+            <div className="my-4 flex items-center">
+                <Separator className="flex-1" />
+                <span className="mx-4 text-xs uppercase text-muted-foreground">Or</span>
+                <Separator className="flex-1" />
+            </div>
+            <Button variant="outline" className="w-full" onClick={onDemoLogin} disabled={isDemoPending}>
+                {isDemoPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Try a Demo
+            </Button>
         </CardContent>
       </Card>
     </main>
