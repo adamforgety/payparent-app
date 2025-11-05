@@ -213,15 +213,15 @@ export function SummaryDetailsCard({
           </li>
           {previousBalances.length > 0 && (
              <li className="w-full items-center justify-between">
-                <div className="flex flex-1 items-center justify-between text-base font-normal">
-                    <div className="flex items-center gap-3">
-                        {renderBalanceIcon(previousMonthsTotalBalance)}
+                <div className="flex items-center gap-3">
+                    {renderBalanceIcon(previousMonthsTotalBalance)}
+                    <div className="flex flex-1 items-center justify-between text-base font-normal">
                         <span className="text-base">Prior Balance</span>
+                        <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                        <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                        {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+                        </span>
                     </div>
-                    <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                    <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                    {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
-                    </span>
                 </div>
                 <div className="pt-2 space-y-1 pl-8">
                     {previousBalances.map(({ monthId, balance }) => (
