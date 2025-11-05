@@ -49,6 +49,8 @@ interface ExpensesCardProps {
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
+  onMarkAllAsSettled: () => void;
+  onMarkAllAsUnsettled: () => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -102,6 +104,8 @@ export function ExpensesCard({
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
+  onMarkAllAsSettled,
+  onMarkAllAsUnsettled,
   children,
   currentDate,
   parentNames,
@@ -257,13 +261,6 @@ export function ExpensesCard({
     return localItems.every(item => item.status === 'Settled');
   }, [localItems]);
 
-  const onMarkAllAsSettled = () => {
-    // Logic to mark all as settled
-  };
-  const onMarkAllAsUnsettled = () => {
-    // Logic to mark all as unsettled
-  };
-
   const handleAllStatusToggle = (checked: boolean) => {
     const newStatus: PaymentStatus = checked ? 'Settled' : 'Unsettled';
     let madeChanges = false;
@@ -387,7 +384,7 @@ export function ExpensesCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
               <ReceiptText className="h-5 w-5 text-secondary-foreground" />
@@ -399,19 +396,17 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
-             <div className="flex items-center gap-2">
-                {children}
-                 <ExportButton
-                    expenses={expenses}
-                    childSupport={childSupport}
-                    currentDate={currentDate}
-                    parentNames={parentNames}
-                    expenseSplit={expenseSplit}
-                    medicalExpenseSplit={medicalExpenseSplit}
-                />
-             </div>
-             <div className="flex items-center space-x-2">
+          <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
+            {children}
+            <ExportButton
+                expenses={expenses}
+                childSupport={childSupport}
+                currentDate={currentDate}
+                parentNames={parentNames}
+                expenseSplit={expenseSplit}
+                medicalExpenseSplit={medicalExpenseSplit}
+            />
+            <div className="flex items-center space-x-2">
                 <Label htmlFor="settle-all-switch" className="text-sm">Settle All</Label>
                 <Switch
                     id="settle-all-switch"
@@ -419,7 +414,7 @@ export function ExpensesCard({
                     onCheckedChange={handleAllStatusToggle}
                     disabled={localItems.length === 0}
                 />
-             </div>
+            </div>
           </div>
         </div>
       </CardHeader>
