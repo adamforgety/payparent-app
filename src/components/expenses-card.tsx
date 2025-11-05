@@ -256,8 +256,18 @@ export function ExpensesCard({
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
 
   
-  const hasUnsettledItems = localItems.some(item => item.status === 'Unsettled');
-  const hasSettledItems = localItems.some(item => item.status === 'Settled');
+  const allItemsSettled = useMemo(() => {
+    if (localItems.length === 0) return true; // No items, considered "settled"
+    return localItems.every(item => item.status === 'Settled');
+  }, [localItems]);
+
+  const handleAllStatusToggle = (checked: boolean) => {
+    if (checked) {
+      onMarkAllAsSettled();
+    } else {
+      onMarkAllAsUnsettled();
+    }
+  };
 
   const handleStatusToggle = (itemToToggle: DisplayItem) => {
     const newStatus: PaymentStatus = itemToToggle.status === 'Settled' ? 'Unsettled' : 'Settled';
@@ -361,32 +371,15 @@ export function ExpensesCard({
           </div>
           <div className="no-print flex flex-wrap items-center gap-2">
               {children}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button variant="outline" size="icon" onClick={onMarkAllAsSettled} disabled={!hasUnsettledItems}>
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Mark All Settled</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button variant="outline" size="icon" onClick={onMarkAllAsUnsettled} disabled={!hasSettledItems}>
-                        <CircleDot className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Mark All Unsettled</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
+               <div className="flex items-center space-x-2">
+                <Switch
+                    id="settle-all-switch"
+                    checked={allItemsSettled}
+                    onCheckedChange={handleAllStatusToggle}
+                    disabled={localItems.length === 0}
+                />
+                <Label htmlFor="settle-all-switch">Settle All</Label>
+               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
