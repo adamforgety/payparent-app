@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -38,6 +38,7 @@ import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import { useAppContext } from '@/context/app-context';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -105,6 +106,7 @@ export function ExpensesCard({
   parentNames,
   appData,
 }: ExpensesCardProps) {
+  const { batchUpdateMonths } = useAppContext();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [localItems, setLocalItems] = useState<DisplayItem[]>([]);
   const { toast } = useToast();
@@ -269,18 +271,15 @@ export function ExpensesCard({
 
     if (madeChanges) {
       setLocalItems(updatedLocalItems);
-      // Propagate all changes to parent
-      updatedLocalItems.forEach(item => {
-        if (item.type === 'expense') {
-          const originalExpense = expenses.find(e => e.id === item.id);
-          if (originalExpense && originalExpense.status !== newStatus) {
-            onUpdateExpense({ ...originalExpense, status: newStatus }, monthId);
-          }
-        } else { // Child Support
-          if (childSupport.status !== newStatus) {
-            onUpdateChildSupport({ ...childSupport, status: newStatus });
-          }
-        }
+      
+      const newExpenses = expenses.map(e => ({ ...e, status: newStatus }));
+      const newChildSupport = { ...childSupport, status: newStatus };
+      
+      batchUpdateMonths({
+        [monthId]: {
+          expenses: newExpenses,
+          childSupport: newChildSupport,
+        },
       });
 
       toast({
@@ -708,6 +707,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
-    

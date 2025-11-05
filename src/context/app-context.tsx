@@ -9,7 +9,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import type { AppData, ChildSupport, Expense, UserDoc } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, UserDoc, MonthData } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
@@ -21,6 +21,7 @@ import { initialData } from '@/lib/data';
 interface AppContextType {
   appData: AppData | null;
   updateAppData: (newData: Partial<Omit<AppData, 'id' | 'email'>>) => void;
+  batchUpdateMonths: (monthUpdates: { [monthId: string]: Partial<MonthData> }) => void;
   isLoading: boolean;
   addExpense: (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   addImportedExpenses: (
@@ -191,7 +192,27 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     },
     [user, firestore, appData]
   );
-  
+   
+  const batchUpdateMonths = useCallback(
+    (monthUpdates: { [monthId: string]: Partial<MonthData> }) => {
+        if (!user || !firestore || !appData) return;
+
+        const newMonths = { ...appData.months };
+        for (const monthId in monthUpdates) {
+            if (newMonths[monthId]) {
+                newMonths[monthId] = {
+                    ...newMonths[monthId],
+                    ...monthUpdates[monthId],
+                };
+            }
+        }
+        const updatedData = { ...appData, months: newMonths };
+        
+        saveUserData(firestore, user.uid, updatedData).catch(console.error);
+    },
+    [user, firestore, appData]
+  );
+
   const updateChildSupport = (updatedChildSupport: ChildSupport, monthId: string) => {
     if (!appData) return;
     const monthData = appData.months[monthId];
@@ -409,6 +430,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     () => ({
       appData,
       updateAppData,
+      batchUpdateMonths,
       isLoading,
       addExpense,
       addImportedExpenses,
@@ -419,7 +441,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       isNewUser,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [appData, updateAppData, isLoading, coParentData, isNewUser]
+    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser]
   );
 
   if (isLoading) {
