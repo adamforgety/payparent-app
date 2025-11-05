@@ -355,7 +355,7 @@ export function ExpensesCard({
             <div>
               <CardTitle>Monthly Ledger</CardTitle>
               <CardDescription>
-                All expenses and child support for {format(currentDate, 'MMMM yyyy')}.
+                All expenses and child support for this period.
               </CardDescription>
             </div>
           </div>
