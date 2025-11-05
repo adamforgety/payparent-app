@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ExportButton } from './export-button';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser } = useAppContext();
@@ -191,60 +192,6 @@ function DashboardComponent() {
     if (monthData) {
         const updatedMonthData = { ...monthData, childSupport: updatedChildSupport };
         updateAppData({ months: { ...appData.months, [csMonthId]: updatedMonthData } });
-    }
-  };
-
-  const handleMarkAllAsSettled = () => {
-    if (!currentMonthData) return;
-
-    let madeChanges = false;
-    const updatedExpenses = currentMonthData.expenses.map(exp => {
-      if (exp.status === 'Unsettled') {
-        madeChanges = true;
-        return { ...exp, status: 'Settled' };
-      }
-      return exp;
-    });
-    
-    let updatedChildSupport = currentMonthData.childSupport;
-    if (currentMonthData.childSupport.status === 'Unsettled' && currentMonthData.childSupport.amount > 0) {
-      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Settled' };
-      madeChanges = true;
-    }
-    
-    if (madeChanges) {
-      updateAppData({ months: { ...appData.months, [monthId]: { ...currentMonthData, expenses: updatedExpenses, childSupport: updatedChildSupport } } });
-      toast({
-        title: 'All Items Marked as Settled',
-        description: 'All unsettled expenses and child support for this month are now settled.',
-      });
-    }
-  };
-
-  const handleMarkAllAsUnsettled = () => {
-    if (!currentMonthData) return;
-
-    let madeChanges = false;
-    const updatedExpenses = currentMonthData.expenses.map(exp => {
-      if (exp.status === 'Settled') {
-        madeChanges = true;
-        return { ...exp, status: 'Unsettled' };
-      }
-      return exp;
-    });
-
-    let updatedChildSupport = currentMonthData.childSupport;
-    if (currentMonthData.childSupport.status === 'Settled' && currentMonthData.childSupport.amount > 0) {
-      updatedChildSupport = { ...currentMonthData.childSupport, status: 'Unsettled' };
-      madeChanges = true;
-    }
-
-    if (madeChanges) {
-      updateAppData({ months: { ...appData.months, [monthId]: { ...currentMonthData, expenses: updatedExpenses, childSupport: updatedChildSupport } } });
-      toast({
-        title: 'All Items Marked as Unsettled',
-        description: 'All settled expenses and child support for this month have been reverted to unsettled.',
-      });
     }
   };
   
@@ -445,14 +392,20 @@ function DashboardComponent() {
                         onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
                         onUpdateExpense={handleUpdateExpense}
                         onUpdateChildSupport={(cs) => updateChildSupportForSingleMonth(cs, monthId)}
-                        onMarkAllAsSettled={handleMarkAllAsSettled}
-                        onMarkAllAsUnsettled={handleMarkAllAsUnsettled}
                         currentDate={currentDate}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
                       >
-                        <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
-                        <ImportExpensesDialog onImport={addImportedExpenses} parentNames={currentMonthData.parentNames} />
+                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
+                          <ImportExpensesDialog onImport={addImportedExpenses} parentNames={currentMonthData.parentNames} />
+                          <ExportButton
+                              expenses={expenses}
+                              childSupport={currentMonthData.childSupport}
+                              currentDate={currentDate}
+                              parentNames={currentMonthData.parentNames}
+                              expenseSplit={currentMonthData.expenseSplit}
+                              medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                          />
                       </ExpensesCard>
                     </TabsContent>
                     <TabsContent value="unsettled" className="mt-6">

@@ -31,9 +31,7 @@ import {
 import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit, AppData } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { ExportButton } from './export-button';
 import { EditExpenseDialog } from './edit-expense-dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
@@ -49,8 +47,6 @@ interface ExpensesCardProps {
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport) => void;
-  onMarkAllAsSettled: () => void;
-  onMarkAllAsUnsettled: () => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -104,8 +100,6 @@ export function ExpensesCard({
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
-  onMarkAllAsSettled,
-  onMarkAllAsUnsettled,
   children,
   currentDate,
   parentNames,
@@ -383,29 +377,20 @@ export function ExpensesCard({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
-              <ReceiptText className="h-5 w-5 text-secondary-foreground" />
+            <ReceiptText className="h-5 w-5 text-secondary-foreground" />
             </span>
             <div>
-              <CardTitle>Monthly Ledger</CardTitle>
-              <CardDescription>
+            <CardTitle>Monthly Ledger</CardTitle>
+            <CardDescription>
                 All expenses and child support for {format(currentDate, 'MMMM yyyy')}.
-              </CardDescription>
+            </CardDescription>
             </div>
-          </div>
-          <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
+        </div>
+        <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
             {children}
-            <ExportButton
-                expenses={expenses}
-                childSupport={childSupport}
-                currentDate={currentDate}
-                parentNames={parentNames}
-                expenseSplit={expenseSplit}
-                medicalExpenseSplit={medicalExpenseSplit}
-            />
             <div className="flex items-center space-x-2">
                 <Label htmlFor="settle-all-switch" className="text-sm">Settle All</Label>
                 <Switch
@@ -415,7 +400,6 @@ export function ExpensesCard({
                     disabled={localItems.length === 0}
                 />
             </div>
-          </div>
         </div>
       </CardHeader>
       <CardContent>
