@@ -1,6 +1,6 @@
 'use client';
 
-import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth } from 'date-fns';
+import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Plus, CalendarDays } from 'lucide-react';
 
@@ -28,6 +28,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { SummaryDetailsCard } from './summary-details-card';
 import { CoParentLinkCard } from './co-parent-link-card';
 import { GettingStartedPage } from './getting-started-page';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser } = useAppContext();
@@ -81,9 +88,35 @@ function DashboardComponent() {
   }, [currentDate]);
 
 
-  const currentMonthData = useMemo((): MonthData | null => {
-    return appData?.months?.[monthId] ?? null;
-  }, [appData, monthId]);
+  const { currentMonthData, availableYears, availableMonthsForYear } = useMemo(() => {
+    if (!appData) {
+      return { currentMonthData: null, availableYears: [String(getYear(new Date()))], availableMonthsForYear: [] };
+    }
+    const currentData = appData.months?.[monthId] ?? null;
+
+    const allMonthKeys = Object.keys(appData.months).sort();
+    const allYears = Array.from(new Set(allMonthKeys.map(key => key.substring(0, 4)))).sort((a,b) => parseInt(b) - parseInt(a));
+    const currentYear = String(getYear(currentDate));
+    if (!allYears.includes(currentYear)) {
+      allYears.push(currentYear);
+      allYears.sort((a,b) => parseInt(b) - parseInt(a));
+    }
+
+
+    const monthsForYear = Array.from({ length: 12 }, (_, i) => {
+      const monthDate = setDateFnsMonth(setYear(new Date(), parseInt(currentYear)), i);
+      return {
+        value: String(i),
+        label: format(monthDate, 'MMMM'),
+      };
+    });
+
+    return {
+      currentMonthData: currentData,
+      availableYears: allYears,
+      availableMonthsForYear: monthsForYear
+    };
+  }, [appData, monthId, currentDate]);
 
 
   const handleDateChange = (direction: 'next' | 'prev') => {
@@ -264,25 +297,33 @@ function DashboardComponent() {
           <div className="flex flex-col items-center justify-center gap-4 mb-8 no-print">
             {activeTab !== 'reporting' ? (
               <div className="flex items-center gap-2 h-10">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleDateChange('prev')}
-                  aria-label="Previous month"
+                <Select
+                  value={String(getYear(currentDate))}
+                  onValueChange={(year) => setCurrentDate(setYear(currentDate, parseInt(year)))}
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <span className="w-40 text-center text-lg font-semibold">
-                  {format(currentDate, 'MMMM yyyy')}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleDateChange('next')}
-                  aria-label="Next month"
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map(year => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String(getMonth(currentDate))}
+                  onValueChange={(month) => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month)))}
                 >
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMonthsForYear.map(month => (
+                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                  <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
