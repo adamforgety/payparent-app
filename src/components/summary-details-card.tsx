@@ -21,12 +21,6 @@ import type {
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ArrowDownCircle, ArrowUpCircle, Info, Circle } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from './ui/accordion';
 
 interface SummaryDetailsCardProps {
   parent: Parent;
@@ -209,7 +203,7 @@ export function SummaryDetailsCard({
             </span>
           </li>
           {previousBalances.length > 0 && (
-             <li className="w-full items-center justify-between pl-8">
+             <li className="w-full items-center justify-between">
                 <div className="flex flex-1 items-center justify-between text-base font-normal">
                     <div className="flex items-center gap-3">
                         {renderBalanceIcon(previousMonthsTotalBalance)}
