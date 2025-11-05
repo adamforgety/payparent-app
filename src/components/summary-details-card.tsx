@@ -41,10 +41,15 @@ const calculateShare = (
 ): number => {
   let totalShare = 0;
   for (const expense of expenses) {
+    // Reimbursements are not split, they are direct transfers.
+    // They are handled outside the share calculation logic.
+    if (expense.category === 'Reimbursement') {
+        continue;
+    }
     if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
-    } else if (expense.category !== 'Reimbursement') {
+    } else {
       const parentSplitPercent = split[p] / 100;
       totalShare += expense.amount * parentSplitPercent;
     }
@@ -72,17 +77,21 @@ export function SummaryDetailsCard({
 
   // --- Calculate Balance from Previous Months ---
   const previousBalances = useMemo<PreviousBalance[]>(() => {
+    const today = startOfDay(new Date());
     return Object.keys(appData.months)
       .sort()
       .filter((monthId) => {
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
         const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
-        return isBefore(startOfDay(monthDate), startOfDay(currentDate));
+        // Only include months that are strictly before the current month being viewed
+        // AND not in the future relative to today.
+        return isBefore(startOfDay(monthDate), startOfDay(currentDate)) && !isAfter(monthDate, today);
       })
       .map((monthId) => {
         const monthData = appData.months[monthId];
         if (!monthData) return { monthId, balance: 0 };
         
+        // Check if there are any unsettled items in this past month. If not, its balance is 0.
         const hasUnsettledItems = 
             monthData.expenses.some(e => e.status === 'Unsettled') || 
             (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
