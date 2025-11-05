@@ -292,8 +292,9 @@ function DashboardComponent() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <h2 className="text-lg font-semibold text-center text-primary">
-                  Showing data for {format(currentDate, 'MMMM yyyy')}
+                <h2 className="text-lg font-semibold text-center text-foreground">
+                  Showing data for{' '}
+                  <span className="text-primary">{format(currentDate, 'MMMM yyyy')}</span>
                 </h2>
               </>
             ) : (
@@ -395,18 +396,7 @@ function DashboardComponent() {
                         currentDate={currentDate}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
-                      >
-                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} />
-                          <ImportExpensesDialog onImport={addImportedExpenses} parentNames={currentMonthData.parentNames} />
-                          <ExportButton
-                              expenses={expenses}
-                              childSupport={currentMonthData.childSupport}
-                              currentDate={currentDate}
-                              parentNames={currentMonthData.parentNames}
-                              expenseSplit={currentMonthData.expenseSplit}
-                              medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                          />
-                      </ExpensesCard>
+                      />
                     </TabsContent>
                     <TabsContent value="unsettled" className="mt-6">
                         <AllUnsettledExpensesCard 
