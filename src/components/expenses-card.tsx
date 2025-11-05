@@ -34,8 +34,6 @@ import { Badge } from './ui/badge';
 import { ExportButton } from './export-button';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
@@ -463,17 +461,9 @@ export function ExpensesCard({
                           {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id={`settle-switch-desktop-${item.id}`}
-                              checked={item.status === 'Settled'}
-                              onCheckedChange={() => handleStatusToggle(item)}
-                              aria-label={`Settle payment for ${item.description}`}
-                            />
-                            <Label htmlFor={`settle-switch-desktop-${item.id}`}>
-                              {item.status}
-                            </Label>
-                          </div>
+                          <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>
+                            {item.status === 'Settled' ? 'Unsettle' : 'Settle'}
+                          </Button>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
@@ -676,15 +666,9 @@ export function ExpensesCard({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <span className="text-muted-foreground">Status</span>
-                                    <div className="flex items-center space-x-2">
-                                        <Switch
-                                            id={`settle-switch-mobile-${item.id}`}
-                                            checked={item.status === 'Settled'}
-                                            onCheckedChange={() => handleStatusToggle(item)}
-                                            aria-label={`Settle payment for ${item.description}`}
-                                        />
-                                        <Label htmlFor={`settle-switch-mobile-${item.id}`}>{item.status}</Label>
-                                    </div>
+                                    <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>
+                                      {item.status === 'Settled' ? 'Unsettle' : 'Settle'}
+                                    </Button>
                                 </div>
                             </div>
                             {(p1Owes > 0 || p2Owes > 0 || p1Credit > 0 || p2Credit > 0) && (

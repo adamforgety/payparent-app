@@ -1,7 +1,7 @@
 'use client';
 
 import { format, isAfter, startOfMonth, parse } from 'date-fns';
-import { ReceiptText, Trash2, Paperclip, Edit, CheckCircle } from 'lucide-react';
+import { ReceiptText, Trash2, Paperclip, Edit } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
 import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
@@ -12,8 +12,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { Button } from './ui/button';
 import { EditExpenseDialog } from './edit-expense-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -289,7 +287,7 @@ export function AllUnsettledExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex flex-wrap items-center gap-2">
               <Select value={yearFilter} onValueChange={setYearFilter}>
                 <SelectTrigger className="w-full sm:w-[120px]">
@@ -318,7 +316,7 @@ export function AllUnsettledExpensesCard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:pt-0">
               <Button
                 variant={monthFilter === 'all' ? 'secondary' : 'outline'}
                 onClick={() => setMonthFilter('all')}
@@ -326,18 +324,14 @@ export function AllUnsettledExpensesCard({
                 >
                 Show All
               </Button>
-              <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                    <div>
-                      <Button variant="outline" size="icon" onClick={handleMarkAllSettled} disabled={allUnsettledItems.length === 0}>
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    </TooltipTrigger>
-                    <TooltipContent>Mark All Settled</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button 
+                variant="outline"
+                onClick={handleMarkAllSettled} 
+                disabled={allUnsettledItems.length === 0}
+                className="w-full sm:w-auto"
+               >
+                Mark All Settled
+              </Button>
             </div>
         </div>
         
@@ -377,15 +371,7 @@ export function AllUnsettledExpensesCard({
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
                       </TableCell>
                        <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id={`settle-switch-desktop-${item.id}`}
-                            checked={false} // Always unsettled in this view
-                            onCheckedChange={() => handleStatusToggle(item)}
-                            aria-label={`Settle payment for ${item.description}`}
-                          />
-                          <Label htmlFor={`settle-switch-desktop-${item.id}`}>Unsettled</Label>
-                        </div>
+                          <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>Settle</Button>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
@@ -540,15 +526,7 @@ export function AllUnsettledExpensesCard({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <span className="text-muted-foreground">Status</span>
-                                    <div className="flex items-center space-x-2">
-                                        <Switch
-                                            id={`settle-switch-mobile-${item.id}`}
-                                            checked={false}
-                                            onCheckedChange={() => handleStatusToggle(item)}
-                                            aria-label={`Settle payment for ${item.description}`}
-                                        />
-                                        <Label htmlFor={`settle-switch-mobile-${item.id}`}>Unsettled</Label>
-                                    </div>
+                                    <Button variant="outline" size="sm" onClick={() => handleStatusToggle(item)}>Settle</Button>
                                 </div>
                             </div>
                             {(p1OwesAmount > 0 || p2OwesAmount > 0) && (
