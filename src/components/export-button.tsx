@@ -103,23 +103,14 @@ export function ExportButton({
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleExport}
-            disabled={isDisabled}
-            aria-label="Export to Excel"
-          >
-            <Sheet className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Export to Excel</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <Button
+        variant="outline"
+        onClick={handleExport}
+        disabled={isDisabled}
+        aria-label="Export to Excel"
+      >
+        <Sheet className="h-4 w-4 mr-2" />
+        Export
+      </Button>
   );
 }

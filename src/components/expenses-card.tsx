@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -369,8 +369,16 @@ export function ExpensesCard({
               </CardDescription>
             </div>
           </div>
-          <div className="no-print flex flex-wrap items-center gap-2">
+          <div className="no-print flex flex-wrap items-center justify-end gap-2">
               {children}
+              <ExportButton
+                  expenses={expenses}
+                  childSupport={childSupport}
+                  currentDate={currentDate}
+                  parentNames={parentNames}
+                  expenseSplit={expenseSplit}
+                  medicalExpenseSplit={medicalExpenseSplit}
+              />
                <div className="flex items-center space-x-2">
                 <Switch
                     id="settle-all-switch"
@@ -380,25 +388,6 @@ export function ExpensesCard({
                 />
                 <Label htmlFor="settle-all-switch">Settle All</Label>
                </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                    <span className="sr-only">More actions</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <ExportButton
-                    expenses={expenses}
-                    childSupport={childSupport}
-                    currentDate={currentDate}
-                    parentNames={parentNames}
-                    expenseSplit={expenseSplit}
-                    medicalExpenseSplit={medicalExpenseSplit}
-                    asChild
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
           </div>
         </div>
       </CardHeader>
