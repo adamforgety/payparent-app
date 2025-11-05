@@ -292,9 +292,9 @@ function DashboardComponent() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                 <div className="flex justify-center items-baseline text-lg font-semibold text-foreground">
-                  <h2>Showing data for&nbsp;</h2>
-                  <h2 className="text-primary">{format(currentDate, 'MMMM yyyy')}</h2>
+                 <div className="w-full text-center text-lg font-semibold text-foreground">
+                  <span className="text-foreground">Showing data for&nbsp;</span>
+                  <span className="text-primary">{format(currentDate, 'MMMM yyyy')}</span>
                 </div>
               </>
             ) : (
