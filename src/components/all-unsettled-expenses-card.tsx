@@ -1,6 +1,6 @@
 'use client';
 
-import { format, isAfter, startOfMonth, parse } from 'date-fns';
+import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, Edit } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -178,17 +178,22 @@ export function AllUnsettledExpensesCard({
   };
 
   const handleMarkAllSettled = () => {
-    if (allUnsettledItems.length === 0) {
+    const today = startOfDay(new Date());
+    const itemsToSettle = allUnsettledItems.filter(item => 
+      !isAfter(startOfDay(new Date(item.date)), today)
+    );
+
+    if (itemsToSettle.length === 0) {
       toast({
         title: 'No Items to Settle',
-        description: 'There are no unsettled items in the current view.',
+        description: 'There are no past or present unsettled items in the current view.',
       });
       return;
     }
 
     const monthUpdates: { [monthId: string]: { expenses: Expense[], childSupport: ChildSupport } } = {};
 
-    allUnsettledItems.forEach(item => {
+    itemsToSettle.forEach(item => {
       const { monthId } = item;
 
       // Initialize month update if not present
@@ -218,8 +223,8 @@ export function AllUnsettledExpensesCard({
     batchUpdateMonths(monthUpdates);
 
     toast({
-      title: 'All Items Marked as Settled',
-      description: `${allUnsettledItems.length} items have been updated.`,
+      title: 'Items Marked as Settled',
+      description: `${itemsToSettle.length} items have been updated. Future items were not affected.`,
     });
   };
 
