@@ -39,6 +39,7 @@ import { Separator } from './ui/separator';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
+import { ExportButton } from './export-button';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -47,7 +48,7 @@ interface ExpensesCardProps {
   medicalExpenseSplit: MedicalExpenseSplit;
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
-  onUpdateChildSupport: (childSupport: ChildSupport) => void;
+  onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -253,7 +254,7 @@ export function ExpensesCard({
 
   
   const allItemsSettled = useMemo(() => {
-    if (localItems.length === 0) return true; // No items, considered "settled"
+    if (localItems.length === 0) return false; // No items, switch should be off.
     return localItems.every(item => item.status === 'Settled');
   }, [localItems]);
 
@@ -306,7 +307,7 @@ export function ExpensesCard({
             onUpdateExpense({ ...originalExpense, status: newStatus }, monthId);
         }
     } else { // Child Support
-        onUpdateChildSupport({ ...childSupport, status: newStatus });
+        onUpdateChildSupport({ ...childSupport, status: newStatus }, monthId);
     }
 
      toast({
