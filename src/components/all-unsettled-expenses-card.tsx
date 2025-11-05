@@ -1,7 +1,7 @@
 'use client';
 
 import { format, isAfter, startOfMonth, parse } from 'date-fns';
-import { ReceiptText, Trash2, Paperclip, Edit } from 'lucide-react';
+import { ReceiptText, Trash2, Paperclip, Edit, CheckCircle } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
 import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
@@ -175,6 +175,29 @@ export function AllUnsettledExpensesCard({
     });
   };
 
+  const handleMarkAllSettled = () => {
+    if (allUnsettledItems.length === 0) {
+      toast({
+        title: 'No Items to Settle',
+        description: 'There are no unsettled items in the current view.',
+      });
+      return;
+    }
+    
+    allUnsettledItems.forEach(item => {
+        if (item.type === 'expense' && item.originalExpense) {
+            onUpdateExpense({ ...item.originalExpense, status: 'Settled' }, item.monthId);
+        } else if (item.type === 'child_support' && item.originalChildSupport) {
+            onUpdateChildSupport({ ...item.originalChildSupport, status: 'Settled' }, item.monthId);
+        }
+    });
+
+    toast({
+        title: 'All Items Marked as Settled',
+        description: `${allUnsettledItems.length} items have been updated.`,
+    });
+  };
+
   const { totalAmount, totalParent1Owes, totalParent2Owes } = useMemo(() => {
      let amount = 0;
      let p1Owes = 0;
@@ -266,9 +289,9 @@ export function AllUnsettledExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center space-x-2 mb-4">
+        <div className="flex flex-wrap items-center space-x-2 mb-4">
             <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-full sm:w-[120px]">
+              <SelectTrigger className="w-full sm:w-[120px] mb-2 sm:mb-0">
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
               <SelectContent>
@@ -281,7 +304,7 @@ export function AllUnsettledExpensesCard({
             </Select>
 
            <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] mb-2 sm:mb-0">
               <SelectValue placeholder="Filter by month" />
             </SelectTrigger>
             <SelectContent>
@@ -298,6 +321,19 @@ export function AllUnsettledExpensesCard({
             >
             Show All
           </Button>
+          <div className="flex-grow" />
+          <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                <div>
+                  <Button variant="outline" size="icon" onClick={handleMarkAllSettled} disabled={allUnsettledItems.length === 0}>
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+                </TooltipTrigger>
+                <TooltipContent>Mark All Settled</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         {/* Desktop Table View */}
