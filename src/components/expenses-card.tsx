@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -355,12 +355,38 @@ export function ExpensesCard({
             <div>
               <CardTitle>Monthly Ledger</CardTitle>
               <CardDescription>
-                All expenses and child support for this period.
+                All expenses and child support for {format(currentDate, 'MMMM yyyy')}.
               </CardDescription>
             </div>
           </div>
           <div className="no-print flex items-center justify-start sm:justify-end gap-2">
             {children}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button variant="outline" size="icon" onClick={onMarkAllAsSettled} disabled={!hasUnsettledItems}>
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Mark All Settled</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button variant="outline" size="icon" onClick={onMarkAllAsUnsettled} disabled={!hasSettledItems}>
+                      <CircleDot className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Mark All Unsettled</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon">
@@ -369,13 +395,6 @@ export function ExpensesCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onMarkAllAsSettled} disabled={!hasUnsettledItems}>
-                  Mark All Settled
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onMarkAllAsUnsettled} disabled={!hasSettledItems}>
-                  Mark All Unsettled
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                  <ExportButton
                   expenses={expenses}
                   childSupport={childSupport}
