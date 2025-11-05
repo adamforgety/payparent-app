@@ -13,7 +13,7 @@ import type { AppData, ChildSupport, Expense, UserDoc, MonthData } from '@/lib/t
 import { useFirebase } from '@/firebase';
 import { saveUserData } from '@/lib/data-service';
 import { Loader2 } from 'lucide-react';
-import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
+import { format, getMonth, getYear, parse, isAfter, startOfDay } from 'date-fns';
 import { doc, onSnapshot, getDoc, FirestoreError, setDoc } from 'firebase/firestore';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { initialData } from '@/lib/data';
@@ -121,21 +121,44 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
               if (dataDocSnap.exists()) {
                 const dataDoc = dataDocSnap.data() as UserDoc;
                 if (dataDoc.appData) {
-                  const migratedData = { ...dataDoc.appData };
+                  const dataToProcess = { ...dataDoc.appData };
                   let migrationNeeded = false;
-                  for (const monthId in migratedData.months) {
-                    if (parseInt(monthId.substring(0, 4), 10) < 2000) {
-                      delete migratedData.months[monthId];
-                      migrationNeeded = true;
-                    }
+                  const today = startOfDay(new Date());
+
+                  for (const monthId in dataToProcess.months) {
+                     const monthData = dataToProcess.months[monthId];
+                     
+                     // Fix for future-dated items that were incorrectly settled
+                     const correctedExpenses = monthData.expenses.map(expense => {
+                        if (expense.status === 'Settled' && isAfter(startOfDay(new Date(expense.date)), today)) {
+                           migrationNeeded = true;
+                           return { ...expense, status: 'Unsettled' };
+                        }
+                        return expense;
+                     });
+
+                     let correctedChildSupport = monthData.childSupport;
+                     const monthDate = parse(monthId, 'yyyy-MM', new Date());
+                     if (monthData.childSupport.status === 'Settled' && isAfter(monthDate, today)) {
+                        migrationNeeded = true;
+                        correctedChildSupport = { ...monthData.childSupport, status: 'Unsettled' };
+                     }
+                     
+                     if (migrationNeeded) {
+                        dataToProcess.months[monthId] = {
+                          ...monthData,
+                          expenses: correctedExpenses,
+                          childSupport: correctedChildSupport,
+                        };
+                     }
                   }
 
                   if (migrationNeeded) {
-                    console.log("Migrating data: Removing months with years before 2000.");
-                    saveUserData(firestore, dataOwnerId, migratedData);
+                    console.log("Data Migration: Reverting future settled items to unsettled.");
+                    saveUserData(firestore, dataOwnerId, dataToProcess);
                   }
                   
-                  setAppData(migrationNeeded ? migratedData : dataDoc.appData);
+                  setAppData(dataToProcess);
                 } else {
                   // Self-healing: If appData field is missing, fix it.
                   console.warn("User document is missing 'appData'. Re-initializing.");
