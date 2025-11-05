@@ -120,7 +120,21 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
               if (dataDocSnap.exists()) {
                 const dataDoc = dataDocSnap.data() as UserDoc;
                 if (dataDoc.appData) {
-                  setAppData(dataDoc.appData);
+                  const migratedData = { ...dataDoc.appData };
+                  let migrationNeeded = false;
+                  for (const monthId in migratedData.months) {
+                    if (parseInt(monthId.substring(0, 4), 10) < 2000) {
+                      delete migratedData.months[monthId];
+                      migrationNeeded = true;
+                    }
+                  }
+
+                  if (migrationNeeded) {
+                    console.log("Migrating data: Removing months with years before 2000.");
+                    saveUserData(firestore, dataOwnerId, migratedData);
+                  }
+                  
+                  setAppData(migrationNeeded ? migratedData : dataDoc.appData);
                 } else {
                   // Self-healing: If appData field is missing, fix it.
                   console.warn("User document is missing 'appData'. Re-initializing.");

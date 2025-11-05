@@ -95,7 +95,9 @@ function DashboardComponent() {
     const currentData = appData.months?.[monthId] ?? null;
 
     const allMonthKeys = Object.keys(appData.months).sort();
-    const allYears = Array.from(new Set(allMonthKeys.map(key => key.substring(0, 4)))).sort((a,b) => parseInt(b) - parseInt(a));
+    const allYears = Array.from(new Set(allMonthKeys.map(key => key.substring(0, 4))))
+      .filter(year => parseInt(year, 10) >= 2000) // Filter out invalid years
+      .sort((a,b) => parseInt(b) - parseInt(a));
     const currentYear = String(getYear(currentDate));
     if (!allYears.includes(currentYear)) {
       allYears.push(currentYear);
@@ -518,7 +520,7 @@ function DashboardComponent() {
                 <TooltipTrigger asChild>
                       <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
                         <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
-                            <Plus className="h-6 w-6" />
+                            <Plus className="w-6 w-6" />
                         </Button>
                       </AddExpenseDialog>
                 </TooltipTrigger>

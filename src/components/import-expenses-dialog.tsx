@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, getYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -95,49 +95,51 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Other',
 ];
 
-// More flexible date parsing
-function flexibleDateParse(dateString: string): Date | null {
-  if (!dateString || typeof dateString !== 'string') {
+// A much more robust date parsing function
+function flexibleDateParse(dateInput: string | number): Date | null {
+  if (dateInput === null || dateInput === undefined || dateInput === '') {
     return null;
   }
 
-  // Handle Excel date serial numbers
-  if (!isNaN(Number(dateString)) && Number(dateString) > 20000) {
-    // This is a basic way to handle Excel's epoch (days since 1900-01-01, with a bug for leap years).
-    // The `Date.UTC(0, 0, ...)` trick correctly converts the serial number.
-    return new Date(Date.UTC(0, 0, Number(dateString) - 1));
-  }
-
-  const formats = [
-    'yyyy-MM-dd',
-    'MM/dd/yyyy',
-    'M/d/yyyy',
-    'MM-dd-yyyy',
-    'M-d-yyyy',
-    'yyyy/MM/dd',
-    'MM/dd/yy',
-    'M/d/yy',
-    'yyyy-MM-dd HH:mm:ss',
-    'yyyy-MM-ddTHH:mm:ss.SSSZ',
-  ];
-
-  for (const fmt of formats) {
-    const parsedDate = parse(dateString, fmt, new Date());
-    if (isValid(parsedDate)) {
-      // Check for two-digit year ambiguity
-      if (fmt.endsWith('yy')) {
-         const twoDigitYear = parsedDate.getFullYear() % 100;
-         // Sliding window: years < 70 are 21st century, >= 70 are 20th.
-         parsedDate.setFullYear(twoDigitYear + (twoDigitYear < 70 ? 2000 : 1900));
-      }
-      return parsedDate;
+  // Handle Excel date serial numbers (which are numbers)
+  if (typeof dateInput === 'number') {
+    if (dateInput > 25569) { // Excel serial date for 1970-01-01
+      // (dateInput - 25569) * 86400 * 1000 gives UTC milliseconds
+      const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
+      const d = new Date(utcMilliseconds);
+      // Adjust for timezone offset to get the correct local date
+      return new Date(d.getTime() + (d.getTimezoneOffset() * 60000));
     }
+    // If it's a number but not a valid Excel date serial, it might be a year like 2024.
+    // We treat it as an invalid format for a full date.
+    return null;
   }
 
-  // Final attempt with native Date constructor for formats like ISO 8601
-  const nativeParsed = new Date(dateString);
-  if (isValid(nativeParsed)) {
+  // Handle string inputs
+  if (typeof dateInput === 'string') {
+    const dateStr = dateInput.trim();
+    // Attempt to parse with native Date constructor first (handles ISO, common formats)
+    const nativeParsed = new Date(dateStr);
+    if (isValid(nativeParsed) && getYear(nativeParsed) > 1900) {
       return nativeParsed;
+    }
+    
+    // Try common formats with date-fns
+    const formats = [
+      'MM/dd/yyyy', 'M/d/yyyy', 'MM-dd-yyyy', 'M-d-yyyy',
+      'MM/dd/yy', 'M/d/yy', 'MM-dd-yy', 'M-d-yy',
+      'yyyy-MM-dd', 'yyyy/MM/dd'
+    ];
+    for (const fmt of formats) {
+      const parsedDate = parse(dateStr, fmt, new Date());
+      if (isValid(parsedDate)) {
+        // Handle 2-digit year ambiguity (e.g., '25' becomes 2025)
+        if (fmt.endsWith('yy') && getYear(parsedDate) < 2000) {
+            parsedDate.setFullYear(getYear(parsedDate) + 2000);
+        }
+        return parsedDate;
+      }
+    }
   }
 
   return null;
@@ -208,8 +210,8 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     if (!date) {
       errors.date = 'Missing';
     } else {
-      parsedDate = flexibleDateParse(date);
-      if (!parsedDate) {
+      parsedDate = flexibleDateParse(date as any); // The raw value can be a number from xlsx
+      if (!parsedDate || getYear(parsedDate) < 2000) { // Add year validation
         errors.date = 'Invalid Date';
       }
     }
@@ -282,10 +284,13 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: '' });
+        // Set raw: false to get formatted strings, but this might not be ideal for dates.
+        // Let's use raw: true and handle types in validation.
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
+
 
         const successes: ParsedExpense[] = [];
         const failures: FailedImport[] = [];
@@ -696,5 +701,3 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     </Dialog>
   );
 }
-
-    
