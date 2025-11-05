@@ -292,10 +292,10 @@ function DashboardComponent() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <h2 className="text-lg font-semibold text-center text-foreground">
-                  Showing data for{' '}
-                  <span className="text-primary">{format(currentDate, 'MMMM yyyy')}</span>
-                </h2>
+                 <div className="flex justify-center items-baseline text-lg font-semibold text-foreground">
+                  <h2>Showing data for&nbsp;</h2>
+                  <h2 className="text-primary">{format(currentDate, 'MMMM yyyy')}</h2>
+                </div>
               </>
             ) : (
                <div className="h-10" />
@@ -396,7 +396,26 @@ function DashboardComponent() {
                         currentDate={currentDate}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
-                      />
+                      >
+                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
+                            <Button variant="outline">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Expense
+                            </Button>
+                          </AddExpenseDialog>
+                          <ImportExpensesDialog
+                            onImport={addImportedExpenses}
+                            parentNames={currentMonthData.parentNames}
+                          />
+                          <ExportButton
+                              expenses={expenses}
+                              childSupport={currentMonthData.childSupport}
+                              currentDate={currentDate}
+                              parentNames={currentMonthData.parentNames}
+                              expenseSplit={currentMonthData.expenseSplit}
+                              medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                          />
+                      </ExpensesCard>
                     </TabsContent>
                     <TabsContent value="unsettled" className="mt-6">
                         <AllUnsettledExpensesCard 
