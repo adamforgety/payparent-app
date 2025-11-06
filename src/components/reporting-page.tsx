@@ -82,7 +82,7 @@ type SortConfig = {
 } | null;
 
 
-const ALL_CATEGORIES: ExpenseCategory[] = [
+const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Medical',
   'Education',
   'Child Care',
@@ -193,7 +193,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     // Filter for settled items only for the reporting table
     let settledTransactions = allTransactionsForPeriod.filter(t => t.status === 'Settled');
     
-    const aggregated: { [key in ExpenseCategory]?: number } = {};
+    const aggregated: { [key: string]: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
 
     let total = 0;
@@ -386,7 +386,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
+          <TabsTrigger value="transactions">Year-to-Date</TabsTrigger>
         </TabsList>
         <TabsContent value="transactions" className="mt-6">
           <Card>
