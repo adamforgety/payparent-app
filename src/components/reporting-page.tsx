@@ -81,6 +81,7 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Activities',
   'Clothing',
   'Food',
+  'Child Support',
   'Other',
 ];
 
@@ -89,6 +90,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     String(getYear(new Date()))
   );
   const [selectedMonth, setSelectedMonth] = useState<string>('all'); // 'all' or 'yyyy-MM'
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeSubTab, setActiveSubTab] = useState('transactions');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
@@ -181,19 +183,26 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     });
 
     // Filter for settled items only for the reporting table
-    const settledTransactions = allTransactionsForPeriod.filter(t => t.status === 'Settled');
+    let settledTransactions = allTransactionsForPeriod.filter(t => t.status === 'Settled');
     
-    const allExpensesForPeriod = settledTransactions.filter(t => t.category !== 'Child Support') as EnrichedExpense[];
-
+    if (selectedCategory !== 'all') {
+        settledTransactions = settledTransactions.filter(t => t.category === selectedCategory);
+    }
+    
     const aggregated: { [key in ExpenseCategory]?: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
 
     let total = 0;
-    allExpensesForPeriod.forEach((expense) => {
-      if (aggregated[expense.category] !== undefined) {
-        aggregated[expense.category]! += expense.amount;
-      }
-      total += expense.amount;
+    
+    const transactionsForSummary = selectedCategory === 'all'
+      ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
+      : settledTransactions;
+
+    transactionsForSummary.forEach((transaction) => {
+        if (aggregated[transaction.category] !== undefined) {
+            aggregated[transaction.category]! += transaction.amount;
+        }
+        total += transaction.amount;
     });
 
     const chartData = Object.entries(aggregated)
@@ -216,7 +225,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       reportTitle: reportTitleForMonth(selectedMonth),
       reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
     };
-  }, [appData, selectedYear, selectedMonth]);
+  }, [appData, selectedYear, selectedMonth, selectedCategory]);
   
   useEffect(() => {
     // If the selected month is no longer available in the new year's list, reset to 'all'
@@ -559,7 +568,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     </span>
                     <div>
                       <CardTitle>Expense Summary</CardTitle>
-                      <CardDescription>A summary of expenses by category.</CardDescription>
+                      <CardDescription>A summary of settled contributions by category.</CardDescription>
                     </div>
                   </div>
                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -592,12 +601,21 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         ))}
                       </SelectContent>
                     </Select>
+                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {ALL_CATEGORIES.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                 <p className="text-sm text-muted-foreground mt-4">
-                    Note: This summary shows expenses by category and does not
-                    include child support payments.
-                </p>
              </CardHeader>
             <CardContent>
               {periodData.length > 0 ? (
@@ -670,10 +688,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <ReceiptText className="h-8 w-8" />
                   </div>
                   <p className="font-medium">
-                    No expenses logged for this period.
+                    No settled expenses for this period.
                   </p>
                   <p className="text-sm">
-                    Once you add expenses, a summary will appear here.
+                    Once you settle expenses, a summary will appear here.
                   </p>
                 </div>
               )}
