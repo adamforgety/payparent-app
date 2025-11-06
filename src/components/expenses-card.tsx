@@ -263,6 +263,13 @@ export function ExpensesCard({
         let p1Owes = 0;
         let p2Owes = 0;
   
+        // For 'Owes' totals, only calculate for unsettled items.
+        if (item.status === 'Unsettled') {
+          const details = renderItemDetails(item);
+          p1Owes = details.p1Owes;
+          p2Owes = details.p2Owes;
+        }
+
         // For 'Paid' totals, calculate based on who initially paid for unsettled items,
         // and by final share for settled items.
         if (item.status === 'Unsettled') {
@@ -283,13 +290,6 @@ export function ExpensesCard({
           }
         }
   
-        // For 'Owes' totals, only calculate for unsettled items.
-        if (item.status === 'Unsettled') {
-          const details = renderItemDetails(item);
-          p1Owes = details.p1Owes;
-          p2Owes = details.p2Owes;
-        }
-  
         acc.totalP1Paid += p1Paid;
         acc.totalP2Paid += p2Paid;
         acc.totalP1Owes += p1Owes;
@@ -299,7 +299,7 @@ export function ExpensesCard({
       },
       { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0 }
     );
-  }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit, renderItemDetails]);
+  }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
   
   const allItemsSettled = useMemo(() => {
     if (localItems.length === 0) return false; // No items, switch should be off.
@@ -451,7 +451,8 @@ export function ExpensesCard({
                     
                     let p1DisplayPaid = 0;
                     let p2DisplayPaid = 0;
-                    if(item.status === 'Unsettled') {
+
+                    if (item.status === 'Unsettled') {
                         if (item.type === 'expense') {
                            p1DisplayPaid = item.paidBy === 'Parent 1' ? item.amount : 0;
                            p2DisplayPaid = item.paidBy === 'Parent 2' ? item.amount : 0;
