@@ -41,11 +41,6 @@ const calculateShare = (
 ): number => {
   let totalShare = 0;
   for (const expense of expenses) {
-    // Reimbursements are not split, they are direct transfers.
-    // They are handled outside the share calculation logic.
-    if (expense.category === 'Reimbursement') {
-        continue;
-    }
     if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
