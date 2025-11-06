@@ -147,14 +147,13 @@ export function ExpensesCard({
 
     if (item.category === 'Child Support') {
       if (item.status === 'Settled') {
-          p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-          p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+        p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+        p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
       }
-      const p1Share = item.paidBy === 'Parent 2' ? item.amount : 0; // P1 owes if P2 pays
-      const p2Share = item.paidBy === 'Parent 1' ? item.amount : 0; // P2 owes if P1 pays
-      
-      p1Owes = p1Share - p1Paid;
-      p2Owes = p2Share - p2Paid;
+      // If Parent 1 pays, Parent 1 owes that amount to Parent 2.
+      p1Owes = item.paidBy === 'Parent 1' ? item.amount : 0;
+      // If Parent 2 pays, Parent 2 owes that amount to Parent 1.
+      p2Owes = item.paidBy === 'Parent 2' ? item.amount : 0;
 
     } else { // Standard expenses and Reimbursements
         const expense = item as Expense;
