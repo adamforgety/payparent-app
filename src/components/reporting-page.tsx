@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
   ResponsiveContainer,
-  BarChart as RechartsBarChart,
+  RechartsBarChart,
   Tooltip,
 } from 'recharts';
 
@@ -51,6 +51,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
 import { ReportingExportButton } from './reporting-export-button';
 import { Button } from './ui/button';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
 
 interface ReportingPageProps {
   appData: AppData | null;
@@ -102,6 +104,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
+  const [settledOnly, setSettledOnly] = useState(true);
 
   const {
     availableYears,
@@ -113,7 +116,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     reportTitle,
     reportDescription,
   } = useMemo(() => {
-    const reportTitleForMonth = (month: string) => month === 'all' ? 'Year-to-Date Report' : 'Monthly Report';
+    const reportTitleForMonth = (month: string) => month === 'all' ? 'Annual Report' : 'Monthly Report';
     const reportDescriptionForPeriod = (year: string, month: string) => 
       `An overview of all expenses for ${month === 'all' ? `the year ${year}` : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
 
@@ -190,15 +193,18 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         }
     });
 
-    // Filter for settled items only for the reporting table
-    let settledTransactions = allTransactionsForPeriod.filter(t => t.status === 'Settled');
+    // Filter by status if the "settled only" toggle is on
+    let transactionsForReport = settledOnly
+      ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
+      : allTransactionsForPeriod;
+
     
     const aggregated: { [key: string]: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
 
     let total = 0;
     
-    const transactionsForSummary = settledTransactions.filter(t => selectedCategories.includes(t.category));
+    const transactionsForSummary = transactionsForReport.filter(t => selectedCategories.includes(t.category));
 
     transactionsForSummary.forEach((transaction) => {
         if (aggregated[transaction.category] !== undefined) {
@@ -215,19 +221,19 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       .filter((item) => item.amount > 0)
       .sort((a, b) => b.amount - a.amount);
       
-    settledTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    transactionsForReport.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
       availableMonths: monthsForSelectedYear,
       periodData: chartData,
       totalPeriodExpenses: total,
-      allTransactions: settledTransactions, // Use settled transactions for the report
+      allTransactions: transactionsForReport, // Use filtered transactions for the report
       parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
       reportTitle: reportTitleForMonth(selectedMonth),
       reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
     };
-  }, [appData, selectedYear, selectedMonth, selectedCategories]);
+  }, [appData, selectedYear, selectedMonth, selectedCategories, settledOnly]);
   
   useEffect(() => {
     // If the selected month is no longer available in the new year's list, reset to 'all'
@@ -386,7 +392,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="transactions">Year-to-Date</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
         <TabsContent value="transactions" className="mt-6">
           <Card>
@@ -397,8 +403,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       <BarChart className="h-5 w-5 text-secondary-foreground" />
                     </span>
                     <div>
-                      <CardTitle>{reportTitle}</CardTitle>
-                      <CardDescription>{reportDescription}</CardDescription>
+                      <CardTitle>All Transactions Report</CardTitle>
+                      <CardDescription>A complete log of all recorded financial items.</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -445,8 +451,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     />
                   </div>
                 </div>
-                 <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                  <div className="relative flex-1">
+                 <div className="flex flex-col sm:flex-row gap-4 mt-4 items-center">
+                  <div className="relative flex-1 w-full">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
@@ -456,6 +462,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                        id="settled-only-filter"
+                        checked={settledOnly}
+                        onCheckedChange={setSettledOnly}
+                    />
+                    <Label htmlFor="settled-only-filter">Settled Only</Label>
+                 </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -471,6 +485,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         Category
                       </SortableHeader>
                       <SortableHeader sortKey="paidBy">Paid By</SortableHeader>
+                      <TableHead className="w-[120px]">Status</TableHead>
                       <SortableHeader sortKey="amount" className="text-right">
                         Total Amount
                       </SortableHeader>
@@ -527,6 +542,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                   </Badge>
                                 )}
                             </TableCell>
+                            <TableCell>
+                                <Badge variant={transaction.status === 'Settled' ? 'success' : 'destructive'}>{transaction.status}</Badge>
+                            </TableCell>
                             <TableCell className="text-right font-semibold">
                               ${transaction.amount.toFixed(2)}
                             </TableCell>
@@ -541,10 +559,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
+                        <TableCell colSpan={8} className="h-24 text-center">
                           {searchTerm
-                            ? `No settled transactions found for "${searchTerm}".`
-                            : 'No settled transactions in this period.'}
+                            ? `No transactions found for "${searchTerm}".`
+                            : 'No transactions in this period.'}
                         </TableCell>
                       </TableRow>
                     )}
@@ -552,7 +570,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   {sortedTransactions.length > 0 && (
                     <TableFooter>
                       <TableRow className="bg-secondary/50 font-bold">
-                        <TableCell colSpan={4}>Grand Totals</TableCell>
+                        <TableCell colSpan={5}>Grand Totals</TableCell>
                         <TableCell className="text-right">
                           ${totalAmount.toFixed(2)}
                         </TableCell>
@@ -580,7 +598,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     </span>
                     <div>
                       <CardTitle>Expense Summary</CardTitle>
-                      <CardDescription>A summary of settled contributions by category.</CardDescription>
+                      <CardDescription>A summary of contributions by category for the selected period.</CardDescription>
                     </div>
                   </div>
                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -715,10 +733,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <ReceiptText className="h-8 w-8" />
                   </div>
                   <p className="font-medium">
-                    No settled expenses for this period or selection.
+                    No transactions for this period or selection.
                   </p>
                   <p className="text-sm">
-                    Once you settle expenses, a summary will appear here.
+                    Once you record transactions, a summary will appear here.
                   </p>
                 </div>
               )}
