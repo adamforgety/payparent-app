@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
-import { format, parse, isValid, getYear, parseISO } from 'date-fns';
+import { format, parse, isValid, getYear, parseISO, add } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -104,11 +104,13 @@ function flexibleDateParse(dateInput: string | number): Date | null {
   // Handle Excel date serial numbers (which are numbers)
   if (typeof dateInput === 'number') {
     if (dateInput > 25569) { // Excel serial date for 1970-01-01
-      // (dateInput - 25569) * 86400 * 1000 gives UTC milliseconds
-      const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
-      const d = new Date(utcMilliseconds);
-      // Adjust for timezone offset to get the correct local date
-      return new Date(d.getTime() + (d.getTimezoneOffset() * 60000));
+        // The numeric value from Excel represents days since 1900-01-01 (with a bug for 1900 leap year).
+        // The standard epoch is 1970-01-01. The difference is 25569 days.
+        // Convert days to milliseconds for the UTC Date constructor.
+        const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
+        // Create a new Date object from the UTC milliseconds. This creates a date
+        // that is timezone-agnostic at its core.
+        return new Date(utcMilliseconds);
     }
     return null;
   }
@@ -120,7 +122,8 @@ function flexibleDateParse(dateInput: string | number): Date | null {
     // First, try standard ISO format, which is very reliable
     let parsedDate = parseISO(dateStr);
     if (isValid(parsedDate)) {
-        return parsedDate;
+        // parseISO can produce a date in the local timezone. We want to treat it as UTC.
+        return add(parsedDate, { minutes: parsedDate.getTimezoneOffset() });
     }
 
     // Try common formats with date-fns
@@ -146,7 +149,7 @@ function flexibleDateParse(dateInput: string | number): Date | null {
     // Fallback for other native formats
     const nativeParsed = new Date(dateStr);
     if (isValid(nativeParsed) && getYear(nativeParsed) > 1900) {
-      return nativeParsed;
+      return add(nativeParsed, { minutes: nativeParsed.getTimezoneOffset() });
     }
   }
 
