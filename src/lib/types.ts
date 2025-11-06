@@ -6,7 +6,6 @@ export type ExpenseCategory =
   | 'Clothing'
   | 'Food'
   | 'Child Support'
-  | 'Reimbursement'
   | 'Other';
 
 export type PaymentStatus = 'Unsettled' | 'Settled';
@@ -17,7 +16,6 @@ export interface Expense {
   description: string;
   amount: number;
   paidBy: Parent;
-  paidTo?: Parent | 'None';
   category: ExpenseCategory;
   status: PaymentStatus;
   year: number;

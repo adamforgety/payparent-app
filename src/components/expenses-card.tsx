@@ -61,9 +61,8 @@ type DisplayItem = {
     description: string;
     amount: number;
     paidBy: Parent | 'None';
-    paidTo?: Parent | 'None';
     status: PaymentStatus;
-    category: 'Child Support' | 'Reimbursement' | Expense['category'];
+    category: 'Child Support' | Expense['category'];
     type: 'expense' | 'child_support';
     receiptUrl?: string | null;
     receiptFilename?: string | null;
@@ -159,25 +158,14 @@ export function ExpensesCard({
           p2Paid = item.amount;
         }
       }
-    } else { // Standard Expense or Reimbursement
+    } else { // Standard Expense
       const expense = item as Expense;
       let p1Share: number, p2Share: number;
   
-      if (expense.category === 'Reimbursement') {
-        // Reimbursements are direct transfers
-        if (expense.paidTo === 'Parent 1') { // P2 owes P1
-          p2Share = expense.amount;
-          p1Share = 0;
-        } else { // P1 owes P2
-          p1Share = expense.amount;
-          p2Share = 0;
-        }
-      } else {
-        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-        p1Share = expense.amount * (split['Parent 1'] / 100);
-        p2Share = expense.amount * (split['Parent 2'] / 100);
-      }
-  
+      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+      p1Share = expense.amount * (split['Parent 1'] / 100);
+      p2Share = expense.amount * (split['Parent 2'] / 100);
+      
       const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
       const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
   
@@ -470,7 +458,7 @@ export function ExpensesCard({
                           <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}>{item.category}</Badge>
+                          <Badge variant={item.category === 'Child Support' ? 'default' : 'secondary'}>{item.category}</Badge>
                         </TableCell>
                         <TableCell>
                           {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
@@ -682,7 +670,7 @@ export function ExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}>{item.category}</Badge>
+                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'secondary'}>{item.category}</Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
 
