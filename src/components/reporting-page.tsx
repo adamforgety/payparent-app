@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { getYear, format, parse, isAfter, startOfMonth } from 'date-fns';
-import { BarChart, ReceiptText, Search, ArrowUpDown } from 'lucide-react';
+import { BarChart, ReceiptText, Search, ArrowUpDown, ChevronDown } from 'lucide-react';
 import {
   Bar,
   CartesianGrid,
@@ -28,6 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltipContent } from './ui/chart';
 import {
   Table,
@@ -90,8 +98,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     String(getYear(new Date()))
   );
   const [selectedMonth, setSelectedMonth] = useState<string>('all'); // 'all' or 'yyyy-MM'
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [activeSubTab, setActiveSubTab] = useState('transactions');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(ALL_CATEGORIES);
+  const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
 
@@ -185,18 +193,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     // Filter for settled items only for the reporting table
     let settledTransactions = allTransactionsForPeriod.filter(t => t.status === 'Settled');
     
-    if (selectedCategory !== 'all') {
-        settledTransactions = settledTransactions.filter(t => t.category === selectedCategory);
-    }
-    
     const aggregated: { [key in ExpenseCategory]?: number } = {};
     ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
 
     let total = 0;
     
-    const transactionsForSummary = selectedCategory === 'all'
-      ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
-      : settledTransactions;
+    const transactionsForSummary = settledTransactions.filter(t => selectedCategories.includes(t.category));
 
     transactionsForSummary.forEach((transaction) => {
         if (aggregated[transaction.category] !== undefined) {
@@ -225,7 +227,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       reportTitle: reportTitleForMonth(selectedMonth),
       reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
     };
-  }, [appData, selectedYear, selectedMonth, selectedCategory]);
+  }, [appData, selectedYear, selectedMonth, selectedCategories]);
   
   useEffect(() => {
     // If the selected month is no longer available in the new year's list, reset to 'all'
@@ -301,7 +303,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           const dateA = new Date(aValue).getTime();
           const dateB = new Date(bValue).getTime();
           if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
-          if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+          if (dateA > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
         } else if (typeof aValue === 'string' && typeof bValue === 'string') {
             return sortConfig.direction === 'ascending'
                 ? aValue.localeCompare(bValue)
@@ -368,13 +370,23 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       </Button>
     </TableHead>
   );
+  
+  const handleCategoryFilterChange = (category: string, checked: boolean) => {
+    if (category === 'all') {
+      setSelectedCategories(checked ? ALL_CATEGORIES : []);
+    } else {
+      setSelectedCategories(prev => 
+        checked ? [...prev, category] : prev.filter(c => c !== category)
+      );
+    }
+  };
 
   return (
     <div className="mt-6">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
           <TabsTrigger value="summary">Summary</TabsTrigger>
+          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
         </TabsList>
         <TabsContent value="transactions" className="mt-6">
           <Card>
@@ -601,19 +613,34 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                     <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Filter by category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {ALL_CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full sm:w-48">
+                            Filter Categories
+                            <ChevronDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56">
+                          <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem
+                            checked={selectedCategories.length === ALL_CATEGORIES.length}
+                            onCheckedChange={(checked) => handleCategoryFilterChange('all', !!checked)}
+                          >
+                            Select All
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuSeparator />
+                          {ALL_CATEGORIES.map((category) => (
+                            <DropdownMenuCheckboxItem
+                              key={category}
+                              checked={selectedCategories.includes(category)}
+                              onCheckedChange={(checked) => handleCategoryFilterChange(category, !!checked)}
+                            >
+                              {category}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   </div>
                 </div>
              </CardHeader>
@@ -688,7 +715,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <ReceiptText className="h-8 w-8" />
                   </div>
                   <p className="font-medium">
-                    No settled expenses for this period.
+                    No settled expenses for this period or selection.
                   </p>
                   <p className="text-sm">
                     Once you settle expenses, a summary will appear here.
