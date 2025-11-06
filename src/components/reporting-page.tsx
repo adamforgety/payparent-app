@@ -2,14 +2,14 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { getYear, format, parse, isAfter, startOfMonth } from 'date-fns';
-import { BarChart, ReceiptText, Search, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { BarChart as BarChartIcon, ReceiptText, Search, ArrowUpDown, ChevronDown } from 'lucide-react';
 import {
   Bar,
   CartesianGrid,
   XAxis,
   YAxis,
   ResponsiveContainer,
-  RechartsBarChart,
+  BarChart,
   Tooltip,
 } from 'recharts';
 
@@ -400,7 +400,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                      <BarChart className="h-5 w-5 text-secondary-foreground" />
+                      <BarChartIcon className="h-5 w-5 text-secondary-foreground" />
                     </span>
                     <div>
                       <CardTitle>All Transactions Report</CardTitle>
@@ -594,7 +594,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                      <BarChart className="h-5 w-5 text-secondary-foreground" />
+                      <BarChartIcon className="h-5 w-5 text-secondary-foreground" />
                     </span>
                     <div>
                       <CardTitle>Expense Summary</CardTitle>
@@ -670,7 +670,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       config={chartConfig}
                       className="min-h-[250px] w-full"
                     >
-                      <RechartsBarChart data={periodData} accessibilityLayer>
+                      <BarChart data={periodData} accessibilityLayer>
                         <CartesianGrid vertical={false} />
                         <XAxis
                           dataKey="name"
@@ -688,7 +688,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                           fill="hsl(var(--primary))"
                           radius={4}
                         />
-                      </RechartsBarChart>
+                      </BarChart>
                     </ChartContainer>
                   </div>
                   <div>
@@ -747,3 +747,5 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </div>
   );
 }
+
+    
