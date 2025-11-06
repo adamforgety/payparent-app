@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
-import { format, parse, isValid, getYear } from 'date-fns';
+import { format, parse, isValid, getYear, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
@@ -110,35 +110,43 @@ function flexibleDateParse(dateInput: string | number): Date | null {
       // Adjust for timezone offset to get the correct local date
       return new Date(d.getTime() + (d.getTimezoneOffset() * 60000));
     }
-    // If it's a number but not a valid Excel date serial, it might be a year like 2024.
-    // We treat it as an invalid format for a full date.
     return null;
   }
 
   // Handle string inputs
   if (typeof dateInput === 'string') {
     const dateStr = dateInput.trim();
-    // Attempt to parse with native Date constructor first (handles ISO, common formats)
-    const nativeParsed = new Date(dateStr);
-    if (isValid(nativeParsed) && getYear(nativeParsed) > 1900) {
-      return nativeParsed;
-    }
     
+    // First, try standard ISO format, which is very reliable
+    let parsedDate = parseISO(dateStr);
+    if (isValid(parsedDate)) {
+        return parsedDate;
+    }
+
     // Try common formats with date-fns
     const formats = [
       'MM/dd/yyyy', 'M/d/yyyy', 'MM-dd-yyyy', 'M-d-yyyy',
+      'yyyy-MM-dd', 'yyyy/MM/dd',
       'MM/dd/yy', 'M/d/yy', 'MM-dd-yy', 'M-d-yy',
-      'yyyy-MM-dd', 'yyyy/MM/dd'
     ];
     for (const fmt of formats) {
-      const parsedDate = parse(dateStr, fmt, new Date());
+      parsedDate = parse(dateStr, fmt, new Date());
       if (isValid(parsedDate)) {
         // Handle 2-digit year ambiguity (e.g., '25' becomes 2025)
-        if (fmt.endsWith('yy') && getYear(parsedDate) < 2000) {
-            parsedDate.setFullYear(getYear(parsedDate) + 2000);
+        if (fmt.endsWith('yy')) {
+            const year = getYear(parsedDate);
+            if (year < 100) { // e.g. '24' becomes year 24, not 2024
+                parsedDate.setFullYear(year + 2000);
+            }
         }
         return parsedDate;
       }
+    }
+    
+    // Fallback for other native formats
+    const nativeParsed = new Date(dateStr);
+    if (isValid(nativeParsed) && getYear(nativeParsed) > 1900) {
+      return nativeParsed;
     }
   }
 
