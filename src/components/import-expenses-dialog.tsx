@@ -397,8 +397,11 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     const updatedSuccessfulImports = [...successfulImports];
     const itemToUpdate = { ...updatedSuccessfulImports[index] };
 
-    if (field === 'date' && value instanceof Date) {
-        itemToUpdate.date = value.toISOString();
+    if (field === 'date' && typeof value === 'string') {
+      const parsedDate = flexibleDateParse(value);
+      if (parsedDate) {
+        itemToUpdate.date = parsedDate.toISOString();
+      }
     } else if (field === 'amount' && typeof value === 'string') {
         let amountAsString = value.trim();
         if (amountAsString.startsWith('$')) {
@@ -545,7 +548,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                         <TableCell>
                                             <Input
                                                 value={format(new Date(exp.date), 'yyyy-MM-dd')}
-                                                onChange={(e) => handleSuccessfulRowChange(i, 'date', parseISO(e.target.value))}
+                                                onChange={(e) => handleSuccessfulRowChange(i, 'date', e.target.value)}
                                                 type="date"
                                                 className="h-8"
                                             />
@@ -624,7 +627,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                     <TableRow key={`fail-${fail.rowNumber}-${i}`}>
                                         <TableCell>
                                             <Input
-                                                value={fail.data.date}
+                                                value={isValid(new Date(fail.data.date)) ? format(new Date(fail.data.date), 'yyyy-MM-dd') : fail.data.date}
                                                 onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
                                                 className={cn("h-8", fail.errors.date && "border-destructive focus-visible:ring-destructive")}
                                             />
