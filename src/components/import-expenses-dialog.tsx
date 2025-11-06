@@ -121,13 +121,13 @@ function flexibleDateParse(dateInput: string | number): Date | null {
     if (typeof dateInput === 'string') {
         const dateStr = dateInput.trim();
         const commonFormats = [
+            'yyyy-MM-dd', 'yyyy/MM/dd',
             'M/d/yy', 'M/d/yyyy', 'MM/dd/yy', 'MM/dd/yyyy',
             'M-d-yy', 'M-d-yyyy', 'MM-dd-yy', 'MM-dd-yyyy',
-            'yyyy-MM-dd', 'yyyy/MM/dd'
         ];
 
         // Try parsing with standard ISO format and common formats
-        for (const fmt of ['yyyy-MM-dd', ...commonFormats]) {
+        for (const fmt of commonFormats) {
             const parsedDate = parse(dateStr, fmt, new Date());
             if (isValid(parsedDate)) {
                  // date-fns parse might return a date in the local timezone.
