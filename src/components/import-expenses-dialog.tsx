@@ -103,16 +103,17 @@ function flexibleDateParse(dateInput: string | number): Date | null {
 
   // Handle Excel date serial numbers (which are numbers)
   if (typeof dateInput === 'number') {
-    if (dateInput > 25569) { // Excel serial date for 1970-01-01
-        // The numeric value from Excel represents days since 1900-01-01 (with a bug for 1900 leap year).
-        // The standard epoch is 1970-01-01. The difference is 25569 days.
-        // Convert days to milliseconds for the UTC Date constructor.
-        const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
-        // Create a new Date object from the UTC milliseconds. This creates a date
-        // that is timezone-agnostic at its core.
-        return new Date(utcMilliseconds);
+    // The numeric value from Excel represents days since 1900-01-01 (with a bug for 1900 leap year).
+    // The standard epoch is 1970-01-01. The difference is 25569 days.
+    // We subtract an extra day for the leap year bug.
+    if (dateInput > 60) {
+        dateInput--;
     }
-    return null;
+    const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
+    const date = new Date(utcMilliseconds);
+    // The date is created in the local timezone. We need to create a new Date object
+    // that represents the same date but in UTC to avoid timezone shifts.
+    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
   }
 
   // Handle string inputs
@@ -122,7 +123,6 @@ function flexibleDateParse(dateInput: string | number): Date | null {
     // First, try standard ISO format, which is very reliable
     let parsedDate = parseISO(dateStr);
     if (isValid(parsedDate)) {
-        // parseISO can produce a date in the local timezone. We want to treat it as UTC.
         return add(parsedDate, { minutes: parsedDate.getTimezoneOffset() });
     }
 
@@ -555,7 +555,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                         <TableCell>
                                             <Input
                                                 value={format(new Date(exp.date), 'yyyy-MM-dd')}
-                                                onChange={(e) => handleSuccessfulRowChange(i, 'date', new Date(e.target.value))}
+                                                onChange={(e) => handleSuccessfulRowChange(i, 'date', parseISO(e.target.value))}
                                                 type="date"
                                                 className="h-8"
                                             />
