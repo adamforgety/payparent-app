@@ -26,7 +26,7 @@ interface AppContextType {
   addExpense: (newExpense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   addImportedExpenses: (
     importedExpenses: Omit<Expense, 'id' | 'year' | 'month'>[]
-  ) => void;
+  ) => { [monthId: string]: number };
   deleteExpense: (expenseId: string, monthId: string) => void;
   updateExpense: (updatedExpense: Expense, originalMonthId: string) => void;
   updateChildSupport: (updatedChildSupport: ChildSupport, monthId: string) => void;
@@ -306,13 +306,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const addImportedExpenses = (
     importedExpenses: Omit<Expense, 'id' | 'year' | 'month'>[]
   ) => {
-    if (!appData?.months) return;
+    if (!appData?.months) return {};
 
     const newMonths = { ...appData.months };
+    const monthSummary: { [monthId: string]: number } = {};
 
     importedExpenses.forEach((newExpense) => {
       const expenseDate = new Date(newExpense.date);
       const targetMonthId = format(expenseDate, 'yyyy-MM');
+      
+      monthSummary[targetMonthId] = (monthSummary[targetMonthId] || 0) + 1;
 
       const newExpenseWithId: Expense = {
         ...newExpense,
@@ -363,6 +366,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     updateAppData({ months: newMonths });
+    return monthSummary;
   };
 
   const deleteExpense = (expenseId: string, monthId: string) => {

@@ -55,7 +55,7 @@ const importSchema = z.object({
 type FormValues = z.infer<typeof importSchema>;
 
 interface ImportExpensesDialogProps {
-  onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => void;
+  onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => { [monthId: string]: number };
   parentNames: ParentNames;
 }
 
@@ -291,14 +291,16 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, {
+          type: 'array',
+          cellDates: false, // Read dates as raw strings
+          dateNF: 'yyyy-mm-dd',
+        });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, {
-          raw: false, // Read values as formatted strings
-          dateNF: 'yyyy-mm-dd', // A hint for date formatting
+          raw: false,
         });
-
 
         const successes: ParsedExpense[] = [];
         const failures: FailedImport[] = [];
@@ -355,31 +357,38 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
   
  const handleConfirmImport = () => {
     if (successfulImports.length > 0) {
-      onImport(successfulImports);
-    }
-    
-    if (failedImports.length > 0) {
-      const totalFailed = failedImports.length;
+      const summary = onImport(successfulImports);
+      const summaryParts = Object.entries(summary).map(
+        ([monthId, count]) =>
+          `${count} to ${format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}`
+      );
+      
       toast({
-        variant: successfulImports.length > 0 ? 'default' : 'destructive',
-        title: `Import Partially Complete: ${successfulImports.length} added, ${totalFailed} failed.`,
+        title: `Added ${successfulImports.length} expenses`,
+        description: summaryParts.join(', '),
+      });
+
+    } else if (failedImports.length === 0) {
+       toast({
+          variant: 'destructive',
+          title: 'Import Canceled',
+          description: 'No valid expenses were found to import.',
+        });
+    }
+
+    if (failedImports.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: `${failedImports.length} rows failed to import`,
         description: `Skipped rows remain in the dialog for correction.`,
       });
+      // Don't close dialog if there are failures but no successes
       if (successfulImports.length > 0) {
         handleOpenChange(false);
       }
-    } else if (successfulImports.length > 0) {
-       toast({
-        title: 'Import Successful',
-        description: `${successfulImports.length} expenses were added.`,
-      });
-       handleOpenChange(false);
     } else {
-        toast({
-          variant: 'destructive',
-          title: 'Import Failed',
-          description: 'No valid expenses found. Please check the data and try again.',
-        });
+      // Close dialog if all were successful
+      handleOpenChange(false);
     }
   };
 
