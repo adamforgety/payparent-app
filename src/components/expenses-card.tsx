@@ -149,41 +149,38 @@ export function ExpensesCard({
 
     if (item.category === 'Reimbursement') {
         const expense = item as Expense;
+        p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+        p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
         if (item.status === 'Settled') {
-            if (expense.paidBy === 'Parent 1') { // P1 paid P2
-                p1Adjustment = -expense.amount;
-                p2Adjustment = expense.amount;
-            } else { // P2 paid P1
+            if (expense.paidTo === 'Parent 1') { // P2 paid P1
                 p1Adjustment = expense.amount;
                 p2Adjustment = -expense.amount;
+            } else { // P1 paid P2
+                p1Adjustment = -expense.amount;
+                p2Adjustment = expense.amount;
             }
         }
     } else if (item.category === 'Child Support') {
-        if (item.status === 'Settled') {
-            if (item.paidBy === 'Parent 1') {
-                p1Owes = item.amount;
-            } else if (item.paidBy === 'Parent 2') {
-                p2Owes = item.amount;
-            }
+        p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+        p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
+        if (item.paidBy === 'Parent 1') {
+            p1Owes = item.amount; // Parent 1 is responsible for paying this amount
+        } else {
+            p2Owes = item.amount; // Parent 2 is responsible for paying this amount
         }
-    } else {
+    } else { // Standard expenses
         const expense = item as Expense;
+        p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+        p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+        
         const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
         const p1Share = item.amount * (split['Parent 1'] / 100);
         const p2Share = item.amount * (split['Parent 2'] / 100);
 
-        if (item.status === 'Settled') {
-          const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-          const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-          p1Owes = p1Share - p1InitialPaid;
-          p2Owes = p2Share - p2InitialPaid;
-        } else { // Unsettled
-            p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-            p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-            p1Owes = p1Share;
-            p2Owes = p2Share;
-        }
+        p1Owes = p1Share;
+        p2Owes = p2Share;
     }
+    
     return { p1Paid, p2Paid, p1Owes, p2Owes, p1Adjustment, p2Adjustment };
   };
 
@@ -255,16 +252,20 @@ export function ExpensesCard({
         const { p1Paid, p2Paid, p1Owes, p2Owes, p1Adjustment, p2Adjustment } = renderItemDetails(item);
         
         acc.totalAmount += item.amount;
-        acc.totalP1Paid += p1Paid;
-        acc.totalP2Paid += p2Paid;
-        acc.totalP1Owes += p1Owes;
-        acc.totalP2Owes += p2Owes;
-        acc.totalP1Adjustment += p1Adjustment;
-        acc.totalP2Adjustment += p2Adjustment;
+        
+        if (item.status === 'Settled') {
+            acc.totalP1Paid += p1Owes + p1Adjustment;
+            acc.totalP2Paid += p2Owes + p2Adjustment;
+        } else { // Unsettled
+            acc.totalP1Paid += p1Paid;
+            acc.totalP2Paid += p2Paid;
+            acc.totalP1Owes += p1Owes;
+            acc.totalP2Owes += p2Owes;
+        }
         
         return acc;
       },
-      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0, totalP1Adjustment: 0, totalP2Adjustment: 0 }
+      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0 }
     );
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
 
@@ -418,6 +419,14 @@ export function ExpensesCard({
                   filteredAndSortedItems.map((item) => {
                     const { p1Paid, p2Paid, p1Owes, p2Owes, p1Adjustment, p2Adjustment } = renderItemDetails(item);
 
+                    // Final calculation for what a parent owes for a row. Share - Paid
+                    const p1OwesFinal = p1Owes - p1Paid + p1Adjustment;
+                    const p2OwesFinal = p2Owes - p2Paid + p2Adjustment;
+
+                    // For unsettled items, "Paid" is who paid initially. For settled, it's their share.
+                    const p1DisplayPaid = item.status === 'Unsettled' ? p1Paid : p1Owes + p1Adjustment;
+                    const p2DisplayPaid = item.status === 'Unsettled' ? p2Paid : p2Owes + p2Adjustment;
+                    
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
@@ -458,16 +467,16 @@ export function ExpensesCard({
                           ${item.amount.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${p1Paid.toFixed(2)}
+                          ${p1DisplayPaid.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${p2Paid.toFixed(2)}
+                          ${p2DisplayPaid.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right", p1Owes < 0 && "text-green-600", p1Owes > 0 && "text-destructive")}>
-                           {p1Owes < 0 ? `($${Math.abs(p1Owes).toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
+                        <TableCell className={cn("text-right", p1OwesFinal < 0 && "text-green-600", p1OwesFinal > 0 && "text-destructive")}>
+                           {p1OwesFinal < 0 ? `($${Math.abs(p1OwesFinal).toFixed(2)})` : `$${p1OwesFinal.toFixed(2)}`}
                         </TableCell>
-                        <TableCell className={cn("text-right", p2Owes < 0 && "text-green-600", p2Owes > 0 && "text-destructive")}>
-                            {p2Owes < 0 ? `($${Math.abs(p2Owes).toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
+                        <TableCell className={cn("text-right", p2OwesFinal < 0 && "text-green-600", p2OwesFinal > 0 && "text-destructive")}>
+                            {p2OwesFinal < 0 ? `($${Math.abs(p2OwesFinal).toFixed(2)})` : `$${p2OwesFinal.toFixed(2)}`}
                         </TableCell>
                         <TableCell className="no-print text-center">
                             {item.type === 'expense' && item.receiptUrl && (
