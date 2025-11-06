@@ -97,63 +97,53 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
 
 // A much more robust date parsing function
 function flexibleDateParse(dateInput: string | number): Date | null {
-  if (dateInput === null || dateInput === undefined || dateInput === '') {
-    return null;
-  }
-
-  // Handle Excel date serial numbers (which are numbers)
-  if (typeof dateInput === 'number') {
-    // The numeric value from Excel represents days since 1900-01-01 (with a bug for 1900 leap year).
-    // The standard epoch is 1970-01-01. The difference is 25569 days.
-    // We subtract an extra day for the leap year bug.
-    if (dateInput > 60) {
-        dateInput--;
-    }
-    const utcMilliseconds = (dateInput - 25569) * 86400 * 1000;
-    const date = new Date(utcMilliseconds);
-    // The date is created in the local timezone. We need to create a new Date object
-    // that represents the same date but in UTC to avoid timezone shifts.
-    return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  }
-
-  // Handle string inputs
-  if (typeof dateInput === 'string') {
-    const dateStr = dateInput.trim();
-    
-    // First, try standard ISO format, which is very reliable
-    let parsedDate = parseISO(dateStr);
-    if (isValid(parsedDate)) {
-        return add(parsedDate, { minutes: parsedDate.getTimezoneOffset() });
+    if (dateInput === null || dateInput === undefined || dateInput === '') {
+        return null;
     }
 
-    // Try common formats with date-fns
-    const formats = [
-      'MM/dd/yyyy', 'M/d/yyyy', 'MM-dd-yyyy', 'M-d-yyyy',
-      'yyyy-MM-dd', 'yyyy/MM/dd',
-      'MM/dd/yy', 'M/d/yy', 'MM-dd-yy', 'M-d-yy',
-    ];
-    for (const fmt of formats) {
-      parsedDate = parse(dateStr, fmt, new Date());
-      if (isValid(parsedDate)) {
-        // Handle 2-digit year ambiguity (e.g., '25' becomes 2025)
-        if (fmt.endsWith('yy')) {
-            const year = getYear(parsedDate);
-            if (year < 100) { // e.g. '24' becomes year 24, not 2024
-                parsedDate.setFullYear(year + 2000);
+    // Handle Excel's numeric date format
+    if (typeof dateInput === 'number') {
+        // Excel's epoch starts on 1900-01-01, but it incorrectly thinks 1900 was a leap year.
+        // The standard JS epoch is 1970-01-01. The difference is 25569 days.
+        if (dateInput > 60) {
+            // Adjust for the 1900 leap year bug for dates after Feb 28, 1900
+            dateInput--;
+        }
+        // (dateInput - 1) is because Excel's day 1 is Jan 1 1900.
+        // We convert days to milliseconds.
+        const excelEpoch = new Date(1900, 0, dateInput);
+        
+        // Return a new Date object representing the date in UTC to avoid timezone shifts.
+        return new Date(Date.UTC(excelEpoch.getFullYear(), excelEpoch.getMonth(), excelEpoch.getDate()));
+    }
+
+    // Handle string dates
+    if (typeof dateInput === 'string') {
+        const dateStr = dateInput.trim();
+        const commonFormats = [
+            'M/d/yy', 'M/d/yyyy', 'MM/dd/yy', 'MM/dd/yyyy',
+            'M-d-yy', 'M-d-yyyy', 'MM-dd-yy', 'MM-dd-yyyy',
+            'yyyy-MM-dd', 'yyyy/MM/dd'
+        ];
+
+        // Try parsing with standard ISO format and common formats
+        for (const fmt of ['yyyy-MM-dd', ...commonFormats]) {
+            const parsedDate = parse(dateStr, fmt, new Date());
+            if (isValid(parsedDate)) {
+                 // date-fns parse might return a date in the local timezone.
+                 // We create a new UTC date to standardize it.
+                 return new Date(Date.UTC(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate()));
             }
         }
-        return parsedDate;
-      }
+        
+        // Final fallback for other native formats if date-fns fails
+        const nativeParsed = new Date(dateStr);
+        if (isValid(nativeParsed)) {
+            return new Date(Date.UTC(nativeParsed.getFullYear(), nativeParsed.getMonth(), nativeParsed.getDate()));
+        }
     }
-    
-    // Fallback for other native formats
-    const nativeParsed = new Date(dateStr);
-    if (isValid(nativeParsed) && getYear(nativeParsed) > 1900) {
-      return add(nativeParsed, { minutes: nativeParsed.getTimezoneOffset() });
-    }
-  }
 
-  return null;
+    return null;
 }
 
 
