@@ -27,10 +27,12 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
   const { user } = useFirebase();
   const router = useRouter();
 
-  const handleSignOut = async () => {
-    await signOut(auth);
-    router.push('/login');
-    router.refresh();
+  const handleSignOut = () => {
+    signOut(auth).then(() => {
+      // Redirect immediately after sign-out is initiated.
+      // The onAuthStateChanged listener will handle the final state cleanup.
+      router.push('/login');
+    });
   };
 
   const getInitials = (email: string | null | undefined) => {
