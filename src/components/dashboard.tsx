@@ -396,7 +396,7 @@ function DashboardComponent() {
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
                       >
-                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
+                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
                             <Button>
                               <Plus className="mr-2 h-4 w-4" />
                               Add Expense
@@ -479,7 +479,7 @@ function DashboardComponent() {
             <TooltipProvider>
                 <Tooltip>
                 <TooltipTrigger asChild>
-                      <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
+                      <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
                         <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
                             <Plus className="w-6 w-6" />
                         </Button>

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon, PlusCircle } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -75,10 +75,11 @@ type FormValues = z.infer<typeof expenseSchema>;
 interface AddExpenseDialogProps {
   onAddExpense: (expense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   parentNames: ParentNames;
+  currentDate: Date;
   children?: ReactNode;
 }
 
-export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, children }: AddExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
@@ -88,10 +89,23 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
     defaultValues: {
       description: '',
       amount: '' as any,
-      date: new Date(),
+      date: currentDate,
       category: 'Other',
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({
+        description: '',
+        amount: '' as any,
+        date: currentDate,
+        paidBy: undefined,
+        category: 'Other',
+        receipt: undefined,
+      });
+    }
+  }, [isOpen, currentDate, form]);
 
   const receiptRef = form.register('receipt');
 
@@ -277,6 +291,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, children }: AddExp
                           }
                           setIsDatePickerOpen(false);
                         }}
+                        defaultMonth={currentDate}
                         initialFocus
                       />
                     </PopoverContent>
