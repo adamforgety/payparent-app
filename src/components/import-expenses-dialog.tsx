@@ -291,12 +291,13 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        // Set raw: false to get formatted strings, but this might not be ideal for dates.
-        // Let's use raw: true and handle types in validation.
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, {
+          raw: false, // Read values as formatted strings
+          dateNF: 'yyyy-mm-dd', // A hint for date formatting
+        });
 
 
         const successes: ParsedExpense[] = [];
