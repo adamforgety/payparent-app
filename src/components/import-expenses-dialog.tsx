@@ -111,15 +111,21 @@ function flexibleDateParse(dateInput: string | number): Date | null {
         }
         // (dateInput - 1) is because Excel's day 1 is Jan 1 1900.
         // We convert days to milliseconds.
-        const excelEpoch = new Date(1900, 0, dateInput);
+        const excelEpoch = new Date(Date.UTC(1900, 0, dateInput));
         
         // Return a new Date object representing the date in UTC to avoid timezone shifts.
-        return new Date(Date.UTC(excelEpoch.getFullYear(), excelEpoch.getMonth(), excelEpoch.getDate()));
+        return excelEpoch;
     }
 
     // Handle string dates
     if (typeof dateInput === 'string') {
         const dateStr = dateInput.trim();
+        // Try parsing ISO format first
+        const isoParsed = parseISO(dateStr);
+        if (isValid(isoParsed)) {
+            return new Date(Date.UTC(isoParsed.getFullYear(), isoParsed.getMonth(), isoParsed.getDate()));
+        }
+
         const commonFormats = [
             'yyyy-MM-dd', 'yyyy/MM/dd',
             'M/d/yy', 'M/d/yyyy', 'MM/dd/yy', 'MM/dd/yyyy',
@@ -627,7 +633,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                     <TableRow key={`fail-${fail.rowNumber}-${i}`}>
                                         <TableCell>
                                             <Input
-                                                value={isValid(new Date(fail.data.date)) ? format(new Date(fail.data.date), 'yyyy-MM-dd') : fail.data.date}
+                                                value={fail.data.date}
                                                 onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
                                                 className={cn("h-8", fail.errors.date && "border-destructive focus-visible:ring-destructive")}
                                             />
