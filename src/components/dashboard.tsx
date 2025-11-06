@@ -397,7 +397,7 @@ function DashboardComponent() {
                         appData={appData}
                       >
                          <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames}>
-                            <Button variant="outline">
+                            <Button>
                               <Plus className="mr-2 h-4 w-4" />
                               Add Expense
                             </Button>
