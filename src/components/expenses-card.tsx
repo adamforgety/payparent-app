@@ -1,7 +1,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet, Plus } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet, Plus, Banknote } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -61,8 +61,9 @@ type DisplayItem = {
     description: string;
     amount: number;
     paidBy: Parent | 'None';
+    paidTo?: Parent | 'None';
     status: PaymentStatus;
-    category: 'Child Support' | Expense['category'];
+    category: 'Child Support' | 'Reimbursement' | Expense['category'];
     type: 'expense' | 'child_support';
     receiptUrl?: string | null;
     receiptFilename?: string | null;
@@ -138,6 +139,53 @@ export function ExpensesCard({
     setLocalItems(allItems);
   }, [expenses, childSupport, currentDate]);
 
+  const renderItemDetails = (item: DisplayItem) => {
+    let p1Paid = 0;
+    let p2Paid = 0;
+    let p1Owes = 0;
+    let p2Owes = 0;
+    let p1Adjustment = 0;
+    let p2Adjustment = 0;
+
+    if (item.category === 'Reimbursement') {
+        const expense = item as Expense;
+        if (item.status === 'Settled') {
+            if (expense.paidBy === 'Parent 1') { // P1 paid P2
+                p1Adjustment = -expense.amount;
+                p2Adjustment = expense.amount;
+            } else { // P2 paid P1
+                p1Adjustment = expense.amount;
+                p2Adjustment = -expense.amount;
+            }
+        }
+    } else if (item.category === 'Child Support') {
+        if (item.status === 'Settled') {
+            if (item.paidBy === 'Parent 1') {
+                p1Owes = item.amount;
+            } else if (item.paidBy === 'Parent 2') {
+                p2Owes = item.amount;
+            }
+        }
+    } else {
+        const expense = item as Expense;
+        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+        const p1Share = item.amount * (split['Parent 1'] / 100);
+        const p2Share = item.amount * (split['Parent 2'] / 100);
+
+        if (item.status === 'Settled') {
+          const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+          const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+          p1Owes = p1Share - p1InitialPaid;
+          p2Owes = p2Share - p2InitialPaid;
+        } else { // Unsettled
+            p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+            p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+            p1Owes = p1Share;
+            p2Owes = p2Share;
+        }
+    }
+    return { p1Paid, p2Paid, p1Owes, p2Owes, p1Adjustment, p2Adjustment };
+  };
 
   const filteredAndSortedItems = useMemo(() => {
     let items = [...localItems];
@@ -204,51 +252,19 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
+        const { p1Paid, p2Paid, p1Owes, p2Owes, p1Adjustment, p2Adjustment } = renderItemDetails(item);
+        
         acc.totalAmount += item.amount;
-
-        let p1Paid = 0, p2Paid = 0, p1Owes = 0, p2Owes = 0, p1Credit = 0, p2Credit = 0;
-
-        if (item.type === 'child_support') {
-          if (item.status === 'Settled') {
-            if (item.paidBy === 'Parent 1') p1Paid = item.amount;
-            if (item.paidBy === 'Parent 2') p2Paid = item.amount;
-          } else {
-            if (item.paidBy === 'Parent 1') p1Owes = item.amount;
-            if (item.paidBy === 'Parent 2') p2Owes = item.amount;
-          }
-        } else {
-          const expense = item as Expense;
-          const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-          const p1Share = item.amount * (split['Parent 1'] / 100);
-          const p2Share = item.amount * (split['Parent 2'] / 100);
-
-          if (item.status === 'Settled') {
-            p1Paid = p1Share;
-            p2Paid = p2Share;
-          } else { // Unsettled
-            const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-            const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-            p1Paid = p1InitialPaid;
-            p2Paid = p2InitialPaid;
-
-            const p1Net = p1Share - p1InitialPaid;
-            const p2Net = p2Share - p2InitialPaid;
-
-            if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
-            if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
-          }
-        }
-
         acc.totalP1Paid += p1Paid;
         acc.totalP2Paid += p2Paid;
         acc.totalP1Owes += p1Owes;
         acc.totalP2Owes += p2Owes;
-        acc.totalP1Credit += p1Credit;
-        acc.totalP2Credit += p2Credit;
+        acc.totalP1Adjustment += p1Adjustment;
+        acc.totalP2Adjustment += p2Adjustment;
         
         return acc;
       },
-      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0, totalP1Credit: 0, totalP2Credit: 0 }
+      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0, totalP1Adjustment: 0, totalP2Adjustment: 0 }
     );
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
 
@@ -333,48 +349,6 @@ export function ExpensesCard({
     </TableHead>
   );
 
-  const renderItemDetails = (item: DisplayItem) => {
-        let p1Paid = 0;
-        let p2Paid = 0;
-        let p1Owes = 0;
-        let p2Owes = 0;
-        let p1Credit = 0;
-        let p2Credit = 0;
-
-        if (item.type === 'child_support') {
-            if (item.status === 'Settled') {
-                if (item.paidBy === 'Parent 1') p1Paid = item.amount;
-                if (item.paidBy === 'Parent 2') p2Paid = item.amount;
-            } else {
-                if (item.paidBy === 'Parent 1') p1Owes = item.amount;
-                if (item.paidBy === 'Parent 2') p2Owes = item.amount;
-            }
-        } else {
-            const expense = item as Expense;
-            const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-            const p1Share = item.amount * (split['Parent 1'] / 100);
-            const p2Share = item.amount * (split['Parent 2'] / 100);
-
-            if (item.status === 'Settled') {
-                p1Paid = p1Share;
-                p2Paid = p2Share;
-            } else {
-                const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-                p1Paid = p1InitialPaid;
-                p2Paid = p2InitialPaid;
-
-                const p1Net = p1Share - p1InitialPaid;
-                const p2Net = p2Share - p2InitialPaid;
-
-                if (p1Net > 0) p1Owes = p1Net; else p1Credit = -p1Net;
-                if (p2Net > 0) p2Owes = p2Net; else p2Credit = -p2Net;
-            }
-        }
-        return { p1Paid, p2Paid, p1Owes, p2Owes, p1Credit, p2Credit };
-  };
-
-
   return (
     <Card>
       <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -429,7 +403,8 @@ export function ExpensesCard({
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                   <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
-                  <SortableHeader sortKey="amount" className="text-right w-[100px]">Total</SortableHeader>
+                  <TableHead className="text-right w-[120px]">Adjustments</TableHead>
+                  <TableHead className="text-right w-[100px]">Total</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Paid</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 2']} Paid</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Owes</TableHead>
@@ -441,7 +416,7 @@ export function ExpensesCard({
               <TableBody>
                 {filteredAndSortedItems.length > 0 ? (
                   filteredAndSortedItems.map((item) => {
-                    const { p1Paid, p2Paid, p1Owes, p2Owes, p1Credit, p2Credit } = renderItemDetails(item);
+                    const { p1Paid, p2Paid, p1Owes, p2Owes, p1Adjustment, p2Adjustment } = renderItemDetails(item);
 
                     return (
                       <TableRow key={item.id}>
@@ -450,7 +425,7 @@ export function ExpensesCard({
                           <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                          <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}>{item.category}</Badge>
                         </TableCell>
                         <TableCell>
                           {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
@@ -467,6 +442,18 @@ export function ExpensesCard({
                             </Label>
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          {p1Adjustment !== 0 && (
+                            <div className={cn(p1Adjustment > 0 ? "text-green-600" : "text-destructive")}>
+                              {p1Adjustment > 0 ? '+' : ''}${p1Adjustment.toFixed(2)} for {parentNames['Parent 1']}
+                            </div>
+                          )}
+                           {p2Adjustment !== 0 && (
+                            <div className={cn(p2Adjustment > 0 ? "text-green-600" : "text-destructive")}>
+                              {p2Adjustment > 0 ? '+' : ''}${p2Adjustment.toFixed(2)} for {parentNames['Parent 2']}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
                         </TableCell>
@@ -476,11 +463,11 @@ export function ExpensesCard({
                         <TableCell className="text-right">
                           ${p2Paid.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right", p1Owes > 0 && "text-destructive font-semibold")}>
-                          {p1Credit > 0 ? `($${p1Credit.toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
+                        <TableCell className={cn("text-right", p1Owes < 0 && "text-green-600", p1Owes > 0 && "text-destructive")}>
+                           {p1Owes < 0 ? `($${Math.abs(p1Owes).toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                         </TableCell>
-                        <TableCell className={cn("text-right", p2Owes > 0 && "text-destructive font-semibold")}>
-                          {p2Credit > 0 ? `($${p2Credit.toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
+                        <TableCell className={cn("text-right", p2Owes < 0 && "text-green-600", p2Owes > 0 && "text-destructive")}>
+                            {p2Owes < 0 ? `($${Math.abs(p2Owes).toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
                         </TableCell>
                         <TableCell className="no-print text-center">
                             {item.type === 'expense' && item.receiptUrl && (
@@ -537,7 +524,7 @@ export function ExpensesCard({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={12} className="h-24 text-center">
                       {searchTerm ? `No results for "${searchTerm}".` : `No ${statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.`}
                     </TableCell>
                   </TableRow>
@@ -546,7 +533,7 @@ export function ExpensesCard({
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={5}></TableCell>
+                    <TableCell colSpan={6}></TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
@@ -554,18 +541,18 @@ export function ExpensesCard({
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
                   <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={5}>Totals</TableCell>
+                    <TableCell colSpan={6}>Totals</TableCell>
                     <TableCell className="text-right">
                       ${totals.totalP1Paid.toFixed(2)}
                     </TableCell>
                      <TableCell className="text-right">
                       ${totals.totalP2Paid.toFixed(2)}
                     </TableCell>
-                    <TableCell className={cn("text-right", totals.totalP1Owes > 0 && "text-destructive")}>
-                      ${totals.totalP1Owes.toFixed(2)}
+                    <TableCell className={cn("text-right", totals.totalP1Owes < 0 && "text-green-600", totals.totalP1Owes > 0 && "text-destructive")}>
+                      {totals.totalP1Owes < 0 ? `($${Math.abs(totals.totalP1Owes).toFixed(2)})` : `$${totals.totalP1Owes.toFixed(2)}`}
                     </TableCell>
-                    <TableCell className={cn("text-right", totals.totalP2Owes > 0 && "text-destructive")}>
-                      ${totals.totalP2Owes.toFixed(2)}
+                    <TableCell className={cn("text-right", totals.totalP2Owes < 0 && "text-green-600", totals.totalP2Owes > 0 && "text-destructive")}>
+                       {totals.totalP2Owes < 0 ? `($${Math.abs(totals.totalP2Owes).toFixed(2)})` : `$${totals.totalP2Owes.toFixed(2)}`}
                     </TableCell>
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
@@ -590,7 +577,9 @@ export function ExpensesCard({
                             </div>
                              <div className="flex justify-between">
                                 <span className="text-muted-foreground">Owes</span>
-                                <span className={cn(totals.totalP1Owes > 0 && "text-destructive font-semibold")}>${totals.totalP1Owes.toFixed(2)}</span>
+                                <span className={cn("font-semibold", totals.totalP1Owes > 0 && "text-destructive", totals.totalP1Owes < 0 && "text-green-600")}>
+                                  {totals.totalP1Owes < 0 ? `-$${Math.abs(totals.totalP1Owes).toFixed(2)}` : `$${totals.totalP1Owes.toFixed(2)}`}
+                                </span>
                             </div>
                         </div>
                         <Separator />
@@ -602,7 +591,9 @@ export function ExpensesCard({
                             </div>
                              <div className="flex justify-between">
                                 <span className="text-muted-foreground">Owes</span>
-                                <span className={cn(totals.totalP2Owes > 0 && "text-destructive font-semibold")}>${totals.totalP2Owes.toFixed(2)}</span>
+                                <span className={cn("font-semibold", totals.totalP2Owes > 0 && "text-destructive", totals.totalP2Owes < 0 && "text-green-600")}>
+                                  {totals.totalP2Owes < 0 ? `-$${Math.abs(totals.totalP2Owes).toFixed(2)}` : `$${totals.totalP2Owes.toFixed(2)}`}
+                                </span>
                             </div>
                         </div>
                     </CardContent>
@@ -610,7 +601,7 @@ export function ExpensesCard({
              )}
             {filteredAndSortedItems.length > 0 ? (
                 filteredAndSortedItems.map((item) => {
-                    const { p1Paid, p2Paid, p1Owes, p2Owes, p1Credit, p2Credit } = renderItemDetails(item);
+                    const { p1Owes, p2Owes } = renderItemDetails(item);
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -658,7 +649,7 @@ export function ExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                                    <Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}>{item.category}</Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
 
@@ -678,16 +669,20 @@ export function ExpensesCard({
                                     </div>
                                 </div>
                             </div>
-                            {(p1Owes > 0 || p2Owes > 0 || p1Credit > 0 || p2Credit > 0) && (
+                            {(p1Owes !== 0 || p2Owes !== 0) && (
                                 <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
                                     <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
                                      <div className="flex justify-between">
                                         <span className="text-muted-foreground">{parentNames['Parent 1']} Owes</span>
-                                        <span className={cn(p1Owes > 0 && "text-destructive font-semibold")}>${p1Owes.toFixed(2)}</span>
+                                        <span className={cn("font-semibold", p1Owes > 0 && "text-destructive", p1Owes < 0 && "text-green-600")}>
+                                          {p1Owes < 0 ? `-$${Math.abs(p1Owes).toFixed(2)}` : `$${p1Owes.toFixed(2)}`}
+                                        </span>
                                      </div>
                                       <div className="flex justify-between">
                                         <span className="text-muted-foreground">{parentNames['Parent 2']} Owes</span>
-                                        <span className={cn(p2Owes > 0 && "text-destructive font-semibold")}>${p2Owes.toFixed(2)}</span>
+                                        <span className={cn("font-semibold", p2Owes > 0 && "text-destructive", p2Owes < 0 && "text-green-600")}>
+                                          {p2Owes < 0 ? `-$${Math.abs(p2Owes).toFixed(2)}` : `$${p2Owes.toFixed(2)}`}
+                                        </span>
                                      </div>
                                 </div>
                             )}
