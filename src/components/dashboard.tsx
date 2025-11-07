@@ -480,7 +480,7 @@ function DashboardComponent() {
               </div>
             </TabsContent>
           </Tabs>
-          <div className="fixed bottom-8 left-8 z-50 no-print md:left-auto md:right-8">
+          <div className="fixed bottom-8 right-8 z-50 no-print">
             <TooltipProvider>
                 <Tooltip>
                 <TooltipTrigger asChild>
@@ -490,7 +490,7 @@ function DashboardComponent() {
                         </Button>
                       </AddExpenseDialog>
                 </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={15}>
+                <TooltipContent side="left" sideOffset={15}>
                     <p>Add New Expense</p>
                 </TooltipContent>
                 </Tooltip>
