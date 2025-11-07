@@ -1,7 +1,7 @@
 'use client';
 
 import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date-fns';
-import { ReceiptText, Trash2, Paperclip, Edit } from 'lucide-react';
+import { ReceiptText, Trash2, Paperclip, Edit, Search, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
 import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
@@ -23,6 +23,7 @@ import {
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
+import { Input } from './ui/input';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -50,7 +51,14 @@ type UnsettledItem = {
   medicalExpenseSplit: MedicalExpenseSplit;
   originalExpense?: Expense;
   originalChildSupport?: ChildSupport;
+  status: PaymentStatus;
 };
+
+type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount';
+type SortConfig = {
+  key: SortKey;
+  direction: 'ascending' | 'descending';
+} | null;
 
 export function AllUnsettledExpensesCard({
   appData,
@@ -65,6 +73,8 @@ export function AllUnsettledExpensesCard({
   const { batchUpdateMonths } = useAppContext();
   const [yearFilter, setYearFilter] = useState<string>(initialYearFilter || String(currentDate.getFullYear()));
   const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter || 'all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
 
   useEffect(() => {
     if (initialYearFilter) setYearFilter(initialYearFilter);
@@ -91,7 +101,6 @@ export function AllUnsettledExpensesCard({
   }, [appData.months, yearFilter]);
 
   useEffect(() => {
-    // Reset month filter if it's not valid for the new year
     if (monthFilter !== 'all' && !monthFilter.startsWith(yearFilter)) {
       setMonthFilter('all');
     }
@@ -117,29 +126,20 @@ export function AllUnsettledExpensesCard({
       const monthDate = parse(monthId, 'yyyy-MM', new Date());
       const isFutureMonth = isAfter(monthDate, startOfMonth(new Date()));
 
-      // Add unsettled expenses
       monthData.expenses
         .filter((exp) => exp.status === 'Unsettled')
         .forEach((exp) => {
           items.push({
-            id: exp.id,
+            ...exp,
             monthId,
-            date: exp.date,
-            description: exp.description,
-            amount: exp.amount,
-            paidBy: exp.paidBy,
-            category: exp.category,
             type: 'expense',
-            receiptUrl: exp.receiptUrl,
-            receiptFilename: exp.receiptFilename,
+            originalExpense: exp,
             parentNames: monthData.parentNames,
             expenseSplit: monthData.expenseSplit,
             medicalExpenseSplit: monthData.medicalExpenseSplit,
-            originalExpense: exp,
           });
         });
 
-      // Add unsettled child support (if not in a future month)
       if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isFutureMonth) {
         items.push({
           id: `cs-${monthId}`,
@@ -154,13 +154,94 @@ export function AllUnsettledExpensesCard({
           expenseSplit: monthData.expenseSplit, 
           medicalExpenseSplit: monthData.medicalExpenseSplit,
           originalChildSupport: monthData.childSupport,
+          status: 'Unsettled',
         });
       }
     }
-
-    // Sort by date descending
-    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return items;
   }, [appData.months, yearFilter, monthFilter]);
+
+  const renderItemDetails = (item: UnsettledItem) => {
+    let p1Owes = 0;
+    let p2Owes = 0;
+  
+    if (item.type === 'child_support') {
+      if (item.paidBy === 'Parent 1') {
+        p1Owes = item.amount;
+      } else if (item.paidBy === 'Parent 2') {
+        p2Owes = item.amount;
+      }
+    } else {
+      const expense = item as Expense;
+      let p1Share: number, p2Share: number;
+  
+      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? item.medicalExpenseSplit : item.expenseSplit;
+      p1Share = expense.amount * (split['Parent 1'] / 100);
+      p2Share = expense.amount * (split['Parent 2'] / 100);
+      
+      const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+      const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+  
+      p1Owes = p1Share - p1InitialPaid;
+      p2Owes = p2Share - p2InitialPaid;
+    }
+    
+    return { p1Owes, p2Owes };
+  };
+
+  const filteredAndSortedItems = useMemo(() => {
+    let items = [...allUnsettledItems];
+    
+    const lowercasedFilter = searchTerm.toLowerCase();
+    if (lowercasedFilter) {
+        items = items.filter(item => {
+            const paidByName = item.paidBy && item.paidBy !== 'None' ? item.parentNames[item.paidBy].toLowerCase() : '';
+            return item.description.toLowerCase().includes(lowercasedFilter) ||
+                   item.category.toLowerCase().includes(lowercasedFilter) ||
+                   paidByName.includes(lowercasedFilter);
+        });
+    }
+
+    if (sortConfig !== null) {
+      items.sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        if (sortConfig.key === 'paidBy') {
+            aValue = a.paidBy === 'None' ? '' : a.parentNames[a.paidBy];
+            bValue = b.paidBy === 'None' ? '' : b.parentNames[b.paidBy];
+        } else {
+             aValue = a[sortConfig.key as keyof UnsettledItem];
+             bValue = b[sortConfig.key as keyof UnsettledItem];
+        }
+
+        if (sortConfig.key === 'date') {
+          const dateA = new Date(aValue).getTime();
+          const dateB = new Date(bValue).getTime();
+          if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+          return 0;
+        }
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return sortConfig.direction === 'ascending'
+                ? aValue.localeCompare(bValue)
+                : bValue.localeCompare(aValue);
+        }
+
+        return 0;
+      });
+    }
+
+
+    return items;
+  }, [allUnsettledItems, searchTerm, sortConfig]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -179,7 +260,7 @@ export function AllUnsettledExpensesCard({
 
   const handleMarkAllSettled = () => {
     const today = startOfDay(new Date());
-    const itemsToSettle = allUnsettledItems.filter(item => 
+    const itemsToSettle = filteredAndSortedItems.filter(item => 
       !isAfter(startOfDay(new Date(item.date)), today)
     );
 
@@ -195,12 +276,12 @@ export function AllUnsettledExpensesCard({
 
     itemsToSettle.forEach(item => {
       const { monthId } = item;
+      if (!appData.months[monthId]) return;
 
-      // Initialize month update if not present
       if (!monthUpdates[monthId]) {
         monthUpdates[monthId] = {
-          expenses: [...(appData.months[monthId]?.expenses || [])],
-          childSupport: { ...(appData.months[monthId]?.childSupport || { amount: 0, paidBy: 'None', status: 'Unsettled' }) }
+          expenses: [...appData.months[monthId].expenses],
+          childSupport: { ...appData.months[monthId].childSupport }
         };
       }
 
@@ -228,169 +309,140 @@ export function AllUnsettledExpensesCard({
     });
   };
 
-
-  const { totalAmount, totalParent1Owes, totalParent2Owes } = useMemo(() => {
-     let amount = 0;
-     let p1Owes = 0;
-     let p2Owes = 0;
-
-     allUnsettledItems.forEach(item => {
-        amount += item.amount;
-        
-        let p1Share = 0;
-        let p2Share = 0;
+  const totals = useMemo(() => {
+    return filteredAndSortedItems.reduce(
+      (acc, item) => {
         let p1Paid = 0;
         let p2Paid = 0;
+        
+        const { p1Owes, p2Owes } = renderItemDetails(item);
 
         if (item.type === 'expense') {
-          const expense = item.originalExpense!;
-          if (expense.category === 'Medical' || expense.category === 'Child Care') {
-            p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
-            p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
-          } else {
-            p1Share = item.amount * (item.expenseSplit['Parent 1'] / 100);
-            p2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
-          }
-          p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-          p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-        } else if (item.type === 'child_support') {
-            if (item.paidBy === 'Parent 1') {
-                p1Owes += item.amount;
-            } else if (item.paidBy === 'Parent 2') {
-                p2Owes += item.amount;
-            }
-            return; // Skip remaining calculation for child support
+            p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
+            p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
         }
+
+        acc.totalAmount += item.amount;
+        acc.totalP1Paid += p1Paid;
+        acc.totalP2Paid += p2Paid;
+        acc.totalP1Owes += p1Owes;
+        acc.totalP2Owes += p2Owes;
         
-        p1Owes += Math.max(0, p1Share - p1Paid);
-        p2Owes += Math.max(0, p2Share - p2Paid);
-     });
+        return acc;
+      },
+      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0 }
+    );
+  }, [filteredAndSortedItems]);
 
-     return { totalAmount: amount, totalParent1Owes: p1Owes, totalParent2Owes: p2Owes };
+  const requestSort = (key: SortKey) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
-  }, [allUnsettledItems]);
-
-  const renderItemDetails = (item: UnsettledItem) => {
-      let p1OwesAmount = 0;
-      let p2OwesAmount = 0;
-      
-      if (item.type === 'expense') {
-          const expense = item.originalExpense!;
-          let p1Share = 0;
-          let p2Share = 0;
-          if (expense.category === 'Medical' || expense.category === 'Child Care') {
-              p1Share = item.amount * (item.medicalExpenseSplit['Parent 1'] / 100);
-              p2Share = item.amount * (item.medicalExpenseSplit['Parent 2'] / 100);
-          } else {
-              p1Share = item.amount * (item.expenseSplit['Parent 1'] / 100);
-              p2Share = item.amount * (item.expenseSplit['Parent 2'] / 100);
-          }
-
-          const p1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-          const p2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-          
-          p1OwesAmount = Math.max(0, p1Share - p1Paid);
-          p2OwesAmount = Math.max(0, p2Share - p2Paid);
-
-      } else if (item.type === 'child_support') {
-          if (item.paidBy === 'Parent 1') { // Parent 1 is the payer
-              p1OwesAmount = item.amount;
-          } else if (item.paidBy === 'Parent 2') { // Parent 2 is the payer
-              p2OwesAmount = item.amount;
-          }
-      }
-      return { p1OwesAmount, p2OwesAmount };
-  }
-
+  const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
+    <TableHead className={className}>
+      <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
+        {children}
+        {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />}
+      </Button>
+    </TableHead>
+  );
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-            <ReceiptText className="h-5 w-5 text-secondary-foreground" />
-          </span>
-          <div>
-            <CardTitle>All Unsettled Items</CardTitle>
-            <CardDescription>
-              A ledger of all outstanding expenses and payments. 
-              The view is currently filtered; use the controls to adjust it.
-            </CardDescription>
-          </div>
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                <ReceiptText className="h-5 w-5 text-secondary-foreground" />
+              </span>
+              <div>
+                <CardTitle>All Unsettled Items</CardTitle>
+                <CardDescription>
+                  A ledger of all outstanding expenses and payments across all months.
+                </CardDescription>
+              </div>
+            </div>
+             <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
+                <Button 
+                    onClick={handleMarkAllSettled} 
+                    disabled={filteredAndSortedItems.length === 0}
+                    className="w-full sm:w-auto"
+                >
+                    Mark All Visible as Settled
+                </Button>
+            </div>
+        </div>
+        <div className="no-print flex flex-col sm:flex-row sm:items-center gap-4 mt-4">
+            <div className="flex flex-wrap items-center gap-2">
+                <Select value={yearFilter} onValueChange={setYearFilter}>
+                    <SelectTrigger className="w-full sm:w-[120px]">
+                    <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {availableYears.map(year => (
+                        <SelectItem key={year} value={year}>
+                        {year}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+
+                <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    <SelectItem value="all">All Months</SelectItem>
+                    {availableMonths.map(month => (
+                        <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                        </SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="relative flex-grow">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                type="search"
+                placeholder="Search..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-full sm:w-[120px]">
-                  <SelectValue placeholder="Select Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter by month" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Months</SelectItem>
-                  {availableMonths.map(month => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:pt-0">
-              <Button
-                variant={monthFilter === 'all' ? 'secondary' : 'outline'}
-                onClick={() => setMonthFilter('all')}
-                className="w-full sm:w-auto"
-                >
-                Show All
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={handleMarkAllSettled} 
-                disabled={allUnsettledItems.length === 0}
-                className="w-full sm:w-auto"
-               >
-                Mark All Settled
-              </Button>
-            </div>
-        </div>
-        
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto rounded-md border">
-          <Table className="min-w-[1200px]">
+          <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Paid By</TableHead>
-                <TableHead className="w-[120px]">Settlement Status</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableHead>
-                <TableHead className="text-right">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableHead>
+                <SortableHeader sortKey="description">Description</SortableHeader>
+                <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
+                <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
+                <TableHead className="w-[150px]">Settlement Status</TableHead>
+                <TableHead className="text-right w-[100px]">Total</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Paid</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Paid</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allUnsettledItems.length > 0 ? (
-                allUnsettledItems.map((item) => {
-                  const { p1OwesAmount, p2OwesAmount } = renderItemDetails(item);
-                  const p1OwesMoney = p1OwesAmount > 0;
-                  const p2OwesMoney = p2OwesAmount > 0;
-
+              {filteredAndSortedItems.length > 0 ? (
+                filteredAndSortedItems.map((item) => {
+                  const { p1Owes, p2Owes } = renderItemDetails(item);
+                  const p1DisplayPaid = item.type === 'expense' && item.paidBy === 'Parent 1' ? item.amount : 0;
+                  const p2DisplayPaid = item.type === 'expense' && item.paidBy === 'Parent 2' ? item.amount : 0;
+                  
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
@@ -416,11 +468,17 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className={cn("text-right text-primary", p1OwesMoney && "text-destructive")}>
-                        ${p1OwesAmount.toFixed(2)}
+                       <TableCell className="text-right">
+                           ${p1DisplayPaid.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                           ${p2DisplayPaid.toFixed(2)}
+                        </TableCell>
+                      <TableCell className={cn("text-right", p1Owes < 0 && "text-green-600", p1Owes > 0 && "text-destructive")}>
+                        {p1Owes < 0 ? `($${Math.abs(p1Owes).toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
                       </TableCell>
-                      <TableCell className={cn("text-right text-primary", p2OwesMoney && "text-destructive")}>
-                        ${p2OwesAmount.toFixed(2)}
+                      <TableCell className={cn("text-right", p2Owes < 0 && "text-green-600", p2Owes > 0 && "text-destructive")}>
+                        {p2Owes < 0 ? `($${Math.abs(p2Owes).toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
                         {item.type === 'expense' && item.receiptUrl && (
@@ -477,39 +535,48 @@ export function AllUnsettledExpensesCard({
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    {monthFilter === 'all'
-                      ? `No unsettled items for ${yearFilter}.`
-                      : `No unsettled items for ${format(parse(monthFilter, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`}
+                  <TableCell colSpan={11} className="h-24 text-center">
+                     {searchTerm ? `No results for "${searchTerm}".` : `No unsettled items for the selected period.`}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
-             {allUnsettledItems.length > 0 && (
-                <TableFooter>
-                    <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={4}>Outstanding Totals</TableCell>
-                    <TableCell className="text-right">
-                        ${totalAmount.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                        ${totalParent1Owes.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                        ${totalParent2Owes.toFixed(2)}
-                    </TableCell>
-                    <TableCell colSpan={2}></TableCell>
+             {filteredAndSortedItems.length > 0 && (
+                 <TableFooter>
+                    <TableRow>
+                        <TableCell colSpan={5}></TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Paid</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Paid</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableCell>
+                        <TableCell colSpan={2}></TableCell>
                     </TableRow>
-                </TableFooter>
+                    <TableRow className="bg-secondary/50 font-bold">
+                        <TableCell colSpan={5}>Totals</TableCell>
+                        <TableCell className="text-right">
+                          ${totals.totalP1Paid.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${totals.totalP2Paid.toFixed(2)}
+                        </TableCell>
+                        <TableCell className={cn("text-right", totals.totalP1Owes < 0 && "text-green-600", totals.totalP1Owes > 0 && "text-destructive")}>
+                          {totals.totalP1Owes < 0 ? `($${Math.abs(totals.totalP1Owes).toFixed(2)})` : `$${totals.totalP1Owes.toFixed(2)}`}
+                        </TableCell>
+                        <TableCell className={cn("text-right", totals.totalP2Owes < 0 && "text-green-600", totals.totalP2Owes > 0 && "text-destructive")}>
+                          {totals.totalP2Owes < 0 ? `($${Math.abs(totals.totalP2Owes).toFixed(2)})` : `$${totals.totalP2Owes.toFixed(2)}`}
+                        </TableCell>
+                        <TableCell colSpan={2}></TableCell>
+                    </TableRow>
+                 </TableFooter>
             )}
           </Table>
         </div>
 
         {/* Mobile Card View */}
         <div className="space-y-4 md:hidden">
-            {allUnsettledItems.length > 0 ? (
-                allUnsettledItems.map((item) => {
-                    const { p1OwesAmount, p2OwesAmount } = renderItemDetails(item);
+            {filteredAndSortedItems.length > 0 ? (
+                filteredAndSortedItems.map((item) => {
+                    const { p1Owes, p2Owes } = renderItemDetails(item);
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -576,28 +643,28 @@ export function AllUnsettledExpensesCard({
                                      </div>
                                 </div>
                             </div>
-                            {(p1OwesAmount > 0 || p2OwesAmount > 0) && (
-                                <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
-                                    <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
-                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{item.parentNames['Parent 1']} Owes</span>
-                                        <span className={cn(p1OwesAmount > 0 && "text-destructive font-semibold")}>${p1OwesAmount.toFixed(2)}</span>
-                                     </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{item.parentNames['Parent 2']} Owes</span>
-                                        <span className={cn(p2OwesAmount > 0 && "text-destructive font-semibold")}>${p2OwesAmount.toFixed(2)}</span>
-                                     </div>
-                                </div>
-                            )}
+                            <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
+                                <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
+                                    <div className="flex justify-between">
+                                    <span className="text-muted-foreground">{item.parentNames['Parent 1']} Owes</span>
+                                    <span className={cn("font-semibold", p1Owes > 0 && "text-destructive", p1Owes < 0 && "text-green-600")}>
+                                        {p1Owes < 0 ? `-$${Math.abs(p1Owes).toFixed(2)}` : `$${p1Owes.toFixed(2)}`}
+                                    </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                    <span className="text-muted-foreground">{item.parentNames['Parent 2']} Owes</span>
+                                    <span className={cn("font-semibold", p2Owes > 0 && "text-destructive", p2Owes < 0 && "text-green-600")}>
+                                        {p2Owes < 0 ? `-$${Math.abs(p2Owes).toFixed(2)}` : `$${p2Owes.toFixed(2)}`}
+                                    </span>
+                                    </div>
+                            </div>
                         </Card>
                     );
                 })
             ) : (
                 <div className="h-32 text-center flex flex-col justify-center items-center">
                     <p className="text-muted-foreground">
-                        {monthFilter === 'all'
-                        ? `No unsettled items for ${yearFilter}.`
-                        : `No unsettled items for ${format(parse(monthFilter, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`}
+                        {searchTerm ? `No results for "${searchTerm}".` : `No unsettled items for the selected period.`}
                     </p>
                 </div>
             )}
