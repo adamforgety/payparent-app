@@ -112,14 +112,6 @@ export function AllUnsettledExpensesCard({
     if (!appData?.months) return items;
     
     let monthIdsToProcess: string[] = Object.keys(appData.months);
-
-    if (yearFilter !== 'all') {
-      monthIdsToProcess = monthIdsToProcess.filter(m => m.startsWith(yearFilter));
-    }
-    
-    if (monthFilter !== 'all') {
-      monthIdsToProcess = monthIdsToProcess.filter(m => m === monthFilter);
-    }
     
     for (const monthId of monthIdsToProcess) {
       if (!appData.months[monthId]) continue;
@@ -161,7 +153,7 @@ export function AllUnsettledExpensesCard({
       }
     }
     return items;
-  }, [appData.months, yearFilter, monthFilter]);
+  }, [appData.months]);
 
   const renderItemDetails = (item: UnsettledItem) => {
     let p1Owes = 0;
@@ -193,6 +185,13 @@ export function AllUnsettledExpensesCard({
 
   const filteredAndSortedItems = useMemo(() => {
     let items = [...allUnsettledItems];
+
+    if (yearFilter !== 'all') {
+      items = items.filter(item => item.monthId.startsWith(yearFilter));
+    }
+    if (monthFilter !== 'all') {
+      items = items.filter(item => item.monthId === monthFilter);
+    }
     
     const lowercasedFilter = searchTerm.toLowerCase();
     if (lowercasedFilter) {
@@ -243,7 +242,7 @@ export function AllUnsettledExpensesCard({
 
 
     return items;
-  }, [allUnsettledItems, searchTerm, sortConfig]);
+  }, [allUnsettledItems, yearFilter, monthFilter, searchTerm, sortConfig]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -260,23 +259,20 @@ export function AllUnsettledExpensesCard({
     });
   };
 
-  const handleMarkAllSettled = () => {
-    const today = startOfDay(new Date());
-    const allItemsToSettle = allUnsettledItems.filter(item => 
-      !isAfter(startOfDay(new Date(item.date)), today)
-    );
+  const handleMarkVisibleSettled = () => {
+    const itemsToSettle = filteredAndSortedItems;
 
-    if (allItemsToSettle.length === 0) {
+    if (itemsToSettle.length === 0) {
       toast({
         title: 'No Items to Settle',
-        description: 'There are no past or present unsettled items in the app.',
+        description: 'There are no visible unsettled items to mark as settled.',
       });
       return;
     }
 
     const monthUpdates: { [monthId: string]: { expenses: Expense[], childSupport: ChildSupport } } = {};
 
-    allItemsToSettle.forEach(item => {
+    itemsToSettle.forEach(item => {
       const { monthId } = item;
       if (!appData.months[monthId]) return;
 
@@ -307,8 +303,8 @@ export function AllUnsettledExpensesCard({
     batchUpdateMonths(monthUpdates);
 
     toast({
-      title: 'All Items Marked as Settled',
-      description: `${allItemsToSettle.length} items have been updated. Future items were not affected.`,
+      title: 'Visible Items Marked as Settled',
+      description: `${itemsToSettle.length} items have been updated.`,
     });
   };
 
@@ -382,11 +378,11 @@ export function AllUnsettledExpensesCard({
                     Show All
                 </Button>
                 <Button 
-                    onClick={handleMarkAllSettled} 
-                    disabled={allUnsettledItems.length === 0}
+                    onClick={handleMarkVisibleSettled} 
+                    disabled={filteredAndSortedItems.length === 0}
                     className="w-full sm:w-auto"
                 >
-                    Mark All Settled
+                    Mark Visible Settled
                 </Button>
             </div>
         </div>
