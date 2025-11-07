@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload, Download, ArrowLeft, Check, Trash2, Info } from 'lucide-react';
+import { Upload, Download, ArrowLeft, Check, Trash2, Info, Calendar as CalendarIcon } from 'lucide-react';
 
 import {
   Dialog,
@@ -36,6 +36,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
 
 const ACCEPTED_FILE_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -630,7 +632,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[150px]">Date</TableHead>
+                                    <TableHead className="w-[200px]">Date</TableHead>
                                     <TableHead>Description</TableHead>
                                     <TableHead className="w-[150px]">Category</TableHead>
                                     <TableHead className="w-[180px]">Paid By</TableHead>
@@ -642,11 +644,38 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                                 {failedImports.map((fail, i) => (
                                     <TableRow key={`fail-${fail.rowNumber}-${i}`}>
                                         <TableCell>
-                                            <Input
-                                                value={fail.data.date}
-                                                onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
-                                                className={cn("h-8", fail.errors.date && "border-destructive focus-visible:ring-destructive")}
-                                            />
+                                            {fail.errors.date ? (
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant={'outline'}
+                                                            className={cn(
+                                                                'w-full justify-start text-left font-normal h-8',
+                                                                !fail.data.date && 'text-muted-foreground',
+                                                                'border-destructive focus-visible:ring-destructive'
+                                                            )}
+                                                        >
+                                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                                            {fail.data.date ? String(fail.data.date) : <span>Pick a date</span>}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0">
+                                                        <Calendar
+                                                            mode="single"
+                                                            onSelect={(d) => {
+                                                                if (d) handleFailedRowChange(i, 'date', format(d, 'yyyy-MM-dd'));
+                                                            }}
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                            ) : (
+                                                <Input
+                                                    value={fail.data.date}
+                                                    onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
+                                                    className="h-8"
+                                                />
+                                            )}
                                             {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
                                         </TableCell>
                                         <TableCell>
