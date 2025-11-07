@@ -4,7 +4,7 @@ import { format, startOfMonth } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent, Reimbursement } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { DropdownMenuItem } from './ui/dropdown-menu';
@@ -12,6 +12,7 @@ import { DropdownMenuItem } from './ui/dropdown-menu';
 interface ExportButtonProps {
   expenses: Expense[];
   childSupport: ChildSupport;
+  reimbursement: Reimbursement;
   currentDate: Date;
   parentNames: ParentNames;
   expenseSplit: ExpenseSplit;
@@ -22,6 +23,7 @@ interface ExportButtonProps {
 export function ExportButton({
   expenses,
   childSupport,
+  reimbursement,
   currentDate,
   parentNames,
   expenseSplit,
@@ -44,8 +46,24 @@ export function ExportButton({
           }
         : null;
 
-    const allItems: (Expense | (typeof childSupportItem))[] = [
+    const reimbursementItem =
+        reimbursement.amount > 0 && reimbursement.paidBy !== 'None'
+        ? {
+            id: 'reimbursement',
+            date: startOfMonth(currentDate).toISOString(),
+            description: 'Reimbursement',
+            amount: reimbursement.amount,
+            paidBy: reimbursement.paidBy,
+            category: 'Reimbursement' as const,
+            status: reimbursement.status,
+            year: currentDate.getFullYear(),
+            month: currentDate.getMonth() + 1,
+            }
+        : null;
+
+    const allItems: (Expense | (typeof childSupportItem) | (typeof reimbursementItem))[] = [
       ...(childSupportItem ? [childSupportItem] : []),
+      ...(reimbursementItem ? [reimbursementItem] : []),
       ...expenses,
     ];
 
@@ -53,7 +71,7 @@ export function ExportButton({
       let parent1Owes = 0;
       let parent2Owes = 0;
 
-      if (item.category === 'Child Support') {
+      if (item.category === 'Child Support' || item.category === 'Reimbursement') {
         if (item.paidBy === 'Parent 1') {
           parent1Owes = item.amount;
         } else if (item.paidBy === 'Parent 2') {

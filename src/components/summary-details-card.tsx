@@ -18,6 +18,7 @@ import type {
   ParentNames,
   MedicalExpenseSplit,
   AppData,
+  Reimbursement,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ArrowDownCircle, ArrowUpCircle, Info, Circle } from 'lucide-react';
@@ -28,6 +29,7 @@ interface SummaryDetailsCardProps {
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
   childSupport: ChildSupport;
+  reimbursement: Reimbursement;
   parentNames: ParentNames;
   appData: AppData;
   currentMonthId: string;
@@ -63,6 +65,7 @@ export function SummaryDetailsCard({
   expenseSplit,
   medicalExpenseSplit,
   childSupport,
+  reimbursement,
   parentNames,
   appData,
   currentMonthId,
@@ -86,10 +89,10 @@ export function SummaryDetailsCard({
         const monthData = appData.months[monthId];
         if (!monthData) return { monthId, balance: 0 };
         
-        // Check if there are any unsettled items in this past month. If not, its balance is 0.
         const hasUnsettledItems = 
             monthData.expenses.some(e => e.status === 'Unsettled') || 
-            (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
+            (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date()))) ||
+            (monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
 
         if (!hasUnsettledItems) {
             return { monthId, balance: 0 };
@@ -120,8 +123,17 @@ export function SummaryDetailsCard({
             childSupportBalance = monthData.childSupport.amount;
           }
         }
+
+        let reimbursementBalance = 0;
+        if (monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
+            if (monthData.reimbursement.paidBy === parent) {
+                reimbursementBalance = -monthData.reimbursement.amount;
+            } else {
+                reimbursementBalance = monthData.reimbursement.amount;
+            }
+        }
         
-        return { monthId, balance: expenseBalance + childSupportBalance };
+        return { monthId, balance: expenseBalance + childSupportBalance + reimbursementBalance };
       })
       .filter(item => Math.abs(item.balance) >= 0.01);
   }, [appData.months, currentMonthId, parent]);
@@ -153,11 +165,20 @@ export function SummaryDetailsCard({
     }
   }
 
+  let reimbursementBalance = 0;
+    if (reimbursement.status === 'Unsettled' && reimbursement.paidBy !== 'None' && !isCurrentMonthFuture) {
+        if (reimbursement.paidBy === parent) {
+            reimbursementBalance = -reimbursement.amount;
+        } else {
+            reimbursementBalance = reimbursement.amount;
+        }
+    }
+
   // What this parent owes the other for the current month
-  const currentMonthDebit = Math.max(0, parentExpenseShare - paidByParent) + (childSupportBalance < 0 ? Math.abs(childSupportBalance) : 0);
+  const currentMonthDebit = Math.max(0, parentExpenseShare - paidByParent) + (childSupportBalance < 0 ? Math.abs(childSupportBalance) : 0) + (reimbursementBalance < 0 ? Math.abs(reimbursementBalance) : 0);
   
   // What the other parent owes this parent for the current month
-  const currentMonthCredit = Math.max(0, paidByParent - parentExpenseShare) + (childSupportBalance > 0 ? childSupportBalance : 0);
+  const currentMonthCredit = Math.max(0, paidByParent - parentExpenseShare) + (childSupportBalance > 0 ? childSupportBalance : 0) + (reimbursementBalance > 0 ? reimbursementBalance : 0);
 
   const totalCredit = currentMonthCredit + Math.max(0, previousMonthsTotalBalance);
   const totalDebit = currentMonthDebit + Math.max(0, -previousMonthsTotalBalance);

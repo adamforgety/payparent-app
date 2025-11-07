@@ -11,7 +11,7 @@ import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
 import { SettleBalanceCard } from '@/components/settle-balance-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppData, ChildSupport, Expense, MonthData, ParentNames, ExpenseSplit, MedicalExpenseSplit } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, MonthData, ParentNames, ExpenseSplit, MedicalExpenseSplit, Reimbursement } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ExportButton } from './export-button';
+import { ReimbursementCard } from './reimbursement-card';
 
 function DashboardComponent() {
   const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser, batchUpdateMonths } = useAppContext();
@@ -66,12 +67,19 @@ function DashboardComponent() {
         status: 'Unsettled' 
       };
 
+      const reimbursementSettings: Reimbursement = {
+        amount: mostRecentMonthData.reimbursement.amount,
+        paidBy: 'None',
+        status: 'Unsettled'
+      };
+
 
       const newMonthData: MonthData = {
         id: monthId,
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
         childSupport: childSupportSettings,
+        reimbursement: reimbursementSettings,
         expenseSplit: mostRecentMonthData.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
         medicalExpenseSplit: mostRecentMonthData.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
         parentNames: mostRecentMonthData.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
@@ -143,6 +151,7 @@ function DashboardComponent() {
                   ...dataToUpdate,
                   // Ensure specific nested objects are merged correctly if they exist in dataToUpdate
                   ...(dataToUpdate.childSupport && { childSupport: { ...updatedMonths[key].childSupport, ...dataToUpdate.childSupport } }),
+                  ...(dataToUpdate.reimbursement && { reimbursement: { ...updatedMonths[key].reimbursement, ...dataToUpdate.reimbursement } }),
                   ...(dataToUpdate.expenseSplit && { expenseSplit: { ...updatedMonths[key].expenseSplit, ...dataToUpdate.expenseSplit } }),
                   ...(dataToUpdate.medicalExpenseSplit && { medicalExpenseSplit: { ...updatedMonths[key].medicalExpenseSplit, ...dataToUpdate.medicalExpenseSplit } }),
                   ...(dataToUpdate.parentNames && { parentNames: { ...updatedMonths[key].parentNames, ...dataToUpdate.parentNames } }),
@@ -192,6 +201,15 @@ function DashboardComponent() {
     if (monthData) {
         const updatedMonthData = { ...monthData, childSupport: updatedChildSupport };
         updateAppData({ months: { ...appData.months, [csMonthId]: updatedMonthData } });
+    }
+  };
+
+  const updateReimbursementForSingleMonth = (updatedReimbursement: Reimbursement, rMonthId: string) => {
+    if (!appData) return;
+    const monthData = appData.months[rMonthId];
+    if (monthData) {
+        const updatedMonthData = { ...monthData, reimbursement: updatedReimbursement };
+        updateAppData({ months: { ...appData.months, [rMonthId]: updatedMonthData } });
     }
   };
   
@@ -328,6 +346,7 @@ function DashboardComponent() {
                             expenseSplit={currentMonthData.expenseSplit}
                             medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                             childSupport={currentMonthData.childSupport}
+                            reimbursement={currentMonthData.reimbursement}
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
@@ -341,6 +360,7 @@ function DashboardComponent() {
                             expenseSplit={currentMonthData.expenseSplit}
                             medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                             childSupport={currentMonthData.childSupport}
+                            reimbursement={currentMonthData.reimbursement}
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
@@ -357,6 +377,7 @@ function DashboardComponent() {
                             expenseSplit={currentMonthData.expenseSplit}
                             medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                             childSupport={currentMonthData.childSupport}
+                            reimbursement={currentMonthData.reimbursement}
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
@@ -370,6 +391,7 @@ function DashboardComponent() {
                             expenseSplit={currentMonthData.expenseSplit}
                             medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                             childSupport={currentMonthData.childSupport}
+                            reimbursement={currentMonthData.reimbursement}
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
@@ -391,11 +413,13 @@ function DashboardComponent() {
                       <ExpensesCard
                         expenses={expenses}
                         childSupport={currentMonthData.childSupport}
+                        reimbursement={currentMonthData.reimbursement}
                         expenseSplit={currentMonthData.expenseSplit}
                         medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
                         onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
                         onUpdateExpense={handleUpdateExpense}
                         onUpdateChildSupport={(cs) => updateChildSupportForSingleMonth(cs, monthId)}
+                        onUpdateReimbursement={(r) => updateReimbursementForSingleMonth(r, monthId)}
                         currentDate={currentDate}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
@@ -414,6 +438,7 @@ function DashboardComponent() {
                           <ExportButton
                               expenses={expenses}
                               childSupport={currentMonthData.childSupport}
+                              reimbursement={currentMonthData.reimbursement}
                               currentDate={currentDate}
                               parentNames={currentMonthData.parentNames}
                               expenseSplit={currentMonthData.expenseSplit}
@@ -426,6 +451,7 @@ function DashboardComponent() {
                             appData={appData}
                             onUpdateExpense={handleUpdateExpense}
                             onUpdateChildSupport={updateChildSupportForSingleMonth}
+                            onUpdateReimbursement={updateReimbursementForSingleMonth}
                             onDeleteExpense={handleDeleteExpense}
                             currentDate={currentDate}
                             initialYearFilter={unsettledYearFilter}
@@ -458,6 +484,11 @@ function DashboardComponent() {
                         onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
                         parentNames={currentMonthData.parentNames}
                       />
+                      <ReimbursementCard
+                        reimbursement={currentMonthData.reimbursement}
+                        onUpdate={(r: Reimbursement) => updateSettingsForCurrentAndFutureMonths({ reimbursement: r })}
+                        parentNames={currentMonthData.parentNames}
+                      />
                       <ParentSplitCard
                         expenseSplit={currentMonthData.expenseSplit}
                         onUpdate={(expenseSplit: ExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ expenseSplit })}
@@ -480,7 +511,7 @@ function DashboardComponent() {
               </div>
             </TabsContent>
           </Tabs>
-          <div className="fixed bottom-8 right-8 z-50 no-print">
+          <div className="fixed bottom-4 right-4 z-50 no-print">
             <TooltipProvider>
                 <Tooltip>
                 <TooltipTrigger asChild>

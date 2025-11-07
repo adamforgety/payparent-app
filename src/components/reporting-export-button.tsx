@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { Expense, ParentNames, ChildSupport, ExpenseSplit, MedicalExpenseSplit, Parent } from '@/lib/types';
+import type { Expense, ParentNames, ChildSupport, ExpenseSplit, MedicalExpenseSplit, Parent, Reimbursement } from '@/lib/types';
 import { Button } from './ui/button';
 
 type EnrichedExpense = Expense & { 
@@ -21,7 +21,15 @@ type EnrichedChildSupport = ChildSupport & {
   parentNames: ParentNames;
 }
 
-type Transaction = EnrichedExpense | EnrichedChildSupport;
+type EnrichedReimbursement = Reimbursement & {
+    id: string;
+    date: string;
+    description: string;
+    category: 'Reimbursement';
+    parentNames: ParentNames;
+}
+
+type Transaction = EnrichedExpense | EnrichedChildSupport | EnrichedReimbursement;
 
 
 interface ReportingExportButtonProps {
@@ -42,7 +50,7 @@ export function ReportingExportButton({
         let parent2Paid = 0;
 
         if (item.status === 'Settled') {
-          if (item.category === 'Child Support') {
+          if (item.category === 'Child Support' || item.category === 'Reimbursement') {
               parent1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
               parent2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
           } else {

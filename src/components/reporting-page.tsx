@@ -13,7 +13,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, ExpenseSplit, ChildSupport, MedicalExpenseSplit } from '@/lib/types';
+import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, ExpenseSplit, ChildSupport, MedicalExpenseSplit, Reimbursement } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -74,7 +74,17 @@ type EnrichedChildSupport = ChildSupport & {
   month: number;
 }
 
-type Transaction = EnrichedExpense | EnrichedChildSupport;
+type EnrichedReimbursement = Reimbursement & {
+    id: string;
+    date: string;
+    description: string;
+    category: 'Reimbursement';
+    parentNames: ParentNames;
+    year: number;
+    month: number;
+}
+
+type Transaction = EnrichedExpense | EnrichedChildSupport | EnrichedReimbursement;
 
 type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount' | 'parent1Paid' | 'parent2Paid';
 
@@ -84,7 +94,7 @@ type SortConfig = {
 } | null;
 
 
-const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
+const ALL_CATEGORIES: (ExpenseCategory | 'Child Support' | 'Reimbursement')[] = [
   'Medical',
   'Education',
   'Child Care',
@@ -92,6 +102,7 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Clothing',
   'Food',
   'Child Support',
+  'Reimbursement',
   'Other',
 ];
 
@@ -190,6 +201,19 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     month: monthData.month
                 });
             }
+
+            if (monthData.reimbursement.amount > 0 && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
+                allTransactionsForPeriod.push({
+                    ...monthData.reimbursement,
+                    id: `rb-${monthId}`,
+                    date: monthDate.toISOString(),
+                    description: 'Reimbursement',
+                    category: 'Reimbursement',
+                    parentNames: monthData.parentNames,
+                    year: monthData.year,
+                    month: monthData.month
+                });
+            }
         }
     });
 
@@ -245,7 +269,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const getPaidAmount = (transaction: Transaction, parent: Parent) => {
       if (transaction.status !== 'Settled') return 0;
   
-      if (transaction.category === 'Child Support') {
+      if (transaction.category === 'Child Support' || transaction.category === 'Reimbursement') {
           // The parent who "Paid By" is responsible for the full amount
           return transaction.paidBy === parent ? transaction.amount : 0;
       }
@@ -520,7 +544,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             <TableCell>
                               <Badge
                                 variant={
-                                  transaction.category === 'Child Support'
+                                  transaction.category === 'Child Support' || transaction.category === 'Reimbursement'
                                     ? 'default'
                                     : 'outline'
                                 }
@@ -747,5 +771,3 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </div>
   );
 }
-
-    
