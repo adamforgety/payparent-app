@@ -180,6 +180,10 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
     if (!appData) return [];
     return Object.values(appData.months).flatMap(month => month.expenses);
   }, [appData]);
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(importSchema),
+  });
 
   const resetState = () => {
     form.reset();
@@ -531,289 +535,293 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
             </DialogDescription>
           )}
         </DialogHeader>
+        <div className="flex-grow overflow-y-auto pr-6 -mr-6">
+          {step === 'upload' && (
+            <>
+              <div className="pt-2">
+                  <Button
+                    variant="link"
+                    onClick={handleDownloadTemplate}
+                    className="p-0 h-auto font-normal text-sm"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Template
+                  </Button>
+              </div>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onFileParse)} className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="file"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Excel File</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept={ACCEPTED_FILE_TYPES.join(',')}
+                            onChange={(e) => field.onChange(e.target.files)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button type="submit">Preview Import</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </>
+          )}
 
-        {step === 'upload' && (
-          <>
-            <div className="pt-2">
-                <Button
-                  variant="link"
-                  onClick={handleDownloadTemplate}
-                  className="p-0 h-auto font-normal text-sm"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Template
-                </Button>
-            </div>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onFileParse)} className="space-y-4 pt-4">
-                <FormField
-                  control={form.control}
-                  name="file"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Excel File</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="file"
-                          accept={ACCEPTED_FILE_TYPES.join(',')}
-                          onChange={(e) => field.onChange(e.target.files)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit">Preview Import</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </>
-        )}
+          {step === 'preview' && (
+            <>
+              {successfulImports.length > 0 && (
+                  <div className="mb-6">
+                      <h3 className="font-semibold mb-2 text-green-600">{successfulImports.length} expenses will be imported:</h3>
+                      <div className="rounded-md border overflow-x-auto">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead className="w-[150px]">Date</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead className="w-[150px]">Category</TableHead>
+                                      <TableHead className="w-[180px]">Paid By</TableHead>
+                                      <TableHead className="w-[130px] text-right">Amount</TableHead>
+                                      <TableHead className="w-[50px] text-right">Actions</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {successfulImports.map((exp, i) => (
+                                      <TableRow key={`success-${i}`}>
+                                          <TableCell>
+                                              <Input
+                                                  value={format(new Date(exp.date), 'yyyy-MM-dd')}
+                                                  onChange={(e) => handleSuccessfulRowChange(i, 'date', e.target.value)}
+                                                  type="date"
+                                                  className="h-8"
+                                              />
+                                          </TableCell>
+                                          <TableCell>
+                                              <ResizingTextarea
+                                                  value={exp.description}
+                                                  onChange={(e) => handleSuccessfulRowChange(i, 'description', e.target.value)}
+                                                  className="h-8"
+                                              />
+                                          </TableCell>
+                                          <TableCell>
+                                              <Select
+                                                  value={exp.category}
+                                                  onValueChange={(value) => handleSuccessfulRowChange(i, 'category', value)}
+                                              >
+                                                  <SelectTrigger className="h-8">
+                                                      <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                                  </SelectContent>
+                                              </Select>
+                                          </TableCell>
+                                          <TableCell>
+                                              <Select
+                                                  value={exp.paidBy}
+                                                  onValueChange={(value) => handleSuccessfulRowChange(i, 'paidBy', value)}
+                                              >
+                                                  <SelectTrigger className="h-8">
+                                                      <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      <SelectItem value="Parent 1">{parentNames['Parent 1']}</SelectItem>
+                                                      <SelectItem value="Parent 2">{parentNames['Parent 2']}</SelectItem>
+                                                  </SelectContent>
+                                              </Select>
+                                          </TableCell>
+                                          <TableCell>
+                                              <Input
+                                                  value={exp.amount}
+                                                  onChange={(e) => handleSuccessfulRowChange(i, 'amount', e.target.value)}
+                                                  className="h-8 text-right"
+                                                  type="number"
+                                              />
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeSuccessfulRow(i)}>
+                                                  <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </div>
+              )}
+               {duplicateImports.length > 0 && (
+                  <div className="mb-6">
+                      <h3 className="font-semibold mb-2 text-yellow-600">{duplicateImports.length} duplicates found:</h3>
+                      <div className="rounded-md border overflow-x-auto">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead className="text-right">Amount</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {duplicateImports.map((dup, i) => (
+                                      <TableRow key={`dup-${dup.rowNumber}-${i}`} className="bg-yellow-500/10">
+                                          <TableCell>
+                                              <p className="font-semibold">{dup.data.description}</p>
+                                              <p className="text-xs text-muted-foreground">Paid by {parentNames[dup.data.paidBy]}</p>
+                                          </TableCell>
+                                          <TableCell>{format(new Date(dup.data.date), 'MMM d, yyyy')}</TableCell>
+                                          <TableCell className="text-right">${dup.data.amount.toFixed(2)}</TableCell>
+                                          <TableCell className="text-right">
+                                              <div className="flex gap-2 justify-end">
+                                                  <Button size="sm" variant="outline" onClick={() => handleDiscardDuplicate(i)}>
+                                                      <Trash2 className="mr-2 h-3 w-3"/>
+                                                      Discard
+                                                  </Button>
+                                                  <Button size="sm" onClick={() => handleKeepDuplicate(i)}>
+                                                      <Copy className="mr-2 h-3 w-3"/>
+                                                      Keep
+                                                  </Button>
+                                              </div>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </div>
+              )}
+               {failedImports.length > 0 && (
+                  <div className="mb-6">
+                      <h3 className="font-semibold mb-2 text-destructive">{failedImports.length} rows will be skipped:</h3>
+                       <div className="rounded-md border overflow-x-auto">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead className="w-[200px]">Date</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead className="w-[150px]">Category</TableHead>
+                                      <TableHead className="w-[180px]">Paid By</TableHead>
+                                      <TableHead className="w-[130px]">Amount</TableHead>
+                                      <TableHead className="w-[50px] text-right">Actions</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {failedImports.map((fail, i) => (
+                                      <TableRow key={`fail-${fail.rowNumber}-${i}`}>
+                                          <TableCell>
+                                              {fail.errors.date ? (
+                                                  <Popover>
+                                                      <PopoverTrigger asChild>
+                                                          <Button
+                                                              variant={'outline'}
+                                                              className={cn(
+                                                                  'w-full justify-start text-left font-normal h-8',
+                                                                  !fail.data.date && 'text-muted-foreground',
+                                                                  'border-destructive focus-visible:ring-destructive'
+                                                              )}
+                                                          >
+                                                              <CalendarIcon className="mr-2 h-4 w-4" />
+                                                              {fail.data.date ? String(fail.data.date) : <span>Pick a date</span>}
+                                                          </Button>
+                                                      </PopoverTrigger>
+                                                      <PopoverContent className="w-auto p-0">
+                                                          <Calendar
+                                                              mode="single"
+                                                              onSelect={(d) => {
+                                                                  if (d) handleFailedRowChange(i, 'date', format(d, 'yyyy-MM-dd'));
+                                                              }}
+                                                              initialFocus
+                                                          />
+                                                      </PopoverContent>
+                                                  </Popover>
+                                              ) : (
+                                                  <Input
+                                                      value={fail.data.date}
+                                                      onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
+                                                      className="h-8"
+                                                  />
+                                              )}
+                                              {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
+                                          </TableCell>
+                                          <TableCell>
+                                              <ResizingTextarea
+                                                  value={fail.data.description}
+                                                  onChange={(e) => handleFailedRowChange(i, 'description', e.target.value)}
+                                                  className={cn("h-8", fail.errors.description && "border-destructive focus-visible:ring-destructive")}
+                                              />
+                                              {fail.errors.description && <div className="text-xs text-destructive mt-1">{fail.errors.description}</div>}
+                                          </TableCell>
+                                          <TableCell>
+                                              <Select
+                                                  value={fail.data.category}
+                                                  onValueChange={(value) => handleFailedRowChange(i, 'category', value)}
+                                              >
+                                                  <SelectTrigger className={cn("h-8", fail.errors.category && "border-destructive focus-visible:ring-destructive")}>
+                                                      <SelectValue placeholder="Select category" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                                  </SelectContent>
+                                              </Select>
+                                          </TableCell>
+                                          <TableCell>
+                                              <Select
+                                                  value={fail.data.paidBy}
+                                                  onValueChange={(value) => handleFailedRowChange(i, 'paidBy', value)}
+                                              >
+                                                  <SelectTrigger className={cn("h-8", fail.errors.paidBy && "border-destructive focus-visible:ring-destructive")}>
+                                                      <SelectValue placeholder="Select parent" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      <SelectItem value={parentNames['Parent 1']}>{parentNames['Parent 1']}</SelectItem>
+                                                      <SelectItem value={parentNames['Parent 2']}>{parentNames['Parent 2']}</SelectItem>
+                                                  </SelectContent>
+                                              </Select>
+                                              {fail.errors.paidBy && <div className="text-xs text-destructive mt-1">{fail.errors.paidBy}</div>}
+                                          </TableCell>
+                                          <TableCell>
+                                              <Input
+                                                  value={fail.data.amount}
+                                                  onChange={(e) => handleFailedRowChange(i, 'amount', e.target.value)}
+                                                  className={cn("h-8 text-right", fail.errors.amount && "border-destructive focus-visible:ring-destructive")}
+                                              />
+                                              {fail.errors.amount && <div className="text-xs text-destructive mt-1">{fail.errors.amount}</div>}
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                              <div className="flex items-center justify-end">
+                                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeFailedRow(i)}>
+                                                      <Trash2 className="h-4 w-4" />
+                                                  </Button>
+                                              </div>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </div>
+              )}
+            </>
+          )}
+        </div>
 
         {step === 'preview' && (
-          <div className="flex-grow overflow-y-auto pr-6 -mr-6">
-            {successfulImports.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="font-semibold mb-2 text-green-600">{successfulImports.length} expenses will be imported:</h3>
-                    <div className="rounded-md border overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[150px]">Date</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="w-[150px]">Category</TableHead>
-                                    <TableHead className="w-[180px]">Paid By</TableHead>
-                                    <TableHead className="w-[130px] text-right">Amount</TableHead>
-                                    <TableHead className="w-[50px] text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {successfulImports.map((exp, i) => (
-                                    <TableRow key={`success-${i}`}>
-                                        <TableCell>
-                                            <Input
-                                                value={format(new Date(exp.date), 'yyyy-MM-dd')}
-                                                onChange={(e) => handleSuccessfulRowChange(i, 'date', e.target.value)}
-                                                type="date"
-                                                className="h-8"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <ResizingTextarea
-                                                value={exp.description}
-                                                onChange={(e) => handleSuccessfulRowChange(i, 'description', e.target.value)}
-                                                className="h-8"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Select
-                                                value={exp.category}
-                                                onValueChange={(value) => handleSuccessfulRowChange(i, 'category', value)}
-                                            >
-                                                <SelectTrigger className="h-8">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Select
-                                                value={exp.paidBy}
-                                                onValueChange={(value) => handleSuccessfulRowChange(i, 'paidBy', value)}
-                                            >
-                                                <SelectTrigger className="h-8">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Parent 1">{parentNames['Parent 1']}</SelectItem>
-                                                    <SelectItem value="Parent 2">{parentNames['Parent 2']}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                value={exp.amount}
-                                                onChange={(e) => handleSuccessfulRowChange(i, 'amount', e.target.value)}
-                                                className="h-8 text-right"
-                                                type="number"
-                                            />
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeSuccessfulRow(i)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-            )}
-             {duplicateImports.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="font-semibold mb-2 text-yellow-600">{duplicateImports.length} duplicates found:</h3>
-                    <div className="rounded-md border overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {duplicateImports.map((dup, i) => (
-                                    <TableRow key={`dup-${dup.rowNumber}-${i}`} className="bg-yellow-500/10">
-                                        <TableCell>
-                                            <p className="font-semibold">{dup.data.description}</p>
-                                            <p className="text-xs text-muted-foreground">Paid by {parentNames[dup.data.paidBy]}</p>
-                                        </TableCell>
-                                        <TableCell>{format(new Date(dup.data.date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell className="text-right">${dup.data.amount.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex gap-2 justify-end">
-                                                <Button size="sm" variant="outline" onClick={() => handleDiscardDuplicate(i)}>
-                                                    <Trash2 className="mr-2 h-3 w-3"/>
-                                                    Discard
-                                                </Button>
-                                                <Button size="sm" onClick={() => handleKeepDuplicate(i)}>
-                                                    <Copy className="mr-2 h-3 w-3"/>
-                                                    Keep
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-            )}
-             {failedImports.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="font-semibold mb-2 text-destructive">{failedImports.length} rows will be skipped:</h3>
-                     <div className="rounded-md border overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[200px]">Date</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="w-[150px]">Category</TableHead>
-                                    <TableHead className="w-[180px]">Paid By</TableHead>
-                                    <TableHead className="w-[130px]">Amount</TableHead>
-                                    <TableHead className="w-[50px] text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {failedImports.map((fail, i) => (
-                                    <TableRow key={`fail-${fail.rowNumber}-${i}`}>
-                                        <TableCell>
-                                            {fail.errors.date ? (
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            variant={'outline'}
-                                                            className={cn(
-                                                                'w-full justify-start text-left font-normal h-8',
-                                                                !fail.data.date && 'text-muted-foreground',
-                                                                'border-destructive focus-visible:ring-destructive'
-                                                            )}
-                                                        >
-                                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                                            {fail.data.date ? String(fail.data.date) : <span>Pick a date</span>}
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0">
-                                                        <Calendar
-                                                            mode="single"
-                                                            onSelect={(d) => {
-                                                                if (d) handleFailedRowChange(i, 'date', format(d, 'yyyy-MM-dd'));
-                                                            }}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                            ) : (
-                                                <Input
-                                                    value={fail.data.date}
-                                                    onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
-                                                    className="h-8"
-                                                />
-                                            )}
-                                            {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
-                                        </TableCell>
-                                        <TableCell>
-                                            <ResizingTextarea
-                                                value={fail.data.description}
-                                                onChange={(e) => handleFailedRowChange(i, 'description', e.target.value)}
-                                                className={cn("h-8", fail.errors.description && "border-destructive focus-visible:ring-destructive")}
-                                            />
-                                            {fail.errors.description && <div className="text-xs text-destructive mt-1">{fail.errors.description}</div>}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Select
-                                                value={fail.data.category}
-                                                onValueChange={(value) => handleFailedRowChange(i, 'category', value)}
-                                            >
-                                                <SelectTrigger className={cn("h-8", fail.errors.category && "border-destructive focus-visible:ring-destructive")}>
-                                                    <SelectValue placeholder="Select category" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Select
-                                                value={fail.data.paidBy}
-                                                onValueChange={(value) => handleFailedRowChange(i, 'paidBy', value)}
-                                            >
-                                                <SelectTrigger className={cn("h-8", fail.errors.paidBy && "border-destructive focus-visible:ring-destructive")}>
-                                                    <SelectValue placeholder="Select parent" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value={parentNames['Parent 1']}>{parentNames['Parent 1']}</SelectItem>
-                                                    <SelectItem value={parentNames['Parent 2']}>{parentNames['Parent 2']}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {fail.errors.paidBy && <div className="text-xs text-destructive mt-1">{fail.errors.paidBy}</div>}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                value={fail.data.amount}
-                                                onChange={(e) => handleFailedRowChange(i, 'amount', e.target.value)}
-                                                className={cn("h-8 text-right", fail.errors.amount && "border-destructive focus-visible:ring-destructive")}
-                                            />
-                                            {fail.errors.amount && <div className="text-xs text-destructive mt-1">{fail.errors.amount}</div>}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => removeFailedRow(i)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-            )}
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setStep('upload')}>
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
-                </Button>
-                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && duplicateImports.length > 0}>
-                  Confirm Import ({successfulImports.length})
-                </Button>
-            </DialogFooter>
-          </div>
+          <DialogFooter>
+              <Button variant="outline" onClick={() => setStep('upload')}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+              </Button>
+              <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && duplicateImports.length > 0}>
+                Confirm Import ({successfulImports.length})
+              </Button>
+          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>
