@@ -244,61 +244,55 @@ function DashboardComponent() {
           </div>
 
           <div className="flex flex-col items-center justify-center gap-4 mb-4 no-print">
-            {activeTab !== 'reporting' ? (
-              <>
-                <div className="flex items-center gap-2 h-10">
-                  <Select
-                    value={String(getYear(currentDate))}
-                    onValueChange={(year) => setCurrentDate(setYear(currentDate, parseInt(year)))}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableYears.map(year => (
-                        <SelectItem key={year} value={year}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={String(getMonth(currentDate))}
-                    onValueChange={(month) => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month)))}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableMonthsForYear.map(month => (
-                        <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <div className="flex items-center gap-2 h-10">
+              <Select
+                value={String(getYear(currentDate))}
+                onValueChange={(year) => setCurrentDate(setYear(currentDate, parseInt(year)))}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(getMonth(currentDate))}
+                onValueChange={(month) => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month)))}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMonthsForYear.map(month => (
+                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setCurrentDate(new Date())}
-                          disabled={isSameMonth(currentDate, new Date())}
-                        >
-                          <CalendarDays className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Go to Current Month</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                 <div className="w-full text-center text-xl font-semibold text-primary">
-                    {format(currentDate, 'MMMM yyyy')}
-                </div>
-              </>
-            ) : (
-               <div className="h-20 mb-1" />
-            )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentDate(new Date())}
+                      disabled={isSameMonth(currentDate, new Date())}
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Go to Current Month</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="w-full text-center text-xl font-semibold text-primary">
+                {format(currentDate, 'MMMM yyyy')}
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
