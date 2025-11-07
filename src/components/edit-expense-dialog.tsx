@@ -37,6 +37,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -216,14 +217,15 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Medical">Medical</SelectItem>
-                      <SelectItem value="Education">Education</SelectItem>
-                      <SelectItem value="Child Care">Child Care</SelectItem>
-                      <SelectItem value="Activities">Activities</SelectItem>
-                      <SelectItem value="Clothing">Clothing</SelectItem>
-                      <SelectItem value="Food">Food</SelectItem>
-                      <SelectItem value="Reimbursement">Reimbursement</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Medical">Medical</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
+                        <SelectItem value="Child Care">Child Care</SelectItem>
+                        <SelectItem value="Activities">Activities</SelectItem>
+                        <SelectItem value="Clothing">Clothing</SelectItem>
+                        <SelectItem value="Food">Food</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectSeparator />
+                        <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

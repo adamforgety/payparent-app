@@ -43,6 +43,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
+import { SelectSeparator } from './ui/select';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
@@ -210,8 +211,9 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
                         <SelectItem value="Activities">Activities</SelectItem>
                         <SelectItem value="Clothing">Clothing</SelectItem>
                         <SelectItem value="Food">Food</SelectItem>
-                        <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                         <SelectItem value="Other">Other</SelectItem>
+                        <SelectSeparator />
+                        <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
