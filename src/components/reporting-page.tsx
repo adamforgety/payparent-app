@@ -391,8 +391,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     <div className="mt-6">
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="summary" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Summary</TabsTrigger>
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Transactions</TabsTrigger>
         </TabsList>
         <TabsContent value="transactions" className="mt-6">
           <Card>

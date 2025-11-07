@@ -442,6 +442,7 @@ function DashboardComponent() {
             </TabsContent>
             <TabsContent value="reporting">
                <div className="mt-6">
+                <div className="h-10 mb-4" />
                 <ReportingPage appData={appData} />
               </div>
             </TabsContent>
