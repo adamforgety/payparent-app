@@ -71,7 +71,7 @@ export function AllUnsettledExpensesCard({
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
   const { batchUpdateMonths } = useAppContext();
-  const [yearFilter, setYearFilter] = useState<string>(initialYearFilter || String(currentDate.getFullYear()));
+  const [yearFilter, setYearFilter] = useState<string>(initialYearFilter || 'all');
   const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
@@ -89,7 +89,7 @@ export function AllUnsettledExpensesCard({
     const sortedYears = Array.from(years).sort().reverse();
 
     const months = Object.keys(appData.months)
-      .filter(monthId => monthId.startsWith(yearFilter))
+      .filter(monthId => yearFilter !== 'all' && monthId.startsWith(yearFilter))
       .sort()
       .reverse()
       .map(monthId => ({
@@ -101,22 +101,24 @@ export function AllUnsettledExpensesCard({
   }, [appData.months, yearFilter]);
 
   useEffect(() => {
-    if (monthFilter !== 'all' && !monthFilter.startsWith(yearFilter)) {
+    if (yearFilter === 'all') {
       setMonthFilter('all');
     }
-  }, [yearFilter, monthFilter]);
+  }, [yearFilter]);
 
 
   const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
     let items: UnsettledItem[] = [];
     if (!appData?.months) return items;
     
-    let monthIdsToProcess: string[] = [];
+    let monthIdsToProcess: string[] = Object.keys(appData.months);
 
-    if (monthFilter === 'all') {
-      monthIdsToProcess = Object.keys(appData.months).filter(m => m.startsWith(yearFilter));
-    } else {
-      monthIdsToProcess = [monthFilter];
+    if (yearFilter !== 'all') {
+      monthIdsToProcess = monthIdsToProcess.filter(m => m.startsWith(yearFilter));
+    }
+    
+    if (monthFilter !== 'all') {
+      monthIdsToProcess = monthIdsToProcess.filter(m => m === monthFilter);
     }
     
     for (const monthId of monthIdsToProcess) {
@@ -260,25 +262,26 @@ export function AllUnsettledExpensesCard({
 
   const handleMarkAllSettled = () => {
     const today = startOfDay(new Date());
-    const itemsToSettle = filteredAndSortedItems.filter(item => 
+    const allItemsToSettle = allUnsettledItems.filter(item => 
       !isAfter(startOfDay(new Date(item.date)), today)
     );
 
-    if (itemsToSettle.length === 0) {
+    if (allItemsToSettle.length === 0) {
       toast({
         title: 'No Items to Settle',
-        description: 'There are no past or present unsettled items in the current view.',
+        description: 'There are no past or present unsettled items in the app.',
       });
       return;
     }
 
     const monthUpdates: { [monthId: string]: { expenses: Expense[], childSupport: ChildSupport } } = {};
 
-    itemsToSettle.forEach(item => {
+    allItemsToSettle.forEach(item => {
       const { monthId } = item;
       if (!appData.months[monthId]) return;
 
       if (!monthUpdates[monthId]) {
+        // Create a mutable copy of the month's data if it's the first time we're updating it
         monthUpdates[monthId] = {
           expenses: [...appData.months[monthId].expenses],
           childSupport: { ...appData.months[monthId].childSupport }
@@ -304,8 +307,8 @@ export function AllUnsettledExpensesCard({
     batchUpdateMonths(monthUpdates);
 
     toast({
-      title: 'Items Marked as Settled',
-      description: `${itemsToSettle.length} items have been updated. Future items were not affected.`,
+      title: 'All Items Marked as Settled',
+      description: `${allItemsToSettle.length} items have been updated. Future items were not affected.`,
     });
   };
 
@@ -367,12 +370,23 @@ export function AllUnsettledExpensesCard({
               </div>
             </div>
              <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
-                <Button 
-                    onClick={handleMarkAllSettled} 
-                    disabled={filteredAndSortedItems.length === 0}
+                 <Button 
+                    variant="outline"
+                    onClick={() => {
+                        setYearFilter('all');
+                        setMonthFilter('all');
+                    }}
+                    disabled={yearFilter === 'all' && monthFilter === 'all'}
                     className="w-full sm:w-auto"
                 >
-                    Mark All Visible as Settled
+                    Show All
+                </Button>
+                <Button 
+                    onClick={handleMarkAllSettled} 
+                    disabled={allUnsettledItems.length === 0}
+                    className="w-full sm:w-auto"
+                >
+                    Mark All Settled
                 </Button>
             </div>
         </div>
@@ -383,6 +397,7 @@ export function AllUnsettledExpensesCard({
                     <SelectValue placeholder="Select Year" />
                     </SelectTrigger>
                     <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
                     {availableYears.map(year => (
                         <SelectItem key={year} value={year}>
                         {year}
@@ -391,7 +406,7 @@ export function AllUnsettledExpensesCard({
                     </SelectContent>
                 </Select>
 
-                <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0}>
+                <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0 || yearFilter === 'all'}>
                     <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by month" />
                     </SelectTrigger>
