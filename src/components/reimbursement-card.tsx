@@ -23,13 +23,19 @@ import { cn } from '@/lib/utils';
 import type { Reimbursement, Parent, ParentNames } from '@/lib/types';
 
 interface ReimbursementCardProps {
-  reimbursement: Reimbursement;
+  reimbursement?: Reimbursement; // Make prop optional
   onUpdate: (data: Reimbursement) => void;
   parentNames: ParentNames;
 }
 
+const defaultReimbursement: Reimbursement = {
+  amount: 0,
+  paidBy: 'None',
+  status: 'Unsettled',
+};
+
 export function ReimbursementCard({
-  reimbursement,
+  reimbursement = defaultReimbursement, // Provide a default value
   onUpdate,
   parentNames
 }: ReimbursementCardProps) {
