@@ -297,7 +297,7 @@ function DashboardComponent() {
                 </div>
               </>
             ) : (
-               <div className="h-10 mb-4" />
+               <div className="h-20 mb-1" />
             )}
           </div>
 
