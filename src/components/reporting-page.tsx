@@ -202,7 +202,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 });
             }
 
-            if (monthData.reimbursement.amount > 0 && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
+            if (monthData.reimbursement && monthData.reimbursement.amount > 0 && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
                 allTransactionsForPeriod.push({
                     ...monthData.reimbursement,
                     id: `rb-${monthId}`,

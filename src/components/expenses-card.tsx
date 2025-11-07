@@ -137,7 +137,7 @@ export function ExpensesCard({
       };
       allItems.unshift(childSupportItem);
     }
-    if (reimbursement.amount > 0 && reimbursement.paidBy !== 'None' && !isFutureMonth) {
+    if (reimbursement && reimbursement.amount > 0 && reimbursement.paidBy !== 'None' && !isFutureMonth) {
       const reimbursementItem: DisplayItem = {
         id: 'reimbursement',
         date: startOfMonth(currentDate).toISOString(),
@@ -385,7 +385,7 @@ export function ExpensesCard({
     <TableHead className={className}>
       <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
         {children}
-        {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />}
+        {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3" />}
       </Button>
     </TableHead>
   );

@@ -92,7 +92,7 @@ export function SummaryDetailsCard({
         const hasUnsettledItems = 
             monthData.expenses.some(e => e.status === 'Unsettled') || 
             (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date()))) ||
-            (monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
+            (monthData.reimbursement && monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
 
         if (!hasUnsettledItems) {
             return { monthId, balance: 0 };
@@ -125,7 +125,7 @@ export function SummaryDetailsCard({
         }
 
         let reimbursementBalance = 0;
-        if (monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
+        if (monthData.reimbursement && monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
             if (monthData.reimbursement.paidBy === parent) {
                 reimbursementBalance = -monthData.reimbursement.amount;
             } else {
@@ -166,7 +166,7 @@ export function SummaryDetailsCard({
   }
 
   let reimbursementBalance = 0;
-    if (reimbursement.status === 'Unsettled' && reimbursement.paidBy !== 'None' && !isCurrentMonthFuture) {
+    if (reimbursement && reimbursement.status === 'Unsettled' && reimbursement.paidBy !== 'None' && !isCurrentMonthFuture) {
         if (reimbursement.paidBy === parent) {
             reimbursementBalance = -reimbursement.amount;
         } else {

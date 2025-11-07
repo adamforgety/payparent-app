@@ -111,7 +111,7 @@ export function SettleBalanceCard({
         }
         
         let reimbursementBalance = 0;
-        if (monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
+        if (monthData.reimbursement && monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
           if (monthData.reimbursement.paidBy === parent) {
             reimbursementBalance = -monthData.reimbursement.amount;
           } else {
@@ -152,7 +152,7 @@ export function SettleBalanceCard({
   }
 
   let reimbursementBalance = 0;
-  if (reimbursement.status === 'Unsettled' && reimbursement.paidBy !== 'None' && !isCurrentMonthFuture) {
+  if (reimbursement && reimbursement.status === 'Unsettled' && reimbursement.paidBy !== 'None' && !isCurrentMonthFuture) {
     if (reimbursement.paidBy === parent) {
       reimbursementBalance = -reimbursement.amount;
     } else {

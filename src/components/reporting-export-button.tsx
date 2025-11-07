@@ -50,7 +50,7 @@ export function ReportingExportButton({
         let parent2Paid = 0;
 
         if (item.status === 'Settled') {
-          if (item.category === 'Child Support' || item.category === 'Reimbursement') {
+          if (item.category === 'Child Support' || (item.category === 'Reimbursement' && item)) {
               parent1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
               parent2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
           } else {

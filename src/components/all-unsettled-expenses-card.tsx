@@ -155,7 +155,7 @@ export function AllUnsettledExpensesCard({
         });
       }
 
-      if (monthData.reimbursement.amount > 0 && monthData.reimbursement.paidBy !== 'None' && monthData.reimbursement.status === 'Unsettled' && !isFutureMonth) {
+      if (monthData.reimbursement && monthData.reimbursement.amount > 0 && monthData.reimbursement.paidBy !== 'None' && monthData.reimbursement.status === 'Unsettled' && !isFutureMonth) {
         items.push({
           id: `rb-${monthId}`,
           monthId,
