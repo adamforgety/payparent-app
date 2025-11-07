@@ -390,8 +390,8 @@ function DashboardComponent() {
                <div className="mt-6">
                  <Tabs value={expensesSubTab} onValueChange={setExpensesSubTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="monthly">Monthly Ledger</TabsTrigger>
-                      <TabsTrigger value="unsettled">All Unsettled</TabsTrigger>
+                      <TabsTrigger value="monthly" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Monthly Ledger</TabsTrigger>
+                      <TabsTrigger value="unsettled" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">All Unsettled</TabsTrigger>
                     </TabsList>
                     <TabsContent value="monthly" className="mt-6">
                       <ExpensesCard
@@ -449,8 +449,8 @@ function DashboardComponent() {
               <div className="mt-6">
                 <Tabs defaultValue="app" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="app">App Settings</TabsTrigger>
-                    <TabsTrigger value="account">Account Settings</TabsTrigger>
+                    <TabsTrigger value="app" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">App Settings</TabsTrigger>
+                    <TabsTrigger value="account" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Account Settings</TabsTrigger>
                   </TabsList>
                   <TabsContent value="app">
                     <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
