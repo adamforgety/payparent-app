@@ -176,10 +176,6 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
   const [duplicateImports, setDuplicateImports] = useState<DuplicateImport[]>([]);
   const { toast } = useToast();
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(importSchema),
-  });
-
   const allExistingExpenses = useMemo(() => {
     if (!appData) return [];
     return Object.values(appData.months).flatMap(month => month.expenses);
@@ -411,11 +407,19 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
     const updatedFailedImports = [...failedImports];
     const itemToUpdate = { ...updatedFailedImports[index] };
     itemToUpdate.data[field] = value;
-
+  
     const { errors, parsedExpense } = validateRow(itemToUpdate.data);
-
+  
     if (parsedExpense) {
-      setSuccessfulImports(prev => [...prev, parsedExpense]);
+      const existingMatch = checkForDuplicates(parsedExpense);
+      if (existingMatch) {
+        setDuplicateImports(prev => [
+          ...prev,
+          { rowNumber: itemToUpdate.rowNumber, data: parsedExpense, existingExpense: existingMatch }
+        ]);
+      } else {
+        setSuccessfulImports(prev => [...prev, parsedExpense]);
+      }
       setFailedImports(prev => prev.filter((_, i) => i !== index));
     } else {
       itemToUpdate.errors = errors;
