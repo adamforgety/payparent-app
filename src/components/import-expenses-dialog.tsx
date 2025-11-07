@@ -548,7 +548,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             {successfulImports.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-semibold mb-2 text-green-600">{successfulImports.length} expenses will be imported:</h3>
-                    <div className="rounded-md border">
+                    <div className="rounded-md border overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -628,7 +628,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
              {failedImports.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-semibold mb-2 text-destructive">{failedImports.length} rows will be skipped:</h3>
-                     <div className="rounded-md border">
+                     <div className="rounded-md border overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
