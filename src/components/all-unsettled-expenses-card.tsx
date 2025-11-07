@@ -4,7 +4,7 @@ import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date
 import { ReceiptText, Trash2, Paperclip, Edit, Search, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
-import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus, Reimbursement } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from './ui/table';
@@ -29,7 +29,6 @@ interface AllUnsettledExpensesCardProps {
   appData: AppData;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
-  onUpdateReimbursement: (reimbursement: Reimbursement, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
   currentDate: Date;
   initialYearFilter?: string | null;
@@ -43,8 +42,8 @@ type UnsettledItem = {
   description: string;
   amount: number;
   paidBy: Parent | 'None';
-  category: 'Child Support' | 'Reimbursement' | Expense['category'];
-  type: 'expense' | 'child_support' | 'reimbursement';
+  category: 'Child Support' | Expense['category'];
+  type: 'expense' | 'child_support';
   receiptUrl?: string | null;
   receiptFilename?: string | null;
   parentNames: ParentNames;
@@ -52,7 +51,6 @@ type UnsettledItem = {
   medicalExpenseSplit: MedicalExpenseSplit;
   originalExpense?: Expense;
   originalChildSupport?: ChildSupport;
-  originalReimbursement?: Reimbursement;
   status: PaymentStatus;
 };
 
@@ -66,7 +64,6 @@ export function AllUnsettledExpensesCard({
   appData,
   onUpdateExpense,
   onUpdateChildSupport,
-  onUpdateReimbursement,
   onDeleteExpense,
   currentDate,
   initialYearFilter,
@@ -154,24 +151,6 @@ export function AllUnsettledExpensesCard({
           status: 'Unsettled',
         });
       }
-
-      if (monthData.reimbursement && monthData.reimbursement.amount > 0 && monthData.reimbursement.paidBy !== 'None' && monthData.reimbursement.status === 'Unsettled' && !isFutureMonth) {
-        items.push({
-          id: `rb-${monthId}`,
-          monthId,
-          date: new Date(monthData.year, monthData.month - 1, 1, 12).toISOString(),
-          description: 'Reimbursement',
-          amount: monthData.reimbursement.amount,
-          paidBy: monthData.reimbursement.paidBy,
-          category: 'Reimbursement',
-          type: 'reimbursement',
-          parentNames: monthData.parentNames,
-          expenseSplit: monthData.expenseSplit,
-          medicalExpenseSplit: monthData.medicalExpenseSplit,
-          originalReimbursement: monthData.reimbursement,
-          status: 'Unsettled',
-        });
-      }
     }
     return items;
   }, [appData.months]);
@@ -180,7 +159,7 @@ export function AllUnsettledExpensesCard({
     let p1Owes = 0;
     let p2Owes = 0;
   
-    if (item.type === 'child_support' || item.type === 'reimbursement') {
+    if (item.type === 'child_support') {
       if (item.paidBy === 'Parent 1') {
         p1Owes = item.amount;
       } else if (item.paidBy === 'Parent 2') {
@@ -272,8 +251,6 @@ export function AllUnsettledExpensesCard({
         onUpdateExpense({ ...item.originalExpense, status: newStatus }, item.monthId);
     } else if (item.type === 'child_support' && item.originalChildSupport) {
         onUpdateChildSupport({ ...item.originalChildSupport, status: newStatus }, item.monthId);
-    } else if (item.type === 'reimbursement' && item.originalReimbursement) {
-        onUpdateReimbursement({ ...item.originalReimbursement, status: newStatus }, item.monthId);
     }
 
      toast({
@@ -293,7 +270,7 @@ export function AllUnsettledExpensesCard({
       return;
     }
 
-    const monthUpdates: { [monthId: string]: { expenses: Expense[], childSupport: ChildSupport, reimbursement: Reimbursement } } = {};
+    const monthUpdates: { [monthId: string]: { expenses: Expense[], childSupport: ChildSupport } } = {};
 
     itemsToSettle.forEach(item => {
       const { monthId } = item;
@@ -304,7 +281,6 @@ export function AllUnsettledExpensesCard({
         monthUpdates[monthId] = {
           expenses: [...appData.months[monthId].expenses],
           childSupport: { ...appData.months[monthId].childSupport },
-          reimbursement: { ...appData.months[monthId].reimbursement }
         };
       }
 
@@ -319,11 +295,6 @@ export function AllUnsettledExpensesCard({
       } else if (item.type === 'child_support' && item.originalChildSupport) {
         monthUpdates[monthId].childSupport = {
           ...monthUpdates[monthId].childSupport,
-          status: 'Settled'
-        };
-      } else if (item.type === 'reimbursement' && item.originalReimbursement) {
-        monthUpdates[monthId].reimbursement = {
-          ...monthUpdates[monthId].reimbursement,
           status: 'Settled'
         };
       }
@@ -490,7 +461,7 @@ export function AllUnsettledExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
@@ -664,7 +635,7 @@ export function AllUnsettledExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'outline'}>{item.category}</Badge>
+                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">

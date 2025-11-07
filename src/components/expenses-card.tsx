@@ -28,7 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit, AppData, Reimbursement } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit, AppData } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { EditExpenseDialog } from './edit-expense-dialog';
@@ -44,13 +44,11 @@ import { ExportButton } from './export-button';
 interface ExpensesCardProps {
   expenses: Expense[];
   childSupport: ChildSupport;
-  reimbursement: Reimbursement;
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
-  onUpdateReimbursement: (reimbursement: Reimbursement, monthId: string) => void;
   children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
@@ -64,8 +62,8 @@ type DisplayItem = {
     amount: number;
     paidBy: Parent | 'None';
     status: PaymentStatus;
-    category: 'Child Support' | 'Reimbursement' | Expense['category'];
-    type: 'expense' | 'child_support' | 'reimbursement';
+    category: 'Child Support' | Expense['category'];
+    type: 'expense' | 'child_support';
     receiptUrl?: string | null;
     receiptFilename?: string | null;
 };
@@ -99,13 +97,11 @@ const calculateShare = (
 export function ExpensesCard({
   expenses,
   childSupport,
-  reimbursement,
   expenseSplit,
   medicalExpenseSplit,
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
-  onUpdateReimbursement,
   children,
   currentDate,
   parentNames,
@@ -137,23 +133,10 @@ export function ExpensesCard({
       };
       allItems.unshift(childSupportItem);
     }
-    if (reimbursement && reimbursement.amount > 0 && reimbursement.paidBy !== 'None' && !isFutureMonth) {
-      const reimbursementItem: DisplayItem = {
-        id: 'reimbursement',
-        date: startOfMonth(currentDate).toISOString(),
-        description: 'Reimbursement',
-        amount: reimbursement.amount,
-        paidBy: reimbursement.paidBy,
-        status: reimbursement.status,
-        category: 'Reimbursement',
-        type: 'reimbursement',
-      };
-      allItems.unshift(reimbursementItem);
-    }
     // Sort by date after combining
     allItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setLocalItems(allItems);
-  }, [expenses, childSupport, reimbursement, currentDate]);
+  }, [expenses, childSupport, currentDate]);
 
   const renderItemDetails = (item: DisplayItem) => {
     let p1Paid = 0;
@@ -161,7 +144,7 @@ export function ExpensesCard({
     let p1Owes = 0;
     let p2Owes = 0;
   
-    if (item.type === 'child_support' || item.type === 'reimbursement') {
+    if (item.type === 'child_support') {
       if (item.paidBy === 'Parent 1') {
         p1Owes = item.amount;
       } else if (item.paidBy === 'Parent 2') {
@@ -284,7 +267,7 @@ export function ExpensesCard({
           }
           // For unsettled child support, 'Paid' is 0
         } else { // 'Settled'
-          if (item.type === 'child_support' || item.type === 'reimbursement') {
+          if (item.type === 'child_support') {
             p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
             p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
           } else {
@@ -328,13 +311,11 @@ export function ExpensesCard({
       
       const newExpenses = expenses.map(e => ({ ...e, status: newStatus }));
       const newChildSupport = { ...childSupport, status: newStatus };
-      const newReimbursement = { ...reimbursement, status: newStatus };
       
       batchUpdateMonths({
         [monthId]: {
           expenses: newExpenses,
           childSupport: newChildSupport,
-          reimbursement: newReimbursement,
         },
       });
 
@@ -363,8 +344,6 @@ export function ExpensesCard({
         }
     } else if (itemToToggle.type === 'child_support') {
         onUpdateChildSupport({ ...childSupport, status: newStatus }, monthId);
-    } else if (itemToToggle.type === 'reimbursement') {
-        onUpdateReimbursement({ ...reimbursement, status: newStatus }, monthId);
     }
 
      toast({
@@ -479,7 +458,7 @@ export function ExpensesCard({
                           <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'secondary'}>{item.category}</Badge>
+                          <Badge variant={item.category === 'Child Support' ? 'default' : 'secondary'}>{item.category}</Badge>
                         </TableCell>
                         <TableCell>
                           {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
@@ -691,7 +670,7 @@ export function ExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'secondary'}>{item.category}</Badge>
+                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'secondary'}>{item.category}</Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
 

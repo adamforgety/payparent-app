@@ -19,7 +19,6 @@ import type {
   ParentNames,
   MedicalExpenseSplit,
   AppData,
-  Reimbursement,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { parse, isBefore, startOfDay, isAfter, startOfMonth } from 'date-fns';
@@ -31,7 +30,6 @@ interface SettleBalanceCardProps {
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
   childSupport: ChildSupport;
-  reimbursement: Reimbursement;
   parentNames: ParentNames;
   appData: AppData;
   currentMonthId: string;
@@ -63,7 +61,6 @@ export function SettleBalanceCard({
   expenseSplit,
   medicalExpenseSplit,
   childSupport,
-  reimbursement,
   parentNames,
   appData,
   currentMonthId,
@@ -110,16 +107,7 @@ export function SettleBalanceCard({
           }
         }
         
-        let reimbursementBalance = 0;
-        if (monthData.reimbursement && monthData.reimbursement.status === 'Unsettled' && monthData.reimbursement.paidBy !== 'None' && !isFutureMonth) {
-          if (monthData.reimbursement.paidBy === parent) {
-            reimbursementBalance = -monthData.reimbursement.amount;
-          } else {
-            reimbursementBalance = monthData.reimbursement.amount;
-          }
-        }
-        
-        return totalBalance + expenseBalance + childSupportBalance + reimbursementBalance;
+        return totalBalance + expenseBalance + childSupportBalance;
       }, 0);
   }, [appData.months, currentMonthId, parent]);
 
@@ -151,16 +139,7 @@ export function SettleBalanceCard({
     }
   }
 
-  let reimbursementBalance = 0;
-  if (reimbursement && reimbursement.status === 'Unsettled' && reimbursement.paidBy !== 'None' && !isCurrentMonthFuture) {
-    if (reimbursement.paidBy === parent) {
-      reimbursementBalance = -reimbursement.amount;
-    } else {
-      reimbursementBalance = reimbursement.amount;
-    }
-  }
-
-  const currentMonthNetBalance = currentMonthExpenseBalance + childSupportBalance + reimbursementBalance;
+  const currentMonthNetBalance = currentMonthExpenseBalance + childSupportBalance;
   const totalNetBalance = previousMonthsTotalBalance + currentMonthNetBalance;
   const isSettled = Math.abs(totalNetBalance) < 0.01;
 

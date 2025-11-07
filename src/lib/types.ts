@@ -6,7 +6,6 @@ export type ExpenseCategory =
   | 'Clothing'
   | 'Food'
   | 'Child Support'
-  | 'Reimbursement'
   | 'Other';
 
 export type PaymentStatus = 'Unsettled' | 'Settled';
@@ -38,12 +37,6 @@ export interface ChildSupport {
   status: PaymentStatus;
 }
 
-export interface Reimbursement {
-  amount: number;
-  paidBy: Parent | 'None';
-  status: PaymentStatus;
-}
-
 export interface ExpenseSplit {
   'Parent 1': number;
   'Parent 2': number;
@@ -59,7 +52,6 @@ export interface MonthData {
   year: number;
   month: number; // 1-12
   childSupport: ChildSupport;
-  reimbursement: Reimbursement;
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
   parentNames: ParentNames;
