@@ -1,3 +1,4 @@
+
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
@@ -445,7 +446,12 @@ export function ExpensesCard({
                           <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'secondary'}>{item.category}</Badge>
+                          <Badge
+                            variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                            className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                          >
+                            {item.category}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
@@ -657,7 +663,12 @@ export function ExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'secondary'}>{item.category}</Badge>
+                                    <Badge
+                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                                    >
+                                      {item.category}
+                                    </Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
 

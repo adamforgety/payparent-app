@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -53,6 +54,7 @@ import { ReportingExportButton } from './reporting-export-button';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
+import { cn } from '@/lib/utils';
 
 interface ReportingPageProps {
   appData: AppData | null;
@@ -526,11 +528,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={
-                                  transaction.category === 'Child Support' || transaction.category === 'Reimbursement'
-                                    ? 'default'
-                                    : 'outline'
-                                }
+                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                className={cn(transaction.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                               >
                                 {transaction.category}
                               </Badge>
