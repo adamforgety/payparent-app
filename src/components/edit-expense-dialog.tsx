@@ -44,7 +44,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Separator } from './ui/separator';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
@@ -90,6 +89,14 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
 
   const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
+    defaultValues: {
+      description: expense.description,
+      amount: expense.amount,
+      date: new Date(expense.date),
+      paidBy: expense.paidBy,
+      category: expense.category,
+      receipt: undefined,
+    },
   });
 
   const receiptRef = form.register('receipt');
@@ -111,7 +118,8 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
 
   const handleRemoveReceipt = () => {
     setRemoveReceipt(true);
-    form.setValue('receipt', undefined); 
+    setHasExistingReceipt(false);
+    form.setValue('receipt', null); 
   };
 
 
@@ -306,7 +314,11 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
               {hasExistingReceipt && !removeReceipt ? (
                 <div className="flex items-center justify-between rounded-md border p-2">
                   <div className='flex items-center gap-2'>
-                    <Paperclip className="h-4 w-4" />
+                     <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
+                        <a href={expense.receiptUrl!} target="_blank" rel="noopener noreferrer">
+                            <Paperclip className="h-4 w-4" />
+                        </a>
+                    </Button>
                     <a href={expense.receiptUrl!} target="_blank" rel="noopener noreferrer" className="text-sm underline">
                       {expense.receiptFilename || 'View Receipt'}
                     </a>
