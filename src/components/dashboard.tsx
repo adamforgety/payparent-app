@@ -2,7 +2,7 @@
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Plus, CalendarDays } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -297,7 +297,7 @@ function DashboardComponent() {
                 </div>
               </>
             ) : (
-               <div className="h-10" />
+               <div className="h-10 mb-4" />
             )}
           </div>
 
@@ -442,7 +442,6 @@ function DashboardComponent() {
             </TabsContent>
             <TabsContent value="reporting">
                <div className="mt-6">
-                <div className="h-10 mb-4" />
                 <ReportingPage appData={appData} />
               </div>
             </TabsContent>
