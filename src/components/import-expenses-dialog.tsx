@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as XLSX from 'xlsx';
-import { Upload, Download, ArrowLeft, Check, Trash2, Info, Calendar as CalendarIcon } from 'lucide-react';
+import { Upload, Download, ArrowLeft, Check, Trash2, Info, Calendar as CalendarIcon, Copy, AlertCircle } from 'lucide-react';
 
 import {
   Dialog,
@@ -27,13 +27,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
-import { format, parse, isValid, getYear, parseISO, add } from 'date-fns';
+import type { AppData, Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
+import { format, parse, isValid, getYear, parseISO, startOfDay } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -59,6 +58,7 @@ type FormValues = z.infer<typeof importSchema>;
 interface ImportExpensesDialogProps {
   onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => { [monthId: string]: number };
   parentNames: ParentNames;
+  appData: AppData;
 }
 
 type ParsedExpense = Omit<Expense, 'id' | 'year' | 'month'>;
@@ -86,6 +86,11 @@ type FailedImport = {
     errors: RowErrors;
 };
 
+type DuplicateImport = {
+    rowNumber: number;
+    data: ParsedExpense;
+    existingExpense: Expense;
+};
 
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
@@ -103,52 +108,47 @@ function flexibleDateParse(dateInput: string | number): Date | null {
         return null;
     }
 
+    let parsedDate: Date | null = null;
+
     // Handle Excel's numeric date format
     if (typeof dateInput === 'number') {
-        // Excel's epoch starts on 1900-01-01, but it incorrectly thinks 1900 was a leap year.
-        // The standard JS epoch is 1970-01-01. The difference is 25569 days.
-        if (dateInput > 60) {
-            // Adjust for the 1900 leap year bug for dates after Feb 28, 1900
-            dateInput--;
+        const excelEpoch = new Date(Date.UTC(1900, 0, dateInput - 1));
+        if (isValid(excelEpoch)) {
+            parsedDate = excelEpoch;
         }
-        // (dateInput - 1) is because Excel's day 1 is Jan 1 1900.
-        // We convert days to milliseconds.
-        const excelEpoch = new Date(Date.UTC(1900, 0, dateInput));
-        
-        // Return a new Date object representing the date in UTC to avoid timezone shifts.
-        return excelEpoch;
     }
 
     // Handle string dates
     if (typeof dateInput === 'string') {
         const dateStr = dateInput.trim();
+        const commonFormats = [
+            'yyyy-MM-dd', 'yyyy/MM/dd', 'MM-dd-yyyy', 'MM/dd/yy',
+            'M/d/yyyy', 'M/d/yy', 'M-d-yyyy', 'M-d-yy'
+        ];
+
         // Try parsing ISO format first
         const isoParsed = parseISO(dateStr);
         if (isValid(isoParsed)) {
-            return new Date(Date.UTC(isoParsed.getFullYear(), isoParsed.getMonth(), isoParsed.getDate()));
+             return startOfDay(isoParsed);
         }
 
-        const commonFormats = [
-            'yyyy-MM-dd', 'yyyy/MM/dd',
-            'M/d/yy', 'M/d/yyyy', 'MM/dd/yy', 'MM/dd/yyyy',
-            'M-d-yy', 'M-d-yyyy', 'MM-dd-yy', 'MM-dd-yyyy',
-        ];
-
-        // Try parsing with standard ISO format and common formats
+        // Try common formats
         for (const fmt of commonFormats) {
-            const parsedDate = parse(dateStr, fmt, new Date());
-            if (isValid(parsedDate)) {
-                 // date-fns parse might return a date in the local timezone.
-                 // We create a new UTC date to standardize it.
-                 return new Date(Date.UTC(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate()));
+            const d = parse(dateStr, fmt, new Date());
+            if (isValid(d)) {
+                return startOfDay(d);
             }
         }
         
-        // Final fallback for other native formats if date-fns fails
+        // Final fallback for other native formats
         const nativeParsed = new Date(dateStr);
         if (isValid(nativeParsed)) {
-            return new Date(Date.UTC(nativeParsed.getFullYear(), nativeParsed.getMonth(), nativeParsed.getDate()));
+            return startOfDay(nativeParsed);
         }
+    }
+    
+    if (parsedDate) {
+        return startOfDay(parsedDate);
     }
 
     return null;
@@ -168,22 +168,29 @@ const ResizingTextarea = (props: React.ComponentProps<typeof Textarea>) => {
 };
 
 
-export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDialogProps) {
+export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportExpensesDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
   const [successfulImports, setSuccessfulImports] = useState<ParsedExpense[]>([]);
   const [failedImports, setFailedImports] = useState<FailedImport[]>([]);
+  const [duplicateImports, setDuplicateImports] = useState<DuplicateImport[]>([]);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(importSchema),
   });
 
+  const allExistingExpenses = useMemo(() => {
+    if (!appData) return [];
+    return Object.values(appData.months).flatMap(month => month.expenses);
+  }, [appData]);
+
   const resetState = () => {
     form.reset();
     setStep('upload');
     setSuccessfulImports([]);
     setFailedImports([]);
+    setDuplicateImports([]);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -286,6 +293,17 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     return { errors: {}, parsedExpense: expenseObject };
   }
 
+  const checkForDuplicates = (expense: ParsedExpense): Expense | undefined => {
+    return allExistingExpenses.find(existing => {
+        const expenseDate = startOfDay(new Date(expense.date));
+        const existingDate = startOfDay(new Date(existing.date));
+        return expenseDate.getTime() === existingDate.getTime() &&
+               existing.description.toLowerCase() === expense.description.toLowerCase() &&
+               existing.amount === expense.amount &&
+               existing.paidBy === expense.paidBy;
+    });
+};
+
   const onFileParse = async (values: FormValues) => {
     const file = values.file[0];
     const reader = new FileReader();
@@ -293,20 +311,15 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, {
-          type: 'array',
-          cellDates: false, // Read dates as raw strings
-          dateNF: 'yyyy-mm-dd',
-        });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: false, dateNF: 'yyyy-mm-dd' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, {
-          raw: false,
-        });
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, });
 
         const successes: ParsedExpense[] = [];
         const failures: FailedImport[] = [];
-        const seen = new Set<string>();
+        const duplicates: DuplicateImport[] = [];
+        const seenInFile = new Set<string>();
 
         jsonData.forEach((row, index) => {
             const normalizedRow: {[key: string]: any} = {};
@@ -325,15 +338,19 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
             const { errors, parsedExpense } = validateRow(rowData);
             
             if (parsedExpense) {
-              const uniqueKey = `${parsedExpense.date}-${parsedExpense.description}-${parsedExpense.amount}-${parsedExpense.paidBy}`;
-              if (seen.has(uniqueKey)) {
-                failures.push({
-                    rowNumber: index + 2, data: rowData, errors: { general: 'Duplicate in file' },
-                });
+              const uniqueKeyInFile = `${parsedExpense.date}-${parsedExpense.description}-${parsedExpense.amount}-${parsedExpense.paidBy}`;
+              if (seenInFile.has(uniqueKeyInFile)) {
+                failures.push({ rowNumber: index + 2, data: rowData, errors: { general: 'Duplicate in file' }, });
                 return;
               }
-              seen.add(uniqueKey);
-              successes.push(parsedExpense);
+              seenInFile.add(uniqueKeyInFile);
+
+              const existingMatch = checkForDuplicates(parsedExpense);
+              if (existingMatch) {
+                duplicates.push({ rowNumber: index + 2, data: parsedExpense, existingExpense: existingMatch });
+              } else {
+                successes.push(parsedExpense);
+              }
             } else {
               failures.push({ rowNumber: index + 2, data: rowData, errors });
             }
@@ -341,6 +358,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
           
         setSuccessfulImports(successes);
         setFailedImports(failures);
+        setDuplicateImports(duplicates);
         setStep('preview');
 
       } catch (error) {
@@ -369,28 +387,23 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         title: `Added ${successfulImports.length} expenses`,
         description: summaryParts.join(', '),
       });
-
-    } else if (failedImports.length === 0) {
-       toast({
-          variant: 'destructive',
-          title: 'Import Canceled',
-          description: 'No valid expenses were found to import.',
-        });
     }
 
-    if (failedImports.length > 0) {
-      toast({
+    const remainingFailures = failedImports.length > 0 || duplicateImports.length > 0;
+    
+    if (remainingFailures) {
+       toast({
         variant: 'destructive',
-        title: `${failedImports.length} rows failed to import`,
-        description: `Skipped rows remain in the dialog for correction.`,
+        title: 'Some rows were not imported',
+        description: 'Skipped rows remain in the dialog for correction.',
       });
-      // Don't close dialog if there are failures but no successes
-      if (successfulImports.length > 0) {
+    }
+    
+    if (successfulImports.length > 0 && !remainingFailures) {
         handleOpenChange(false);
-      }
-    } else {
-      // Close dialog if all were successful
-      handleOpenChange(false);
+    } else if (successfulImports.length === 0 && !remainingFailures) {
+        toast({ title: 'No expenses to import' });
+        handleOpenChange(false);
     }
   };
 
@@ -452,6 +465,17 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
         ]);
     }
   };
+
+    const handleKeepDuplicate = (index: number) => {
+        const duplicate = duplicateImports[index];
+        setSuccessfulImports(prev => [...prev, duplicate.data]);
+        setDuplicateImports(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleDiscardDuplicate = (index: number) => {
+        setDuplicateImports(prev => prev.filter((_, i) => i !== index));
+    };
+
   
   const removeSuccessfulRow = (index: number) => {
     setSuccessfulImports(prev => prev.filter((_, i) => i !== index));
@@ -625,6 +649,47 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                     </div>
                 </div>
             )}
+             {duplicateImports.length > 0 && (
+                <div className="mb-6">
+                    <h3 className="font-semibold mb-2 text-yellow-600">{duplicateImports.length} duplicates found:</h3>
+                    <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {duplicateImports.map((dup, i) => (
+                                    <TableRow key={`dup-${dup.rowNumber}-${i}`} className="bg-yellow-500/10">
+                                        <TableCell>
+                                            <p className="font-semibold">{dup.data.description}</p>
+                                            <p className="text-xs text-muted-foreground">Paid by {parentNames[dup.data.paidBy]}</p>
+                                        </TableCell>
+                                        <TableCell>{format(new Date(dup.data.date), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell className="text-right">${dup.data.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex gap-2 justify-end">
+                                                <Button size="sm" variant="outline" onClick={() => handleDiscardDuplicate(i)}>
+                                                    <Trash2 className="mr-2 h-3 w-3"/>
+                                                    Discard
+                                                </Button>
+                                                <Button size="sm" onClick={() => handleKeepDuplicate(i)}>
+                                                    <Copy className="mr-2 h-3 w-3"/>
+                                                    Keep
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+            )}
              {failedImports.length > 0 && (
                 <div className="mb-6">
                     <h3 className="font-semibold mb-2 text-destructive">{failedImports.length} rows will be skipped:</h3>
@@ -740,7 +805,7 @@ export function ImportExpensesDialog({ onImport, parentNames }: ImportExpensesDi
                 <Button variant="outline" onClick={() => setStep('upload')}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
                 </Button>
-                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0}>
+                <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && duplicateImports.length > 0}>
                   Confirm Import ({successfulImports.length})
                 </Button>
             </DialogFooter>

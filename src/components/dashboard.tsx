@@ -409,6 +409,7 @@ function DashboardComponent() {
                           <ImportExpensesDialog
                             onImport={addImportedExpenses}
                             parentNames={currentMonthData.parentNames}
+                            appData={appData}
                           />
                           <ExportButton
                               expenses={expenses}
