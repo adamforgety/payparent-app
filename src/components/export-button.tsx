@@ -60,15 +60,23 @@ export function ExportButton({
           parent2Owes = item.amount;
         }
       } else {
-        const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-        const p1Share = item.amount * (split['Parent 1'] / 100);
-        const p2Share = item.amount * (split['Parent 2'] / 100);
+        let p1Share = 0;
+        let p2Share = 0;
+
+        if (item.category === 'Reimbursement') {
+          p1Share = item.paidBy === 'Parent 1' ? 0 : item.amount;
+          p2Share = item.paidBy === 'Parent 2' ? 0 : item.amount;
+        } else {
+          const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
+          p1Share = item.amount * (split['Parent 1'] / 100);
+          p2Share = item.amount * (split['Parent 2'] / 100);
+        }
 
         const p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
         const p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
 
-        parent1Owes = Math.max(0, p1Share - p1Paid);
-        parent2Owes = Math.max(0, p2Share - p2Paid);
+        parent1Owes = p1Share - p1Paid;
+        parent2Owes = p2Share - p2Paid;
       }
 
       return {

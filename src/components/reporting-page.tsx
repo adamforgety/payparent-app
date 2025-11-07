@@ -91,6 +91,7 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Activities',
   'Clothing',
   'Food',
+  'Reimbursement',
   'Child Support',
   'Other',
 ];
@@ -252,6 +253,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   
       // For standard expenses, the "paid" amount is their share
       const expense = transaction as EnrichedExpense;
+      if (expense.category === 'Reimbursement') {
+        // The parent who paid is credited 100%, so they "paid" their share (which is $0) + the reimbursement amount.
+        // The other parent pays 100% but paid $0 initially, so their net paid is $0 for this item.
+        return expense.paidBy === parent ? expense.amount : 0;
+      }
+
       const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
       return expense.amount * (split[parent] / 100);
   };
@@ -520,7 +527,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             <TableCell>
                               <Badge
                                 variant={
-                                  transaction.category === 'Child Support'
+                                  transaction.category === 'Child Support' || transaction.category === 'Reimbursement'
                                     ? 'default'
                                     : 'outline'
                                 }

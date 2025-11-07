@@ -44,7 +44,10 @@ const calculateShare = (
 ): number => {
   let totalShare = 0;
   for (const expense of expenses) {
-    if (expense.category === 'Medical' || expense.category === 'Child Care') {
+    if (expense.category === 'Reimbursement') {
+      // The parent who paid gets 0% of the share, the other parent gets 100%
+      totalShare += expense.paidBy === p ? 0 : expense.amount;
+    } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
       const medicalParentSplitPercent = medicalSplit[p] / 100;
       totalShare += expense.amount * medicalParentSplitPercent;
     } else {

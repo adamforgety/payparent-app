@@ -168,10 +168,15 @@ export function AllUnsettledExpensesCard({
     } else {
       const expense = item as Expense;
       let p1Share: number, p2Share: number;
-  
-      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? item.medicalExpenseSplit : item.expenseSplit;
-      p1Share = expense.amount * (split['Parent 1'] / 100);
-      p2Share = expense.amount * (split['Parent 2'] / 100);
+
+      if (expense.category === 'Reimbursement') {
+        p1Share = expense.paidBy === 'Parent 1' ? 0 : expense.amount;
+        p2Share = expense.paidBy === 'Parent 2' ? 0 : expense.amount;
+      } else {
+        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? item.medicalExpenseSplit : item.expenseSplit;
+        p1Share = expense.amount * (split['Parent 1'] / 100);
+        p2Share = expense.amount * (split['Parent 2'] / 100);
+      }
       
       const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
       const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
@@ -461,7 +466,7 @@ export function AllUnsettledExpensesCard({
                         <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                        <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'outline'}>{item.category}</Badge>
                       </TableCell>
                       <TableCell>
                         {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
@@ -635,7 +640,7 @@ export function AllUnsettledExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <Badge variant={item.category === 'Child Support' ? 'default' : 'outline'}>{item.category}</Badge>
+                                    <Badge variant={item.category === 'Child Support' || item.category === 'Reimbursement' ? 'default' : 'outline'}>{item.category}</Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
