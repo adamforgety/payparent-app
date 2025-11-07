@@ -1,9 +1,10 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon, Edit, Paperclip, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -59,7 +60,16 @@ const expenseSchema = z.object({
     ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Other'],
     { required_error: 'Please select a category.' }
   ),
-  receipt: z.any().optional(),
+  receipt: z
+    .any()
+    .refine(
+      (files) => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE,
+      'Max file size is 4MB.'
+    )
+    .refine(
+      (files) => !files || files.length === 0 || ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
+      'Only .jpg, .jpeg, .png, .webp and .pdf files are accepted.'
+    ).optional(),
 });
 
 type FormValues = z.infer<typeof expenseSchema>;
@@ -92,11 +102,18 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
         date: new Date(expense.date),
         paidBy: expense.paidBy,
         category: expense.category,
+        receipt: undefined,
       });
       setHasExistingReceipt(!!expense.receiptUrl);
       setRemoveReceipt(false);
     }
   }, [expense, form, isOpen]);
+
+  const handleRemoveReceipt = () => {
+    setRemoveReceipt(true);
+    form.setValue('receipt', undefined); 
+  };
+
 
   async function onSubmit(values: FormValues) {
     let receiptData: Partial<Pick<Expense, 'receiptUrl' | 'receiptFilename'>>;
@@ -294,7 +311,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
                       {expense.receiptFilename || 'View Receipt'}
                     </a>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setRemoveReceipt(true)}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemoveReceipt}>
                     <X className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
