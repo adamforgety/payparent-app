@@ -312,8 +312,18 @@ function DashboardComponent() {
               <div className="mt-6">
                 <Tabs defaultValue="parent-1" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="parent-1">{currentMonthData.parentNames['Parent 1']}</TabsTrigger>
-                    <TabsTrigger value="parent-2">{currentMonthData.parentNames['Parent 2']}</TabsTrigger>
+                    <TabsTrigger
+                      value="parent-1"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
+                      {currentMonthData.parentNames['Parent 1']}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="parent-2"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
+                      {currentMonthData.parentNames['Parent 2']}
+                    </TabsTrigger>
                   </TabsList>
                    <TabsContent value="parent-1" className="mt-6">
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
