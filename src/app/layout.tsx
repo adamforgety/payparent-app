@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import { FirebaseClientProvider } from '@/firebase';
-import { AddToHomeScreenPrompt } from '@/components/add-to-home-screen-prompt';
+import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'PayParent',
@@ -26,11 +24,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          {children}
-          <Toaster />
-          <AddToHomeScreenPrompt />
-        </FirebaseClientProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
