@@ -207,8 +207,8 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
       {
         Date: format(new Date(), 'yyyy-MM-dd'),
         Description: 'Sample: School Books',
-        Amount: 75.50,
-      }
+        Amount: 75.5,
+      },
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
