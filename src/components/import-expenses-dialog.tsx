@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -206,8 +207,6 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
       {
         Date: format(new Date(), 'yyyy-MM-dd'),
         Description: 'Sample: School Books',
-        Category: 'Education',
-        'Initially Paid By': parentNames['Parent 1'],
         Amount: 75.50,
       }
     ];
@@ -218,7 +217,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
     XLSX.writeFile(workbook, 'Expense_Import_Template.xlsx');
   };
 
-  const validateRow = (rowData: RowData): { errors: RowErrors, parsedExpense: ParsedExpense | null } => {
+  const validateRow = (rowData: RowData, fromFile: boolean = false): { errors: RowErrors, parsedExpense: ParsedExpense | null } => {
     const errors: RowErrors = {};
     const { date, description, paidBy, category } = rowData;
     let amount = rowData.amount;
@@ -248,9 +247,9 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
     }
 
     let paidByParent: Parent | null = null;
-    if (!paidBy) {
+    if (!paidBy && !fromFile) { // Required in UI, not from file
         errors.paidBy = 'Missing';
-    } else if (typeof paidBy === 'string') {
+    } else if (typeof paidBy === 'string' && paidBy) {
         const paidByLower = paidBy.toLowerCase();
         if (
           paidByLower === parentNames['Parent 1'].toLowerCase() ||
@@ -263,7 +262,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
         ) {
           paidByParent = 'Parent 2';
         } else {
-            errors.paidBy = 'Unrecognized';
+           if (!fromFile) errors.paidBy = 'Unrecognized';
         }
     }
 
@@ -273,7 +272,10 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
         if (matchedCategory) {
             expenseCategory = matchedCategory;
         }
+    } else if (!fromFile) { // Required in UI, not from file
+        errors.category = 'Missing';
     }
+
 
     if (Object.keys(errors).length > 0) {
         return { errors, parsedExpense: null };
@@ -331,27 +333,38 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
             const rowData: RowData = {
               date: normalizedRow.date,
               description: normalizedRow.description,
-              category: normalizedRow.category,
-              paidBy: normalizedRow.initiallypaidby || normalizedRow.paidby,
+              category: '', // Not required from file
+              paidBy: '', // Not required from file
               amount: String(normalizedRow.amount),
             };
 
-            const { errors, parsedExpense } = validateRow(rowData);
+            const { errors, parsedExpense } = validateRow(rowData, true); // `true` for fromFile
             
             if (parsedExpense) {
-              const uniqueKeyInFile = `${parsedExpense.date}-${parsedExpense.description}-${parsedExpense.amount}-${parsedExpense.paidBy}`;
+              // Duplicate check within the file itself (less reliable without all fields)
+              const uniqueKeyInFile = `${parsedExpense.date}-${parsedExpense.description}-${parsedExpense.amount}`;
               if (seenInFile.has(uniqueKeyInFile)) {
                 failures.push({ rowNumber: index + 2, data: rowData, errors: { general: 'Duplicate in file' }, });
                 return;
               }
               seenInFile.add(uniqueKeyInFile);
 
-              const existingMatch = checkForDuplicates(parsedExpense);
-              if (existingMatch) {
-                duplicates.push({ rowNumber: index + 2, data: parsedExpense, existingExpense: existingMatch });
-              } else {
-                successes.push(parsedExpense);
-              }
+              // Create a partial expense object and push to failures to be completed in UI
+              failures.push({
+                rowNumber: index + 2,
+                data: {
+                  date: format(new Date(parsedExpense.date), 'yyyy-MM-dd'),
+                  description: parsedExpense.description,
+                  amount: String(parsedExpense.amount),
+                  category: '', // Let user choose
+                  paidBy: '', // Let user choose
+                },
+                errors: {
+                  paidBy: 'Required',
+                  category: 'Required'
+                }
+              });
+
             } else {
               failures.push({ rowNumber: index + 2, data: rowData, errors });
             }
@@ -377,6 +390,15 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
   };
   
  const handleConfirmImport = () => {
+    if (failedImports.length > 0 || duplicateImports.length > 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Incomplete Rows',
+            description: 'Please correct all errors and resolve duplicates before importing.',
+        });
+        return;
+    }
+
     if (successfulImports.length > 0) {
       const summary = onImport(successfulImports);
       const summaryParts = Object.entries(summary).map(
@@ -388,21 +410,8 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
         title: `Added ${successfulImports.length} expenses`,
         description: summaryParts.join(', '),
       });
-    }
-
-    const remainingFailures = failedImports.length > 0 || duplicateImports.length > 0;
-    
-    if (remainingFailures) {
-       toast({
-        variant: 'destructive',
-        title: 'Some rows were not imported',
-        description: 'Skipped rows remain in the dialog for correction.',
-      });
-    }
-    
-    if (successfulImports.length > 0 && !remainingFailures) {
-        handleOpenChange(false);
-    } else if (successfulImports.length === 0 && !remainingFailures) {
+      handleOpenChange(false);
+    } else {
         toast({ title: 'No expenses to import' });
         handleOpenChange(false);
     }
@@ -413,7 +422,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
     const itemToUpdate = { ...updatedFailedImports[index] };
     itemToUpdate.data[field] = value;
   
-    const { errors, parsedExpense } = validateRow(itemToUpdate.data);
+    const { errors, parsedExpense } = validateRow(itemToUpdate.data, false); // false for UI validation
   
     if (parsedExpense) {
       const existingMatch = checkForDuplicates(parsedExpense);
@@ -456,11 +465,11 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
         date: format(new Date(itemToUpdate.date), 'yyyy-MM-dd'),
         description: itemToUpdate.description,
         category: itemToUpdate.category,
-        paidBy: parentNames[itemToUpdate.paidBy],
+        paidBy: itemToUpdate.paidBy ? parentNames[itemToUpdate.paidBy] : '',
         amount: String(itemToUpdate.amount),
     };
 
-    const { errors, parsedExpense } = validateRow(rowData);
+    const { errors, parsedExpense } = validateRow(rowData, false); // false for UI validation
     
     if (parsedExpense) {
         updatedSuccessfulImports[index] = parsedExpense;
@@ -511,21 +520,11 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
            {step === 'upload' ? (
             <DialogDescription asChild>
               <div className="space-y-4 pt-2 text-sm text-muted-foreground">
-                <p>Upload an Excel file with the required columns to bulk-add expenses.</p>
+                <p>Upload an Excel file with `Date`, `Description`, and `Amount` columns to bulk-add expenses. You'll assign categories and payers in the next step.</p>
                 <Alert variant="default" className="bg-secondary/50">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    <ul className="list-disc list-inside space-y-2">
-                       <li>
-                         Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, <strong className="text-foreground">Category</strong>, <strong className="text-foreground">Amount</strong>, and <strong className="text-foreground">Initially Paid By</strong>.
-                      </li>
-                      <li>
-                        The "Initially Paid By" value must exactly match one of your set parent names: "<strong className="text-foreground">{parentNames['Parent 1']}</strong>" or "<strong className="text-foreground">{parentNames['Parent 2']}</strong>".
-                      </li>
-                      <li>
-                        The system will automatically calculate each parent's share based on your split percentages. Do not pre-calculate splits in the file.
-                      </li>
-                    </ul>
+                    Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, and <strong className="text-foreground">Amount</strong>. Column names must match exactly.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -580,7 +579,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
             <>
               {successfulImports.length > 0 && (
                   <div className="mb-6">
-                      <h3 className="font-semibold mb-2 text-green-600">{successfulImports.length} expenses will be imported:</h3>
+                      <h3 className="font-semibold mb-2 text-green-600">{successfulImports.length} expenses are ready to import:</h3>
                       <div className="rounded-md border overflow-x-auto">
                           <Table>
                               <TableHeader>
@@ -701,7 +700,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
               )}
                {failedImports.length > 0 && (
                   <div className="mb-6">
-                      <h3 className="font-semibold mb-2 text-destructive">{failedImports.length} rows will be skipped:</h3>
+                      <h3 className="font-semibold mb-2 text-destructive">{failedImports.length} rows require your attention:</h3>
                        <div className="rounded-md border overflow-x-auto">
                           <Table>
                               <TableHeader>
@@ -748,6 +747,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                                                       value={fail.data.date}
                                                       onChange={(e) => handleFailedRowChange(i, 'date', e.target.value)}
                                                       className="h-8"
+                                                      type="date"
                                                   />
                                               )}
                                               {fail.errors.date && <div className="text-xs text-destructive mt-1">{fail.errors.date}</div>}
@@ -772,6 +772,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                                                       {ALL_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                                                   </SelectContent>
                                               </Select>
+                                               {fail.errors.category && <div className="text-xs text-destructive mt-1">{fail.errors.category}</div>}
                                           </TableCell>
                                           <TableCell>
                                               <Select
@@ -819,7 +820,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
               <Button variant="outline" onClick={() => setStep('upload')}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
               </Button>
-              <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && duplicateImports.length > 0}>
+              <Button onClick={handleConfirmImport} disabled={successfulImports.length === 0 && failedImports.length === 0}>
                 Confirm Import ({successfulImports.length})
               </Button>
           </DialogFooter>
