@@ -253,14 +253,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           return transaction.paidBy === parent ? transaction.amount : 0;
       }
   
-      // For standard expenses, the "paid" amount is their share
       const expense = transaction as EnrichedExpense;
       if (expense.category === 'Reimbursement') {
-        // The parent who paid is credited 100%, so they "paid" their share (which is $0) + the reimbursement amount.
-        // The other parent pays 100% but paid $0 initially, so their net paid is $0 for this item.
-        return expense.paidBy === parent ? expense.amount : 0;
+        // When a reimbursement is settled, the parent who DID NOT initially pay is the one who ultimately bears the cost.
+        // So, we credit the payment to them.
+        const otherParent = expense.paidBy === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+        return otherParent === parent ? expense.amount : 0;
       }
 
+      // For standard settled expenses, the "paid" amount is their share
       const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
       return expense.amount * (split[parent] / 100);
   };
