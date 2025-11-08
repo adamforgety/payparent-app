@@ -61,12 +61,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setIsLoading(true);
-
     let dataUnsubscribe: () => void = () => {};
 
     const userDocRef = doc(firestore, 'users', user.uid);
 
     const userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
+      // Always clear previous data listeners when the user's own doc changes.
       if (dataUnsubscribe) {
         dataUnsubscribe();
       }
@@ -83,25 +83,26 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       setIsNewUser(false);
       const userDocData = userDocSnap.data() as UserDoc;
 
-      // Fetch co-parent data if coParentId exists
+      // 1. Fetch co-parent data if coParentId exists on the user's doc
       if (userDocData.coParentId) {
         const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
         try {
+          // One-time fetch for the co-parent's data
           const coParentSnap = await getDoc(coParentDocRef);
           if (coParentSnap.exists()) {
             setCoParentData(coParentSnap.data() as UserDoc);
           } else {
-            setCoParentData(null);
+            setCoParentData(null); // Co-parent doc not found
           }
         } catch (error) {
           console.error("Error fetching co-parent document:", error);
           setCoParentData(null);
         }
       } else {
-        setCoParentData(null);
+        setCoParentData(null); // No coParentId, not linked
       }
 
-      // Determine the target document for app data and set up listener
+      // 2. Set up a real-time listener for the shared AppData
       const dataOwnerId = userDocData.dataOwnerId || user.uid;
       const dataDocRef = doc(firestore, 'users', dataOwnerId);
 
@@ -113,14 +114,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
               setAppData(dataDoc.appData);
             } else {
               console.warn("User document is missing 'appData'. Re-initializing.");
+              // This should ideally not happen if user creation is robust
               saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
             }
           } else {
-            // This case might happen during unlinking, where the pointer is stale for a moment.
-            // Revert to self if the data owner doc is gone.
+            // Fallback: If data owner doc is gone, revert to self
             setAppData(userDocData.appData);
           }
-          setIsLoading(false);
+          setIsLoading(false); // Stop loading after appData is set
         },
         (error: FirestoreError) => {
           const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
@@ -134,6 +135,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
       errorEmitter.emit('permission-error', contextualError);
       setIsLoading(false);
+      setAppData(null);
+      setCoParentData(null);
     });
 
     return () => {
@@ -151,6 +154,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const newMonths = { ...appData.months, ...newData.months };
       const updatedData = { ...appData, ...newData, months: newMonths };
       
+      // The saveUserData function already correctly identifies the dataOwnerId
       saveUserData(firestore, user.uid, updatedData).catch(console.error);
     },
     [user, firestore, appData]
@@ -432,5 +436,3 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
-
-    
