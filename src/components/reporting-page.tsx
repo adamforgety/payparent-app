@@ -498,19 +498,19 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       <SortableHeader sortKey="paidBy">Initially Paid By</SortableHeader>
                       <TableHead className="w-[120px]">Status</TableHead>
                       <SortableHeader sortKey="amount" className="text-right">
-                        Total Amount
+                        Initial Amount
                       </SortableHeader>
                       <SortableHeader
                         sortKey="parent1Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 1']} Paid
+                        {parentNamesForPeriod['Parent 1']} Settlement
                       </SortableHeader>
                       <SortableHeader
                         sortKey="parent2Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 2']} Paid
+                        {parentNamesForPeriod['Parent 2']} Settlement
                       </SortableHeader>
                     </TableRow>
                   </TableHeader>

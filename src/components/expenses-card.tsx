@@ -413,8 +413,8 @@ export function ExpensesCard({
                   <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
                   <TableHead className="text-right w-[100px]">Total</TableHead>
-                  <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Paid</TableHead>
-                  <TableHead className="text-right w-[120px]">{parentNames['Parent 2']} Paid</TableHead>
+                  <TableHead className="text-right w-[140px]">{parentNames['Parent 1']} Settlement</TableHead>
+                  <TableHead className="text-right w-[140px]">{parentNames['Parent 2']} Settlement</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Owes</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 2']} Owes</TableHead>
                   <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
@@ -431,8 +431,8 @@ export function ExpensesCard({
 
                     if (item.status === 'Unsettled') {
                         if (item.type === 'expense') {
-                           p1DisplayPaid = item.paidBy === 'Parent 1' ? item.amount : 0;
-                           p2DisplayPaid = item.paidBy === 'Parent 2' ? item.amount : 0;
+                           p1DisplayPaid = 0; // Don't show settlement value for unsettled items
+                           p2DisplayPaid = 0;
                         } else {
                            p1DisplayPaid = 0;
                            p2DisplayPaid = 0;
@@ -548,8 +548,8 @@ export function ExpensesCard({
                 <TableFooter>
                   <TableRow>
                     <TableCell colSpan={5}></TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Paid</TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Paid</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Settlement</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Settlement</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Owes</TableCell>
                     <TableCell colSpan={2}></TableCell>
@@ -586,7 +586,7 @@ export function ExpensesCard({
                         <div className="space-y-2 text-sm">
                             <h4 className="font-medium">{parentNames['Parent 1']}</h4>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Paid</span>
+                                <span className="text-muted-foreground">Settlement</span>
                                 <span>${totals.totalP1Paid.toFixed(2)}</span>
                             </div>
                              <div className="flex justify-between">
@@ -600,7 +600,7 @@ export function ExpensesCard({
                         <div className="space-y-2 text-sm">
                             <h4 className="font-medium">{parentNames['Parent 2']}</h4>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Paid</span>
+                                <span className="text-muted-foreground">Settlement</span>
                                 <span>${totals.totalP2Paid.toFixed(2)}</span>
                             </div>
                              <div className="flex justify-between">

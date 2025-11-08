@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date-fns';
@@ -445,8 +446,8 @@ export function AllUnsettledExpensesCard({
                 <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                 <TableHead className="w-[150px]">Settlement Status</TableHead>
                 <TableHead className="text-right w-[100px]">Total</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Paid</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Paid</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Initially Paid</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Initially Paid</TableHead>
                 <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableHead>
                 <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
@@ -567,8 +568,8 @@ export function AllUnsettledExpensesCard({
                  <TableFooter>
                     <TableRow>
                         <TableCell colSpan={5}></TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Paid</TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Paid</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Initially Paid</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Initially Paid</TableCell>
                         <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableCell>
                         <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableCell>
                         <TableCell colSpan={2}></TableCell>

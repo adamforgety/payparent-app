@@ -1,3 +1,4 @@
+
 'use client';
 
 import { format } from 'date-fns';
@@ -48,8 +49,8 @@ export function ReportingExportButton({
           } else {
             const expense = item as EnrichedExpense;
             if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
-                parent1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-                parent2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                parent1Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+                parent2Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
             } else {
                 const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
                 parent1Paid = expense.amount * (split['Parent 1'] / 100);
@@ -63,9 +64,9 @@ export function ReportingExportButton({
           Description: item.description,
           Category: item.category,
           'Initially Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
-          Amount: item.amount,
-          [`${parentNames['Parent 1']} Paid`]: parent1Paid.toFixed(2),
-          [`${parentNames['Parent 2']} Paid`]: parent2Paid.toFixed(2),
+          'Initial Amount': item.amount,
+          [`${parentNames['Parent 1']} Settlement`]: parent1Paid.toFixed(2),
+          [`${parentNames['Parent 2']} Settlement`]: parent2Paid.toFixed(2),
           Status: item.status,
         };
       }).filter(item => item.Status === 'Settled');
