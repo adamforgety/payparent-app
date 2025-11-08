@@ -62,12 +62,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
     setIsLoading(true);
     let appDataUnsubscribe: () => void = () => {};
-    let userUnsubscribe: () => void = () => {};
-
+    
     const userDocRef = doc(firestore, 'users', user.uid);
     
     // Primary listener on the current user's own document
-    userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
+    const userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
         if (!userDocSnap.exists()) {
             console.log('User document not found for UID:', user.uid);
             setIsNewUser(true);
@@ -80,14 +79,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         setIsNewUser(false);
         const userDocData = userDocSnap.data() as UserDoc;
 
+        // Whenever the user's doc changes, re-evaluate the co-parent and data owner.
+        
         // --- Step 1: Fetch Co-Parent Data if linked ---
         if (userDocData.coParentId) {
             const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
             try {
+                // Use a direct getDoc for the co-parent. It's not expected to change frequently.
                 const coParentSnap = await getDoc(coParentDocRef);
                 if (coParentSnap.exists()) {
                     setCoParentData(coParentSnap.data() as UserDoc);
                 } else {
+                    console.warn(`Co-parent with ID ${userDocData.coParentId} not found.`);
                     setCoParentData(null);
                 }
             } catch (error) {
@@ -113,7 +116,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
                     const dataOwnerDoc = dataDocSnap.data() as UserDoc;
                     setAppData(dataOwnerDoc.appData || JSON.parse(JSON.stringify(initialData)));
                 } else {
-                    // Fallback if the data owner doc is somehow missing
+                    console.warn(`Data owner document with ID ${dataOwnerId} not found.`);
+                    // Fallback to the current user's appData if the owner's is missing.
                     setAppData(userDocData.appData);
                 }
                 setIsLoading(false);
@@ -135,8 +139,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     return () => {
-        if (userUnsubscribe) userUnsubscribe();
-        if (appDataUnsubscribe) appDataUnsubscribe();
+        userUnsubscribe();
+        appDataUnsubscribe();
     };
 }, [user, firestore, isUserLoading]);
 
@@ -430,3 +434,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    
