@@ -527,6 +527,12 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                     Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, and <strong className="text-foreground">Amount</strong>. Column names must match exactly.
                   </AlertDescription>
                 </Alert>
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Enter the <strong className="text-foreground">full amount</strong> of the expense in the 'Amount' column. The app will automatically calculate each parent's share based on your settings.
+                  </AlertDescription>
+                </Alert>
               </div>
             </DialogDescription>
           ) : (
@@ -829,5 +835,3 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
     </Dialog>
   );
 }
-
-    
