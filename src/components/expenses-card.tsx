@@ -472,11 +472,11 @@ export function ExpensesCard({
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right", p1DisplayPaid < 0 && 'text-destructive')}>
-                          {p1DisplayPaid < 0 ? `-$${Math.abs(p1DisplayPaid).toFixed(2)}` : `$${p1DisplayPaid.toFixed(2)}`}
+                        <TableCell className={cn("text-right", p1DisplayPaid < 0 && 'text-green-600')}>
+                          {p1DisplayPaid < 0 ? `($${Math.abs(p1DisplayPaid).toFixed(2)})` : `$${p1DisplayPaid.toFixed(2)}`}
                         </TableCell>
-                        <TableCell className={cn("text-right", p2DisplayPaid < 0 && 'text-destructive')}>
-                          {p2DisplayPaid < 0 ? `-$${Math.abs(p2DisplayPaid).toFixed(2)}` : `$${p2DisplayPaid.toFixed(2)}`}
+                        <TableCell className={cn("text-right", p2DisplayPaid < 0 && 'text-green-600')}>
+                          {p2DisplayPaid < 0 ? `($${Math.abs(p2DisplayPaid).toFixed(2)})` : `$${p2DisplayPaid.toFixed(2)}`}
                         </TableCell>
                         <TableCell className={cn("text-right", p1Owes < 0 && "text-green-600", p1Owes > 0 && "text-destructive", item.status === 'Settled' && "text-muted-foreground")}>
                            {item.status === 'Settled' ? '$0.00' : p1Owes < 0 ? `($${Math.abs(p1Owes).toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
