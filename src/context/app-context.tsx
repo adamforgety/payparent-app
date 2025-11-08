@@ -80,34 +80,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         async (userDocSnap) => {
           let userDocData = userDocSnap.data() as UserDoc | undefined;
 
-          // --- Self-healing: Create user document if it doesn't exist ---
+          // --- Self-healing: Check for user document ---
           if (!userDocSnap.exists()) {
-            console.log('User document not found for UID:', user.uid, 'Creating a new one.');
+            console.log('User document not found for UID:', user.uid);
             setIsNewUser(true);
-            const newUserDocPayload: UserDoc = {
-              id: user.uid,
-              email: user.email,
-              appData: JSON.parse(JSON.stringify(initialData)),
-              coParentId: null,
-              dataOwnerId: user.uid,
-            };
-            
-            try {
-              await setDoc(userDocRef, newUserDocPayload);
-              userDocData = newUserDocPayload; // Use the new data immediately
-            } catch (error) {
-               const permissionError = new FirestorePermissionError({
-                  path: userDocRef.path,
-                  operation: 'create',
-                  requestResourceData: newUserDocPayload,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-                setIsLoading(false);
-                return; // Stop if we can't create the doc
-            }
-          } else {
-              setIsNewUser(false);
+            setIsLoading(false);
+            return; // Stop if the doc doesn't exist. Let the user go through the Getting Started flow.
           }
+          
+          setIsNewUser(false);
+          userDocData = userDocSnap.data() as UserDoc;
           // --- End Self-healing ---
 
           // Determine the target document for app data
