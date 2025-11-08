@@ -250,20 +250,17 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       if (transaction.status !== 'Settled') return 0;
   
       if (transaction.category === 'Child Support') {
-          // The parent who "Paid By" is responsible for the full amount
           return transaction.paidBy === parent ? transaction.amount : 0;
       }
   
       const expense = transaction as EnrichedExpense;
       if (expense.category === 'Reimbursement') {
-        // When a reimbursement is settled, the parent who was reimbursed gets a NEGATIVE settlement amount.
-        // The parent who made the payment gets a POSITIVE settlement amount.
         if (expense.paidBy === parent) {
-          // This parent paid the reimbursement to the other parent.
-          return expense.amount;
-        } else {
-          // This parent received the reimbursement, so their contribution is negative.
+          // This parent was paid back, so their contribution is negative for this item.
           return -expense.amount;
+        } else {
+          // This parent paid the other one back, so they covered the full amount.
+          return expense.amount;
         }
       }
 
