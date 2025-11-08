@@ -48,7 +48,7 @@ export function ReportingExportButton({
               parent2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
           } else {
             const expense = item as EnrichedExpense;
-            if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+            if (expense.category === 'Reimbursement') {
                 parent1Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
                 parent2Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
             } else {

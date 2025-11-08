@@ -64,7 +64,7 @@ export function ExportButton({
         let p1Share = 0;
         let p2Share = 0;
 
-        if (item.category === 'Reimbursement' || item.category === 'Credit') {
+        if (item.category === 'Reimbursement') {
           p1Share = item.paidBy === 'Parent 1' ? 0 : item.amount;
           p2Share = item.paidBy === 'Parent 2' ? 0 : item.amount;
         } else {

@@ -94,7 +94,6 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Clothing',
   'Food',
   'Reimbursement',
-  'Credit',
   'Child Support',
   'Other',
 ];
@@ -255,7 +254,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       }
   
       const expense = transaction as EnrichedExpense;
-      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+      if (expense.category === 'Reimbursement') {
         // When a reimbursement is settled, the parent who DID NOT initially pay is the one who ultimately bears the cost.
         // So, we credit the payment to them.
         const otherParent = expense.paidBy === 'Parent 1' ? 'Parent 2' : 'Parent 1';
@@ -530,8 +529,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={transaction.category === 'Child Support' ? 'default' : (transaction.category === 'Reimbursement' || transaction.category === 'Credit') ? 'outline' : 'secondary'}
-                                className={cn((transaction.category === 'Reimbursement' || transaction.category === 'Credit') && 'border-primary bg-background text-primary')}
+                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                className={cn(transaction.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                               >
                                 {transaction.category}
                               </Badge>

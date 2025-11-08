@@ -171,7 +171,7 @@ export function AllUnsettledExpensesCard({
       const expense = item as Expense;
       let p1Share: number, p2Share: number;
 
-      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+      if (expense.category === 'Reimbursement') {
         p1Share = expense.paidBy === 'Parent 1' ? 0 : expense.amount;
         p2Share = expense.paidBy === 'Parent 2' ? 0 : expense.amount;
       } else {
@@ -469,8 +469,8 @@ export function AllUnsettledExpensesCard({
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
-                          className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
+                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                          className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                         >
                           {item.category}
                         </Badge>
@@ -648,8 +648,8 @@ export function AllUnsettledExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
-                                      className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
+                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>
