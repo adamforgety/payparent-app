@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
@@ -412,7 +413,7 @@ export function ExpensesCard({
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                   <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
-                  <TableHead className="text-right w-[100px]">Total</TableHead>
+                  <TableHead className="text-right w-[120px]">Initial Amount</TableHead>
                   <TableHead className="text-right w-[140px]">{parentNames['Parent 1']} Settlement</TableHead>
                   <TableHead className="text-right w-[140px]">{parentNames['Parent 2']} Settlement</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Owes</TableHead>
@@ -555,7 +556,7 @@ export function ExpensesCard({
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
                   <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={5}>Totals</TableCell>
+                    <TableCell colSpan={5}>Initial Total</TableCell>
                     <TableCell className="text-right">
                       ${totals.totalP1Paid.toFixed(2)}
                     </TableCell>
