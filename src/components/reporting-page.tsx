@@ -254,14 +254,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       }
   
       const expense = transaction as EnrichedExpense;
-      if (expense.category === 'Reimbursement') {
-        if (expense.paidBy === parent) {
-          // This parent was paid back, so their contribution is negative for this item.
-          return -expense.amount;
-        } else {
-          // This parent paid the other one back, so they covered the full amount.
-          return expense.amount;
-        }
+       if (expense.category === 'Reimbursement') {
+          // The parent who initially paid gets the money back (negative contribution)
+          // The other parent covers the full cost.
+          if (expense.paidBy === parent) {
+            return -expense.amount;
+          } else {
+            return expense.amount;
+          }
       }
 
       // For standard settled expenses, the "paid" amount is their share
@@ -558,11 +558,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             <TableCell className="text-right font-semibold">
                               ${transaction.amount.toFixed(2)}
                             </TableCell>
-                            <TableCell className={cn("text-right", parent1Paid < 0 && 'text-destructive')}>
-                              {parent1Paid < 0 ? `-$${Math.abs(parent1Paid).toFixed(2)}` : `$${parent1Paid.toFixed(2)}`}
+                            <TableCell className={cn("text-right", parent1Paid < 0 && 'text-green-600')}>
+                              {parent1Paid < 0 ? `($${Math.abs(parent1Paid).toFixed(2)})` : `$${parent1Paid.toFixed(2)}`}
                             </TableCell>
-                            <TableCell className={cn("text-right", parent2Paid < 0 && 'text-destructive')}>
-                              {parent2Paid < 0 ? `-$${Math.abs(parent2Paid).toFixed(2)}` : `$${parent2Paid.toFixed(2)}`}
+                            <TableCell className={cn("text-right", parent2Paid < 0 && 'text-green-600')}>
+                              {parent2Paid < 0 ? `($${Math.abs(parent2Paid).toFixed(2)})` : `$${parent2Paid.toFixed(2)}`}
                             </TableCell>
                           </TableRow>
                         );
