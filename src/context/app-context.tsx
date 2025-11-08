@@ -61,91 +61,90 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setIsLoading(true);
-    let dataUnsubscribe: () => void = () => {};
+    let appDataUnsubscribe: () => void = () => {};
 
     const userDocRef = doc(firestore, 'users', user.uid);
 
     const userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
-      // Always clear previous data listeners when the user's own doc changes.
-      if (dataUnsubscribe) {
-        dataUnsubscribe();
-      }
+        // Unsubscribe from any previous appData listener
+        if (appDataUnsubscribe) {
+            appDataUnsubscribe();
+        }
 
-      if (!userDocSnap.exists()) {
-        console.log('User document not found for UID:', user.uid);
-        setIsNewUser(true);
+        if (!userDocSnap.exists()) {
+            console.log('User document not found for UID:', user.uid);
+            setIsNewUser(true);
+            setIsLoading(false);
+            setAppData(null);
+            setCoParentData(null);
+            return;
+        }
+
+        setIsNewUser(false);
+        const userDocData = userDocSnap.data() as UserDoc;
+
+        // --- Fetch Co-Parent Data ---
+        // This is a separate, one-time fetch based on the coParentId.
+        if (userDocData.coParentId) {
+            const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
+            try {
+                const coParentSnap = await getDoc(coParentDocRef);
+                if (coParentSnap.exists()) {
+                    setCoParentData(coParentSnap.data() as UserDoc);
+                } else {
+                    setCoParentData(null);
+                }
+            } catch (error) {
+                console.error("Error fetching co-parent document:", error);
+                setCoParentData(null);
+            }
+        } else {
+            setCoParentData(null);
+        }
+
+        // --- Set up AppData Listener ---
+        // Listen to the document specified by dataOwnerId for real-time appData updates.
+        const dataOwnerId = userDocData.dataOwnerId || user.uid;
+        const dataDocRef = doc(firestore, 'users', dataOwnerId);
+
+        appDataUnsubscribe = onSnapshot(dataDocRef,
+            (dataDocSnap) => {
+                if (dataDocSnap.exists()) {
+                    const dataOwnerDoc = dataDocSnap.data() as UserDoc;
+                    if (dataOwnerDoc.appData) {
+                        setAppData(dataOwnerDoc.appData);
+                    } else {
+                         saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
+                    }
+                } else {
+                    // Fallback if the data owner doc is somehow missing
+                     setAppData(userDocData.appData);
+                }
+                setIsLoading(false);
+            },
+            (error: FirestoreError) => {
+                const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
+                errorEmitter.emit('permission-error', contextualError);
+                setAppData(null);
+                setIsLoading(false);
+            }
+        );
+
+    }, (error: FirestoreError) => {
+        const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
+        errorEmitter.emit('permission-error', contextualError);
         setIsLoading(false);
         setAppData(null);
         setCoParentData(null);
-        return;
-      }
-
-      setIsNewUser(false);
-      const userDocData = userDocSnap.data() as UserDoc;
-
-      // 1. Fetch co-parent data if coParentId exists on the user's doc
-      if (userDocData.coParentId) {
-        const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
-        try {
-          // One-time fetch for the co-parent's data
-          const coParentSnap = await getDoc(coParentDocRef);
-          if (coParentSnap.exists()) {
-            setCoParentData(coParentSnap.data() as UserDoc);
-          } else {
-            setCoParentData(null); // Co-parent doc not found
-          }
-        } catch (error) {
-          console.error("Error fetching co-parent document:", error);
-          setCoParentData(null);
-        }
-      } else {
-        setCoParentData(null); // No coParentId, not linked
-      }
-
-      // 2. Set up a real-time listener for the shared AppData
-      const dataOwnerId = userDocData.dataOwnerId || user.uid;
-      const dataDocRef = doc(firestore, 'users', dataOwnerId);
-
-      dataUnsubscribe = onSnapshot(dataDocRef, 
-        (dataDocSnap) => {
-          if (dataDocSnap.exists()) {
-            const dataDoc = dataDocSnap.data() as UserDoc;
-            if (dataDoc.appData) {
-              setAppData(dataDoc.appData);
-            } else {
-              console.warn("User document is missing 'appData'. Re-initializing.");
-              // This should ideally not happen if user creation is robust
-              saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
-            }
-          } else {
-            // Fallback: If data owner doc is gone, revert to self
-            setAppData(userDocData.appData);
-          }
-          setIsLoading(false); // Stop loading after appData is set
-        },
-        (error: FirestoreError) => {
-          const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
-          errorEmitter.emit('permission-error', contextualError);
-          setAppData(null);
-          setIsLoading(false);
-        }
-      );
-
-    }, (error: FirestoreError) => {
-      const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
-      errorEmitter.emit('permission-error', contextualError);
-      setIsLoading(false);
-      setAppData(null);
-      setCoParentData(null);
     });
 
     return () => {
-      userUnsubscribe();
-      if (dataUnsubscribe) {
-        dataUnsubscribe();
-      }
+        userUnsubscribe();
+        if (appDataUnsubscribe) {
+            appDataUnsubscribe();
+        }
     };
-  }, [user, firestore, isUserLoading]);
+}, [user, firestore, isUserLoading]);
 
   const updateAppData = useCallback(
     (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
@@ -436,3 +435,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    
