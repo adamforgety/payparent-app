@@ -77,7 +77,7 @@ type EnrichedChildSupport = ChildSupport & {
   month: number;
 }
 
-type Transaction = EnrichedExpense | EnrichedChildSupport;
+export type Transaction = EnrichedExpense | EnrichedChildSupport;
 
 type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount' | 'parent1Paid' | 'parent2Paid';
 
@@ -254,14 +254,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       }
   
       const expense = transaction as EnrichedExpense;
-       if (expense.category === 'Reimbursement') {
-          // The parent who initially paid gets the money back (negative contribution)
-          // The other parent covers the full cost.
-          if (expense.paidBy === parent) {
-            return -expense.amount;
-          } else {
-            return expense.amount;
-          }
+      if (expense.category === 'Reimbursement') {
+        return expense.paidBy === parent ? -expense.amount : expense.amount;
       }
 
       // For standard settled expenses, the "paid" amount is their share
@@ -451,7 +445,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       </SelectContent>
                     </Select>
                     <ReportingExportButton
-                      transactions={allTransactions}
+                      transactions={sortedTransactions}
                       periodLabel={
                         selectedMonth === 'all'
                           ? selectedYear
