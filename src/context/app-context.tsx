@@ -48,141 +48,99 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
   // Effect to load initial data and set up listeners
   useEffect(() => {
-    // Wait until the initial auth check is complete before doing anything.
     if (isUserLoading || !firestore) {
       setIsLoading(true);
       return;
     }
-    
-    // If auth is checked and there's no user, we are done.
+
     if (!user) {
-        setIsLoading(false);
-        setAppData(null);
-        setCoParentData(null);
-        return;
+      setIsLoading(false);
+      setAppData(null);
+      setCoParentData(null);
+      return;
     }
 
     setIsLoading(true);
 
-    // --- Set up real-time listeners ---
-    
-    let userUnsubscribe = () => {};
     let dataUnsubscribe: () => void = () => {};
 
-    // This async function sets up all listeners. It's called inside the effect.
-    const setupListeners = async () => {
-      if (!user || !firestore) return;
+    const userDocRef = doc(firestore, 'users', user.uid);
 
-      const userDocRef = doc(firestore, 'users', user.uid);
+    const userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
+      if (dataUnsubscribe) {
+        dataUnsubscribe();
+      }
 
-      // 1. Listener for the current user's document to get coParent and dataOwner info
-      userUnsubscribe = onSnapshot(userDocRef, 
-        async (userDocSnap) => {
-          let userDocData = userDocSnap.data() as UserDoc | undefined;
+      if (!userDocSnap.exists()) {
+        console.log('User document not found for UID:', user.uid);
+        setIsNewUser(true);
+        setIsLoading(false);
+        setAppData(null);
+        setCoParentData(null);
+        return;
+      }
 
-          // --- Self-healing: Check for user document ---
-          if (!userDocSnap.exists()) {
-            console.log('User document not found for UID:', user.uid);
-            setIsNewUser(true);
-            setIsLoading(false);
-            return; // Stop if the doc doesn't exist. Let the user go through the Getting Started flow.
-          }
-          
-          setIsNewUser(false);
-          userDocData = userDocSnap.data() as UserDoc;
-          // --- End Self-healing ---
+      setIsNewUser(false);
+      const userDocData = userDocSnap.data() as UserDoc;
 
-          // Determine the target document for app data
-          const dataOwnerId = userDocData?.dataOwnerId || user.uid;
-          const dataDocRef = doc(firestore, 'users', dataOwnerId);
-          
-          // Set up or update the listener for the shared appData
-          if (dataUnsubscribe) dataUnsubscribe(); // Detach old listener if any
-          dataUnsubscribe = onSnapshot(dataDocRef, 
-            (dataDocSnap) => {
-              if (dataDocSnap.exists()) {
-                const dataDoc = dataDocSnap.data() as UserDoc;
-                if (dataDoc.appData) {
-                  const dataToProcess = { ...dataDoc.appData };
-                  let migrationNeeded = false;
-                  const today = startOfDay(new Date());
-
-                  for (const monthId in dataToProcess.months) {
-                     const monthData = dataToProcess.months[monthId];
-                     
-                     // Fix for future-dated items that were incorrectly settled
-                     const correctedExpenses = monthData.expenses.map(expense => {
-                        if (expense.status === 'Settled' && isAfter(startOfDay(new Date(expense.date)), today)) {
-                           migrationNeeded = true;
-                           return { ...expense, status: 'Unsettled' };
-                        }
-                        return expense;
-                     });
-
-                     let correctedChildSupport = monthData.childSupport;
-                     const monthDate = parse(monthId, 'yyyy-MM', new Date());
-                     if (monthData.childSupport.status === 'Settled' && isAfter(monthDate, today)) {
-                        migrationNeeded = true;
-                        correctedChildSupport = { ...monthData.childSupport, status: 'Unsettled' };
-                     }
-                     
-                     if (migrationNeeded) {
-                        dataToProcess.months[monthId] = {
-                          ...monthData,
-                          expenses: correctedExpenses,
-                          childSupport: correctedChildSupport,
-                        };
-                     }
-                  }
-
-                  if (migrationNeeded) {
-                    console.log("Data Migration: Reverting future settled items to unsettled.");
-                    saveUserData(firestore, dataOwnerId, dataToProcess);
-                  }
-                  
-                  setAppData(dataToProcess);
-                } else {
-                  // Self-healing: If appData field is missing, fix it.
-                  console.warn("User document is missing 'appData'. Re-initializing.");
-                  saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
-                }
-              }
-              setIsLoading(false);
-            },
-            (error: FirestoreError) => {
-              const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
-              errorEmitter.emit('permission-error', contextualError);
-              setAppData(null);
-              setIsLoading(false);
-            }
-          );
-          
-          // Fetch co-parent's profile info if they are linked
-          if (userDocData?.coParentId) {
-            const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
-            const coParentSnap = await getDoc(coParentDocRef);
-            if (coParentSnap.exists()) {
-              setCoParentData(coParentSnap.data() as UserDoc);
-            } else {
-              setCoParentData(null);
-            }
+      // Fetch co-parent data if coParentId exists
+      if (userDocData.coParentId) {
+        const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
+        try {
+          const coParentSnap = await getDoc(coParentDocRef);
+          if (coParentSnap.exists()) {
+            setCoParentData(coParentSnap.data() as UserDoc);
           } else {
             setCoParentData(null);
           }
+        } catch (error) {
+          console.error("Error fetching co-parent document:", error);
+          setCoParentData(null);
+        }
+      } else {
+        setCoParentData(null);
+      }
+
+      // Determine the target document for app data and set up listener
+      const dataOwnerId = userDocData.dataOwnerId || user.uid;
+      const dataDocRef = doc(firestore, 'users', dataOwnerId);
+
+      dataUnsubscribe = onSnapshot(dataDocRef, 
+        (dataDocSnap) => {
+          if (dataDocSnap.exists()) {
+            const dataDoc = dataDocSnap.data() as UserDoc;
+            if (dataDoc.appData) {
+              setAppData(dataDoc.appData);
+            } else {
+              console.warn("User document is missing 'appData'. Re-initializing.");
+              saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
+            }
+          } else {
+            // This case might happen during unlinking, where the pointer is stale for a moment.
+            // Revert to self if the data owner doc is gone.
+            setAppData(userDocData.appData);
+          }
+          setIsLoading(false);
         },
         (error: FirestoreError) => {
-          const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
+          const contextualError = new FirestorePermissionError({ operation: 'get', path: dataDocRef.path });
           errorEmitter.emit('permission-error', contextualError);
+          setAppData(null);
           setIsLoading(false);
         }
       );
-    };
 
-    setupListeners();
+    }, (error: FirestoreError) => {
+      const contextualError = new FirestorePermissionError({ operation: 'get', path: userDocRef.path });
+      errorEmitter.emit('permission-error', contextualError);
+      setIsLoading(false);
+    });
 
     return () => {
       userUnsubscribe();
-      dataUnsubscribe();
+      if (dataUnsubscribe) {
+        dataUnsubscribe();
+      }
     };
   }, [user, firestore, isUserLoading]);
 
@@ -474,3 +432,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    
