@@ -1,8 +1,9 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-import { CalendarIcon, PlusCircle } from 'lucide-react';
+import { CalendarIcon, PlusCircle, Info } from 'lucide-react';
 import { useState, type ReactNode, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -44,6 +45,7 @@ import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types'
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { SelectSeparator } from './ui/select';
+import { Alert, AlertDescription } from './ui/alert';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
@@ -94,6 +96,8 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
       category: 'Other',
     },
   });
+
+  const selectedCategory = form.watch('category');
 
   useEffect(() => {
     if (isOpen) {
@@ -216,6 +220,22 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
                         <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                       </SelectContent>
                     </Select>
+                    {(selectedCategory === 'Medical' || selectedCategory === 'Child Care') && (
+                        <Alert className="mt-2">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                                This cost will be divided based on the <strong className="text-foreground">Medical & Child Care Split</strong> percentage in Settings.
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                    {selectedCategory === 'Reimbursement' && (
+                        <Alert className="mt-2">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                                The parent who initially paid will be reimbursed 100% of this amount by the other parent.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
