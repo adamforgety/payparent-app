@@ -162,10 +162,9 @@ export function ExpensesCard({
       } else {
         const expense = item as Expense;
         if (expense.category === 'Reimbursement') {
-           // When settled, the parent who owed the money (the one who did *not* pay initially) is considered to have "Paid".
-           // The parent who was reimbursed has their initial outlay cancelled out.
-           p1Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-           p2Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
+           // When settled, the parent who was reimbursed gets a NEGATIVE settlement, as their initial outlay is now returned.
+           p1Paid = expense.paidBy === 'Parent 1' ? -expense.amount : expense.amount;
+           p2Paid = expense.paidBy === 'Parent 2' ? -expense.amount : expense.amount;
         } else {
           const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
           p1Paid = expense.amount * (split['Parent 1'] / 100);
@@ -473,11 +472,11 @@ export function ExpensesCard({
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right">
-                           ${p1DisplayPaid.toFixed(2)}
+                        <TableCell className={cn("text-right", p1DisplayPaid < 0 && 'text-destructive')}>
+                          {p1DisplayPaid < 0 ? `-$${Math.abs(p1DisplayPaid).toFixed(2)}` : `$${p1DisplayPaid.toFixed(2)}`}
                         </TableCell>
-                        <TableCell className="text-right">
-                           ${p2DisplayPaid.toFixed(2)}
+                        <TableCell className={cn("text-right", p2DisplayPaid < 0 && 'text-destructive')}>
+                          {p2DisplayPaid < 0 ? `-$${Math.abs(p2DisplayPaid).toFixed(2)}` : `$${p2DisplayPaid.toFixed(2)}`}
                         </TableCell>
                         <TableCell className={cn("text-right", p1Owes < 0 && "text-green-600", p1Owes > 0 && "text-destructive", item.status === 'Settled' && "text-muted-foreground")}>
                            {item.status === 'Settled' ? '$0.00' : p1Owes < 0 ? `($${Math.abs(p1Owes).toFixed(2)})` : `$${p1Owes.toFixed(2)}`}

@@ -172,8 +172,9 @@ export function AllUnsettledExpensesCard({
       let p1Share: number, p2Share: number;
 
       if (expense.category === 'Reimbursement') {
-        p1Share = expense.paidBy === 'Parent 1' ? 0 : expense.amount;
-        p2Share = expense.paidBy === 'Parent 2' ? 0 : expense.amount;
+        // For a reimbursement, the "Paid By" parent is owed 100%. So the *other* parent has the 100% share.
+        p1Share = expense.paidBy === 'Parent 2' ? expense.amount : 0;
+        p2Share = expense.paidBy === 'Parent 1' ? expense.amount : 0;
       } else {
         const split = expense.category === 'Medical' || expense.category === 'Child Care' ? item.medicalExpenseSplit : item.expenseSplit;
         p1Share = expense.amount * (split['Parent 1'] / 100);
