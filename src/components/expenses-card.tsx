@@ -268,6 +268,7 @@ export function ExpensesCard({
           p2Paid = details.p2Paid;
         }
   
+        acc.totalInitialAmount += item.amount;
         acc.totalP1Paid += p1Paid;
         acc.totalP2Paid += p2Paid;
         acc.totalP1Owes += p1Owes;
@@ -275,7 +276,7 @@ export function ExpensesCard({
         
         return acc;
       },
-      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0 }
+      { totalInitialAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0 }
     );
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
   
@@ -413,7 +414,7 @@ export function ExpensesCard({
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                   <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
-                  <TableHead className="text-right w-[120px]">Initial Amount</TableHead>
+                  <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
                   <TableHead className="text-right w-[140px]">{parentNames['Parent 1']} Settlement</TableHead>
                   <TableHead className="text-right w-[140px]">{parentNames['Parent 2']} Settlement</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Owes</TableHead>
@@ -548,7 +549,8 @@ export function ExpensesCard({
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={5}></TableCell>
+                    <TableCell colSpan={4}></TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Settlement</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Settlement</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Owes</TableCell>
@@ -556,7 +558,10 @@ export function ExpensesCard({
                     <TableCell colSpan={2}></TableCell>
                   </TableRow>
                   <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={5}>Initial Total</TableCell>
+                    <TableCell colSpan={4}>Totals</TableCell>
+                    <TableCell className="text-right">
+                        ${totals.totalInitialAmount.toFixed(2)}
+                    </TableCell>
                     <TableCell className="text-right">
                       ${totals.totalP1Paid.toFixed(2)}
                     </TableCell>
