@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -120,8 +121,16 @@ export function CoParentLinkCard() {
 
   const handleUnlink = () => {
     startUnlinking(async () => {
-      if (!user || !firestore || !coParentData) return;
+      if (!user || !firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User or database is not available.' });
+        return;
+      }
       
+      if (!coParentData) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Co-parent data is not loaded. Cannot unlink.' });
+        return;
+      }
+
       const coParentId = coParentData.id;
       const coParentDocRef = doc(firestore, 'users', coParentId);
       const currentUserDocRef = doc(firestore, 'users', user.uid);
