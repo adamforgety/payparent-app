@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { UserDoc } from '@/lib/types';
 
 const linkSchema = z.object({
   coParentCode: z.string().trim().min(1, { message: 'Co-parent code is required.' }),
@@ -125,15 +126,35 @@ export function CoParentLinkCard() {
         toast({ variant: 'destructive', title: 'Error', description: 'User or database is not available.' });
         return;
       }
+
+      const currentUserDocRef = doc(firestore, 'users', user.uid);
+      let coParentId: string | null = null;
+      let coParentEmail: string | null = null;
+
+      // First, try to get the coParentId from the context for immediate feedback
+      if (coParentData) {
+        coParentId = coParentData.id;
+        coParentEmail = coParentData.email;
+      } else {
+        // If context is not available, fetch the user doc directly to get the coParentId
+        try {
+            const userDocSnap = await getDoc(currentUserDocRef);
+            if (userDocSnap.exists()) {
+                const userDocData = userDocSnap.data() as UserDoc;
+                coParentId = userDocData.coParentId;
+            }
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not verify co-parent link. Please try again.' });
+            return;
+        }
+      }
       
-      if (!coParentData) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Co-parent data is not loaded. Cannot unlink.' });
+      if (!coParentId) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not find a co-parent to unlink. The accounts may already be unlinked.' });
         return;
       }
-
-      const coParentId = coParentData.id;
+      
       const coParentDocRef = doc(firestore, 'users', coParentId);
-      const currentUserDocRef = doc(firestore, 'users', user.uid);
 
       const batch = writeBatch(firestore);
       
@@ -151,7 +172,7 @@ export function CoParentLinkCard() {
       
       batch.commit()
         .then(() => {
-          toast({ title: 'Unlinked Successfully', description: 'Your accounts are no longer connected.' });
+          toast({ title: 'Unlinked Successfully', description: `Your accounts are no longer connected.` });
         })
         .catch((error) => {
           const permissionError = new FirestorePermissionError({
@@ -204,7 +225,7 @@ export function CoParentLinkCard() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure you want to unlink?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will stop data sharing between you and {coParentData.email}. You will both revert to your own separate data. This action can be undone by linking again.
+                    This will stop data sharing between you and {coParentData.email || 'your co-parent'}. You will both revert to your own separate data. This action can be undone by linking again.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
