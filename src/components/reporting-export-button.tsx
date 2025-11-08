@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { Expense, ParentNames, ChildSupport, ExpenseSplit, MedicalExpenseSplit, Parent } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 
 type EnrichedExpense = Expense & { 
@@ -47,7 +47,7 @@ export function ReportingExportButton({
               parent2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
           } else {
             const expense = item as EnrichedExpense;
-            if (expense.category === 'Reimbursement') {
+            if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
                 parent1Paid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
                 parent2Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
             } else {
@@ -62,7 +62,7 @@ export function ReportingExportButton({
           Date: format(new Date(item.date), 'yyyy-MM-dd'),
           Description: item.description,
           Category: item.category,
-          'Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
+          'Initially Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
           Amount: item.amount,
           [`${parentNames['Parent 1']} Paid`]: parent1Paid.toFixed(2),
           [`${parentNames['Parent 2']} Paid`]: parent2Paid.toFixed(2),

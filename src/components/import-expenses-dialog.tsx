@@ -99,6 +99,8 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Activities',
   'Clothing',
   'Food',
+  'Credit',
+  'Reimbursement',
   'Other',
 ];
 
@@ -206,7 +208,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
         Date: format(new Date(), 'yyyy-MM-dd'),
         Description: 'Sample: School Books',
         Category: 'Education',
-        'Paid By': parentNames['Parent 1'],
+        'Initially Paid By': parentNames['Parent 1'],
         Amount: 75.50,
       }
     ];
@@ -331,7 +333,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
               date: normalizedRow.date,
               description: normalizedRow.description,
               category: normalizedRow.category,
-              paidBy: normalizedRow.paidby,
+              paidBy: normalizedRow.initiallypaidby || normalizedRow.paidby,
               amount: String(normalizedRow.amount),
             };
 
@@ -516,10 +518,10 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                   <AlertDescription>
                     <ul className="list-disc list-inside space-y-2">
                        <li>
-                         Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, <strong className="text-foreground">Category</strong>, <strong className="text-foreground">Amount</strong>, and <strong className="text-foreground">Paid By</strong>.
+                         Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, <strong className="text-foreground">Category</strong>, <strong className="text-foreground">Amount</strong>, and <strong className="text-foreground">Initially Paid By</strong>.
                       </li>
                       <li>
-                        The "Paid By" value must exactly match one of your set parent names: "<strong className="text-foreground">{parentNames['Parent 1']}</strong>" or "<strong className="text-foreground">{parentNames['Parent 2']}</strong>".
+                        The "Initially Paid By" value must exactly match one of your set parent names: "<strong className="text-foreground">{parentNames['Parent 1']}</strong>" or "<strong className="text-foreground">{parentNames['Parent 2']}</strong>".
                       </li>
                       <li>
                         The system will automatically calculate each parent's share based on your split percentages. Do not pre-calculate splits in the file.
@@ -587,7 +589,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                                       <TableHead className="w-[150px]">Date</TableHead>
                                       <TableHead>Description</TableHead>
                                       <TableHead className="w-[150px]">Category</TableHead>
-                                      <TableHead className="w-[180px]">Paid By</TableHead>
+                                      <TableHead className="w-[180px]">Initially Paid By</TableHead>
                                       <TableHead className="w-[130px] text-right">Amount</TableHead>
                                       <TableHead className="w-[50px] text-right">Actions</TableHead>
                                   </TableRow>
@@ -708,7 +710,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                                       <TableHead className="w-[200px]">Date</TableHead>
                                       <TableHead>Description</TableHead>
                                       <TableHead className="w-[150px]">Category</TableHead>
-                                      <TableHead className="w-[180px]">Paid By</TableHead>
+                                      <TableHead className="w-[180px]">Initially Paid By</TableHead>
                                       <TableHead className="w-[130px]">Amount</TableHead>
                                       <TableHead className="w-[50px] text-right">Actions</TableHead>
                                   </TableRow>

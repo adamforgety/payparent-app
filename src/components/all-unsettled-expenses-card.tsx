@@ -170,7 +170,7 @@ export function AllUnsettledExpensesCard({
       const expense = item as Expense;
       let p1Share: number, p2Share: number;
 
-      if (expense.category === 'Reimbursement') {
+      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
         p1Share = expense.paidBy === 'Parent 1' ? 0 : expense.amount;
         p2Share = expense.paidBy === 'Parent 2' ? 0 : expense.amount;
       } else {
@@ -442,7 +442,7 @@ export function AllUnsettledExpensesCard({
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
-                <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
+                <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                 <TableHead className="w-[150px]">Settlement Status</TableHead>
                 <TableHead className="text-right w-[100px]">Total</TableHead>
                 <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Paid</TableHead>
@@ -468,8 +468,8 @@ export function AllUnsettledExpensesCard({
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                          className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                          variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
+                          className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                         >
                           {item.category}
                         </Badge>
@@ -647,15 +647,15 @@ export function AllUnsettledExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                                      variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
+                                      className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Paid By</span>
+                                    <span className="text-muted-foreground">Initially Paid By</span>
                                     {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
                                 </div>
                                 <div className="flex items-center justify-between text-sm">

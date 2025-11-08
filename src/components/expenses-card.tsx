@@ -134,7 +134,7 @@ export function ExpensesCard({
       const expense = item as Expense;
       let p1Share: number, p2Share: number;
 
-      if (expense.category === 'Reimbursement') {
+      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
         // For a reimbursement, the "Paid By" parent is owed 100%. So the *other* parent has the 100% share.
         p1Share = expense.paidBy === 'Parent 2' ? expense.amount : 0;
         p2Share = expense.paidBy === 'Parent 1' ? expense.amount : 0;
@@ -160,7 +160,7 @@ export function ExpensesCard({
         p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
       } else {
         const expense = item as Expense;
-        if (expense.category === 'Reimbursement') {
+        if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
            // When settled, the parent who owed the money (the one who did *not* pay initially) is considered to have "Paid".
            // The parent who was reimbursed has their initial outlay cancelled out.
            p1Paid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
@@ -410,7 +410,7 @@ export function ExpensesCard({
                 <TableRow>
                   <SortableHeader sortKey="description">Description</SortableHeader>
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
-                  <SortableHeader sortKey="paidBy" className="w-[120px]">Paid By</SortableHeader>
+                  <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
                   <TableHead className="text-right w-[100px]">Total</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']} Paid</TableHead>
@@ -447,8 +447,8 @@ export function ExpensesCard({
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                            className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                            variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
+                            className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                           >
                             {item.category}
                           </Badge>
@@ -664,8 +664,8 @@ export function ExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                                      variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
+                                      className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>
@@ -673,7 +673,7 @@ export function ExpensesCard({
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Paid By</span>
+                                    <span className="text-muted-foreground">Initially Paid By</span>
                                     {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
