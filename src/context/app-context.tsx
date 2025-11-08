@@ -62,15 +62,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
     setIsLoading(true);
     let appDataUnsubscribe: () => void = () => {};
+    let userUnsubscribe: () => void = () => {};
 
     const userDocRef = doc(firestore, 'users', user.uid);
-
-    const userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
-        // Unsubscribe from any previous appData listener
-        if (appDataUnsubscribe) {
-            appDataUnsubscribe();
-        }
-
+    
+    // Primary listener on the current user's own document
+    userUnsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
         if (!userDocSnap.exists()) {
             console.log('User document not found for UID:', user.uid);
             setIsNewUser(true);
@@ -83,8 +80,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         setIsNewUser(false);
         const userDocData = userDocSnap.data() as UserDoc;
 
-        // --- Fetch Co-Parent Data ---
-        // This is a separate, one-time fetch based on the coParentId.
+        // --- Step 1: Fetch Co-Parent Data if linked ---
         if (userDocData.coParentId) {
             const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
             try {
@@ -102,23 +98,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
             setCoParentData(null);
         }
 
-        // --- Set up AppData Listener ---
-        // Listen to the document specified by dataOwnerId for real-time appData updates.
+        // --- Step 2: Set up listener for the SHARED appData ---
         const dataOwnerId = userDocData.dataOwnerId || user.uid;
         const dataDocRef = doc(firestore, 'users', dataOwnerId);
 
-        appDataUnsubscribe = onSnapshot(dataDocRef,
+        // Unsubscribe from any previous appData listener before creating a new one
+        if (appDataUnsubscribe) {
+            appDataUnsubscribe();
+        }
+
+        appDataUnsubscribe = onSnapshot(dataDocRef, 
             (dataDocSnap) => {
                 if (dataDocSnap.exists()) {
                     const dataOwnerDoc = dataDocSnap.data() as UserDoc;
-                    if (dataOwnerDoc.appData) {
-                        setAppData(dataOwnerDoc.appData);
-                    } else {
-                         saveUserData(firestore, dataOwnerId, JSON.parse(JSON.stringify(initialData)));
-                    }
+                    setAppData(dataOwnerDoc.appData || JSON.parse(JSON.stringify(initialData)));
                 } else {
                     // Fallback if the data owner doc is somehow missing
-                     setAppData(userDocData.appData);
+                    setAppData(userDocData.appData);
                 }
                 setIsLoading(false);
             },
@@ -139,12 +135,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     return () => {
-        userUnsubscribe();
-        if (appDataUnsubscribe) {
-            appDataUnsubscribe();
-        }
+        if (userUnsubscribe) userUnsubscribe();
+        if (appDataUnsubscribe) appDataUnsubscribe();
     };
 }, [user, firestore, isUserLoading]);
+
 
   const updateAppData = useCallback(
     (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
