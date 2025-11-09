@@ -553,10 +553,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             <TableCell className="text-right font-semibold">
                               ${transaction.amount.toFixed(2)}
                             </TableCell>
-                            <TableCell className={cn("text-right", transaction.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
+                            <TableCell className="text-right">
                               {isP1Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent1Share.toFixed(2)}`}
                             </TableCell>
-                            <TableCell className={cn("text-right", transaction.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
+                            <TableCell className="text-right">
                               {isP2Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent2Share.toFixed(2)}`}
                             </TableCell>
                           </TableRow>
