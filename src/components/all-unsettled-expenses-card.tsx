@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date-fns';
@@ -425,8 +426,8 @@ export function AllUnsettledExpensesCard({
                 <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                 <TableHead className="w-[150px]">Settlement Status</TableHead>
                 <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']}'s Share</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']}'s Share</TableHead>
+                <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
+                <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
               </TableRow>
@@ -438,6 +439,7 @@ export function AllUnsettledExpensesCard({
                     const p2Share = getParentShare(item, 'Parent 2');
                     
                     const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
 
                   return (
                     <TableRow key={item.id}>
@@ -470,10 +472,10 @@ export function AllUnsettledExpensesCard({
                         ${item.amount.toFixed(2)}
                       </TableCell>
                       <TableCell className={cn("text-right", item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
-                        {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
+                         {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                       </TableCell>
                       <TableCell className={cn("text-right", item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
-                         {isP1Reimbursed ? `$${p2Share.toFixed(2)}` : `($${item.amount.toFixed(2)})`}
+                         {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
                         {item.type === 'expense' && item.receiptUrl && (
@@ -541,8 +543,8 @@ export function AllUnsettledExpensesCard({
                     <TableRow>
                         <TableCell colSpan={4}></TableCell>
                         <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']}'s Share</TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']}'s Share</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']}'s Share</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']}'s Share</TableCell>
                         <TableCell colSpan={2}></TableCell>
                     </TableRow>
                     <TableRow className="bg-secondary/50 font-bold">
@@ -592,6 +594,8 @@ export function AllUnsettledExpensesCard({
                 filteredAndSortedItems.map((item) => {
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
+                    const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -668,13 +672,13 @@ export function AllUnsettledExpensesCard({
                                     <div className="flex justify-between">
                                     <span className="text-muted-foreground">{item.parentNames['Parent 1']}'s Share</span>
                                     <span className={cn("font-semibold", item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
-                                        ${p1Share.toFixed(2)}
+                                         {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                                     </span>
                                     </div>
                                     <div className="flex justify-between">
                                     <span className="text-muted-foreground">{item.parentNames['Parent 2']}'s Share</span>
                                     <span className={cn("font-semibold", item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
-                                        ${p2Share.toFixed(2)}
+                                         {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                                     </span>
                                     </div>
                             </div>
@@ -696,4 +700,6 @@ export function AllUnsettledExpensesCard({
 }
 
     
+    
+
     
