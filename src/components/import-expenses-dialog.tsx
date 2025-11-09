@@ -520,21 +520,20 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
           </DialogTitle>
            {step === 'upload' ? (
             <DialogDescription asChild>
-              <div className="space-y-4 pt-2 text-sm text-muted-foreground">
-                <p>Upload an Excel file with `Date`, `Description`, and `Amount` columns to bulk-add expenses. You'll assign categories and payers in the next step.</p>
-                <Alert variant="default" className="bg-secondary/50">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    Your file must have columns for: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, and <strong className="text-foreground">Amount</strong>. Column names must match exactly.
-                  </AlertDescription>
-                </Alert>
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    Enter the <strong className="text-foreground">full amount</strong> of the expense in the 'Amount' column. The app will automatically calculate each parent's share based on your settings.
-                  </AlertDescription>
-                </Alert>
-              </div>
+                <div className="space-y-4 pt-2 text-sm text-muted-foreground">
+                    <p>
+                        Bulk-add expenses by uploading an Excel file. After uploading, you will assign categories and payers before finalizing the import.
+                    </p>
+                    <Alert variant="default" className="bg-secondary/50 border-primary/50">
+                        <Info className="h-4 w-4 text-primary" />
+                        <AlertDescription>
+                        <ul className="list-disc list-outside pl-5 space-y-1">
+                            <li>Your file must have columns named: <strong className="text-foreground">Date</strong>, <strong className="text-foreground">Description</strong>, and <strong className="text-foreground">Amount</strong>.</li>
+                            <li>Enter the <strong className="text-foreground">full amount</strong> for each expense. The app will calculate each parent's share automatically.</li>
+                        </ul>
+                        </AlertDescription>
+                    </Alert>
+                </div>
             </DialogDescription>
           ) : (
             <DialogDescription>
