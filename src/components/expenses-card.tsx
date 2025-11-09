@@ -550,7 +550,8 @@ export function ExpensesCard({
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={3}></TableCell>
+                    <TableCell>
                       {totalCount > 0 && (
                         <div className="text-xs text-muted-foreground">
                           {settledCount} of {totalCount} settled

@@ -337,9 +337,6 @@ export function AllUnsettledExpensesCard({
     </TableHead>
   );
 
-  const settledCount = allUnsettledItems.filter(item => item.status === 'Settled').length;
-  const totalCount = allUnsettledItems.length;
-
   return (
     <Card>
       <CardHeader>
@@ -559,10 +556,11 @@ export function AllUnsettledExpensesCard({
              {filteredAndSortedItems.length > 0 && (
                  <TableFooter>
                     <TableRow>
-                        <TableCell colSpan={4}>
-                           {totalCount > 0 && (
+                        <TableCell colSpan={3}></TableCell>
+                        <TableCell>
+                           {filteredAndSortedItems.length > 0 && (
                             <div className="text-xs text-muted-foreground">
-                              {settledCount} of {totalCount} settled
+                              {filteredAndSortedItems.length} items remaining
                             </div>
                           )}
                         </TableCell>
