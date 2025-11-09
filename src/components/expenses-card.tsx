@@ -241,37 +241,17 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        let p1Paid = 0;
-        let p2Paid = 0;
-        let p1Owes = 0;
-        let p2Owes = 0;
-  
-        // For 'Owes' totals, only calculate for unsettled items.
-        if (item.status === 'Unsettled') {
-          const details = renderItemDetails(item);
-          p1Owes = details.p1Owes;
-          p2Owes = details.p2Owes;
-        }
-
-        // For 'Paid' totals, calculate based on who initially paid for unsettled items,
-        // and by final share for settled items.
-        if (item.status === 'Unsettled') {
-          if (item.type === 'expense') {
-            p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-            p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-          }
-          // For unsettled child support, 'Paid' is 0
-        } else { // 'Settled'
-          const details = renderItemDetails(item);
-          p1Paid = details.p1Paid;
-          p2Paid = details.p2Paid;
-        }
+        const { p1Owes, p2Owes, p1Paid, p2Paid } = renderItemDetails(item);
   
         acc.totalInitialAmount += item.amount;
         acc.totalP1Paid += p1Paid;
         acc.totalP2Paid += p2Paid;
-        acc.totalP1Owes += p1Owes;
-        acc.totalP2Owes += p2Owes;
+        
+        // For 'Owes' totals, only calculate for unsettled items.
+        if (item.status === 'Unsettled') {
+          acc.totalP1Owes += p1Owes;
+          acc.totalP2Owes += p2Owes;
+        }
         
         return acc;
       },
