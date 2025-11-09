@@ -64,7 +64,7 @@ export function ExportButton({
         let p1Share = 0;
         let p2Share = 0;
 
-        if (item.category === 'Reimbursement') {
+        if (item.category === 'Reimbursement' || item.category === 'Credit') {
           p1Share = item.paidBy === 'Parent 1' ? 0 : item.amount;
           p2Share = item.paidBy === 'Parent 2' ? 0 : item.amount;
         } else {
@@ -84,7 +84,7 @@ export function ExportButton({
         Date: format(new Date(item.date), 'yyyy-MM-dd'),
         Description: item.description,
         Category: item.category,
-        'Initially Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy],
+        'Initial Payer': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy],
         Amount: item.amount,
         [`${parentNames['Parent 1']} Owes`]: parent1Owes.toFixed(2),
         [`${parentNames['Parent 2']} Owes`]: parent2Owes.toFixed(2),

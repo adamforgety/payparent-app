@@ -423,7 +423,7 @@ export function AllUnsettledExpensesCard({
               <TableRow>
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
-                <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
+                <SortableHeader sortKey="paidBy" className="w-[140px]">Initial Payer</SortableHeader>
                 <TableHead className="w-[150px]">Settlement Status</TableHead>
                 <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
                 <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
@@ -442,18 +442,18 @@ export function AllUnsettledExpensesCard({
 
                     let p1Color, p2Color;
 
-                    if (item.type === 'child_support') {
+                     if (item.type === 'child_support') {
                         if (item.paidBy === 'Parent 1') { // Parent 1 is paying
-                            p1Color = 'text-destructive'; // Unsettled is always red for paying parent
+                            p1Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
                             p2Color = 'text-green-600';
                         } else { // Parent 2 is paying
                             p1Color = 'text-green-600';
-                            p2Color = 'text-destructive'; // Unsettled is always red for paying parent
+                            p2Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
                         }
                     } else {
                         // Regular Expense Logic
-                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive';
-                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive';
+                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
+                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
                     }
 
                   return (
@@ -616,16 +616,16 @@ export function AllUnsettledExpensesCard({
 
                     if (item.type === 'child_support') {
                         if (item.paidBy === 'Parent 1') { // Parent 1 is paying
-                            p1Color = 'text-destructive';
+                            p1Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
                             p2Color = 'text-green-600';
                         } else { // Parent 2 is paying
                             p1Color = 'text-green-600';
-                            p2Color = 'text-destructive';
+                            p2Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
                         }
                     } else {
                         // Regular Expense Logic
-                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive';
-                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive';
+                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
+                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
                     }
 
                     return (
@@ -684,7 +684,7 @@ export function AllUnsettledExpensesCard({
                                     <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Initially Paid By</span>
+                                    <span className="text-muted-foreground">Initial Payer</span>
                                     {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
                                 </div>
                                 <div className="flex items-center justify-between text-sm">

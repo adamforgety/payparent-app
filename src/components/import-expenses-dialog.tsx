@@ -101,6 +101,7 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Clothing',
   'Food',
   'Reimbursement',
+  'Credit',
   'Other',
 ];
 
@@ -593,7 +594,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                                       <TableHead className="w-[150px]">Date</TableHead>
                                       <TableHead>Description</TableHead>
                                       <TableHead className="w-[150px]">Category</TableHead>
-                                      <TableHead className="w-[180px]">Initially Paid By</TableHead>
+                                      <TableHead className="w-[180px]">Initial Payer</TableHead>
                                       <TableHead className="w-[130px] text-right">Amount</TableHead>
                                       <TableHead className="w-[50px] text-right">Actions</TableHead>
                                   </TableRow>
@@ -714,7 +715,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
                                       <TableHead className="w-[200px]">Date</TableHead>
                                       <TableHead>Description</TableHead>
                                       <TableHead className="w-[150px]">Category</TableHead>
-                                      <TableHead className="w-[180px]">Initially Paid By</TableHead>
+                                      <TableHead className="w-[180px]">Initial Payer</TableHead>
                                       <TableHead className="w-[130px]">Amount</TableHead>
                                       <TableHead className="w-[50px] text-right">Actions</TableHead>
                                   </TableRow>

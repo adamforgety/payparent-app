@@ -489,7 +489,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       <SortableHeader sortKey="category">
                         Category
                       </SortableHeader>
-                      <SortableHeader sortKey="paidBy">Initially Paid By</SortableHeader>
+                      <SortableHeader sortKey="paidBy">Initial Payer</SortableHeader>
                       <TableHead className="w-[120px]">Status</TableHead>
                       <SortableHeader sortKey="amount" className="text-right">
                         Initial Amount

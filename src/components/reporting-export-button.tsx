@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ParentNames, Parent, Expense, ExpenseSplit, MedicalExpenseSplit } from '@/lib/types';
+import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 import type { Transaction } from './reporting-page';
 
@@ -50,7 +50,7 @@ export function ReportingExportButton({
           Date: format(new Date(item.date), 'yyyy-MM-dd'),
           Description: item.description,
           Category: item.category,
-          'Initially Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
+          'Initial Payer': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
           'Initial Amount': item.amount,
           [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
           [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),

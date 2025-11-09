@@ -58,7 +58,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Child Care', 'Education', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
+    ['Medical', 'Child Care', 'Education', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Credit', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z
@@ -218,6 +218,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
                         <SelectItem value="Other">Other</SelectItem>
                         <SelectSeparator />
                         <SelectItem value="Reimbursement">Reimbursement</SelectItem>
+                        <SelectItem value="Credit">Credit</SelectItem>
                       </SelectContent>
                     </Select>
                     {(selectedCategory === 'Medical' || selectedCategory === 'Child Care') && (
@@ -228,7 +229,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
                             </AlertDescription>
                         </Alert>
                     )}
-                    {selectedCategory === 'Reimbursement' && (
+                    {(selectedCategory === 'Reimbursement' || selectedCategory === 'Credit') && (
                         <Alert className="mt-2">
                             <Info className="h-4 w-4" />
                             <AlertDescription>
@@ -259,7 +260,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
                 name="paidBy"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Initially Paid By</FormLabel>
+                    <FormLabel>Initial Payer</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
