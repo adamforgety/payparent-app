@@ -424,7 +424,7 @@ export function AllUnsettledExpensesCard({
                 <SortableHeader sortKey="description">Description</SortableHeader>
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                 <SortableHeader sortKey="paidBy" className="w-[140px]">Initial Payer</SortableHeader>
-                <TableHead className="w-[150px]">Settlement Status</TableHead>
+                <TableHead className="w-[150px]">Status</TableHead>
                 <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
                 <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
                 <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>

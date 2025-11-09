@@ -415,7 +415,7 @@ export function ExpensesCard({
                   <SortableHeader sortKey="description">Description</SortableHeader>
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                   <SortableHeader sortKey="paidBy" className="w-[140px]">Initial Payer</SortableHeader>
-                  <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
+                  <SortableHeader sortKey="status" className="w-[150px]">Status</SortableHeader>
                   <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>
