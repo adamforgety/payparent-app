@@ -46,124 +46,105 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
   const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
-  const [coParentId, setCoParentId] = useState<string | null>(null);
 
-
-  // Step 1: Listen to the current user's document to get their IDs
+  // Effect to listen to the current user's document to determine their data owner and co-parent.
   useEffect(() => {
     if (isUserLoading || !firestore || !user) {
-      setIsLoading(true);
+      // If the user is not authenticated or firebase is not ready, reset state.
+      if (!isUserLoading && !user) {
+        setIsLoading(false);
+        setAppData(null);
+        setCurrentUserDoc(null);
+        setDataOwnerId(null);
+        setCoParentData(null);
+      }
       return;
     }
     
+    setIsLoading(true);
     const currentUserDocRef = doc(firestore, 'users', user.uid);
+
     const unsubscribeUser = onSnapshot(currentUserDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const userDocData = docSnap.data() as UserDoc;
             setCurrentUserDoc(userDocData);
             setDataOwnerId(userDocData.dataOwnerId || user.uid);
-            setCoParentId(userDocData.coParentId);
+            // Listen for co-parent data if coParentId exists
+            if (userDocData.coParentId && firestore) {
+              const coParentDocRef = doc(firestore, 'users', userDocData.coParentId);
+              getDoc(coParentDocRef).then(coParentSnap => {
+                if(coParentSnap.exists()){
+                  setCoParentData(coParentSnap.data() as UserDoc);
+                }
+              });
+            } else {
+              setCoParentData(null);
+            }
             setIsNewUser(false);
         } else {
             // This is a new user who doesn't have a document yet.
             setIsNewUser(true);
             setAppData(null);
-            setCoParentData(null);
             setDataOwnerId(null);
-            setCoParentId(null);
-            setCurrentUserDoc(null);
-            setIsLoading(false);
-            setIsInitialLoad(false);
+            setCoParentData(null);
+            setIsLoading(false); // New user flow doesn't require further data loading
         }
     }, (error) => {
         console.error("Error listening to current user doc:", error);
         errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'get', path: currentUserDocRef.path }));
         setIsLoading(false);
-        setIsInitialLoad(false);
     });
 
     return () => unsubscribeUser();
   }, [user, firestore, isUserLoading]);
 
-
-  // Step 2: Listen to the co-parent's document if the ID exists
-  useEffect(() => {
-      if (!firestore || !coParentId) {
-          setCoParentData(null);
-          return;
-      }
-      
-      const coParentDocRef = doc(firestore, 'users', coParentId);
-      const unsubscribeCoParent = onSnapshot(coParentDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-              setCoParentData(docSnap.data() as UserDoc);
-          } else {
-              setCoParentData(null);
-          }
-      }, (error) => {
-          console.error("Error listening to co-parent doc:", error);
-          setCoParentData(null);
-      });
-
-      return () => unsubscribeCoParent();
-  }, [firestore, coParentId]);
-
-
-  // Step 3: Listen to the shared appData from the data owner's document
+  // Effect to listen to the actual appData from the data owner's document.
   useEffect(() => {
       if (!firestore || !dataOwnerId) {
-          setAppData(null);
-          if (!isNewUser) setIsLoading(true); // Still loading if we expect a data owner
-          else {
-            setIsLoading(false);
-            setIsInitialLoad(false);
-          }
-          return;
+        if (!isNewUser) {
+          setIsLoading(true); // Still loading if we expect a data owner but don't have the ID yet
+        }
+        return;
       }
 
-      setIsLoading(true);
       const dataOwnerDocRef = doc(firestore, 'users', dataOwnerId);
       const unsubscribeAppData = onSnapshot(dataOwnerDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const ownerDoc = docSnap.data() as UserDoc;
               setAppData(ownerDoc.appData || JSON.parse(JSON.stringify(initialData)));
           } else {
-              // This can happen during unlinking, where dataOwnerId points to a doc that is being changed
-              // Or if data is inconsistent. Fallback to user's own data.
-              setAppData(currentUserDoc?.appData || null);
+              setAppData(null);
           }
-          setIsLoading(false);
-          setIsInitialLoad(false);
+          setIsLoading(false); // Data is loaded or confirmed not to exist
       }, (error) => {
           console.error("Error listening to app data:", error);
           errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'get', path: dataOwnerDocRef.path }));
           setAppData(null);
           setIsLoading(false);
-          setIsInitialLoad(false);
       });
 
       return () => unsubscribeAppData();
-  }, [firestore, dataOwnerId, isNewUser, currentUserDoc]);
+  }, [firestore, dataOwnerId, isNewUser]);
 
 
   const updateAppData = useCallback(
     (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
-      if (!user || !firestore || !appData) return;
+      if (!user || !firestore || !appData || !dataOwnerId) return;
 
       const newMonths = { ...appData.months, ...newData.months };
       const updatedData = { ...appData, ...newData, months: newMonths };
       
-      saveUserData(firestore, user.uid, updatedData).catch(console.error);
+      // Data is always saved to the data owner's document
+      saveUserData(firestore, dataOwnerId, updatedData).catch(console.error);
     },
-    [user, firestore, appData]
+    [user, firestore, appData, dataOwnerId]
   );
    
   const batchUpdateMonths = useCallback(
     (monthUpdates: { [monthId: string]: Partial<MonthData> }) => {
-        if (!user || !firestore || !appData) return;
+        if (!user || !firestore || !appData || !dataOwnerId) return;
 
         const newMonths = { ...appData.months };
         for (const monthId in monthUpdates) {
@@ -176,9 +157,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         }
         const updatedData = { ...appData, months: newMonths };
         
-        saveUserData(firestore, user.uid, updatedData).catch(console.error);
+        saveUserData(firestore, dataOwnerId, updatedData).catch(console.error);
     },
-    [user, firestore, appData]
+    [user, firestore, appData, dataOwnerId]
   );
 
   const updateChildSupport = (updatedChildSupport: ChildSupport, monthId: string) => {
@@ -412,19 +393,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       coParentData,
       isNewUser,
     }),
-    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser]
+    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser, deleteExpense, updateExpense]
   );
-
-  if (isInitialLoad) { 
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-background">
-          <Users className="h-6 w-6 animate-pulse text-primary" />
-        </div>
-        <p className="text-muted-foreground">Loading your financial data...</p>
-      </div>
-    );
-  }
 
   return (
     <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
@@ -438,5 +408,3 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
-
-    
