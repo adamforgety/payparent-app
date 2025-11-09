@@ -6,9 +6,6 @@ export const metadata: Metadata = {
   title: 'PayParent',
   description: 'Child Support & Expense Tracker',
   manifest: '/manifest.ts',
-  icons: {
-    icon: '/icons/icon.svg',
-  },
 };
 
 export default function RootLayout({
