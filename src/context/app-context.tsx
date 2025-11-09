@@ -41,88 +41,103 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const { firestore, user, isUserLoading } = useFirebase();
 
-  const [appData, setAppData] = useState<AppData | null>(null);
+  const [currentUserDoc, setCurrentUserDoc] = useState<UserDoc | null>(null);
   const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
+  const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
-  
-  // This effect runs once when the user's auth state is confirmed.
-  // It is responsible for setting up all data listeners.
+  const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
+  const [coParentId, setCoParentId] = useState<string | null>(null);
+
+
+  // Step 1: Listen to the current user's document to get their IDs
   useEffect(() => {
     if (isUserLoading || !firestore || !user) {
       setIsLoading(true);
       return;
     }
-
-    let appDataUnsubscribe: (() => void) | undefined;
-
-    const setupData = async () => {
-      setIsLoading(true);
-      try {
-        const currentUserDocRef = doc(firestore, 'users', user.uid);
-        const userDocSnap = await getDoc(currentUserDocRef);
-
-        if (!userDocSnap.exists()) {
-          setIsNewUser(true);
-          setAppData(null);
-          setCoParentData(null);
-          setIsLoading(false);
-          return;
-        }
-
-        setIsNewUser(false);
-        const userDocData = userDocSnap.data() as UserDoc;
-        const dataOwnerId = userDocData.dataOwnerId || user.uid;
-        const coParentId = userDocData.coParentId;
-
-        // Fetch co-parent's static data (like email) if they exist
-        if (coParentId) {
-          const coParentDocRef = doc(firestore, 'users', coParentId);
-          const coParentDocSnap = await getDoc(coParentDocRef);
-          if (coParentDocSnap.exists()) {
-            setCoParentData(coParentDocSnap.data() as UserDoc);
-          } else {
-             setCoParentData(null);
-          }
+    
+    const currentUserDocRef = doc(firestore, 'users', user.uid);
+    const unsubscribeUser = onSnapshot(currentUserDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const userDocData = docSnap.data() as UserDoc;
+            setCurrentUserDoc(userDocData);
+            setDataOwnerId(userDocData.dataOwnerId || user.uid);
+            setCoParentId(userDocData.coParentId);
+            setIsNewUser(false);
         } else {
-          setCoParentData(null);
-        }
-
-        // Set up the single, authoritative listener for the shared appData
-        const dataOwnerDocRef = doc(firestore, 'users', dataOwnerId);
-        appDataUnsubscribe = onSnapshot(dataOwnerDocRef, (dataDocSnap) => {
-            if (dataDocSnap.exists()) {
-                const ownerDoc = dataDocSnap.data() as UserDoc;
-                setAppData(ownerDoc.appData || JSON.parse(JSON.stringify(initialData)));
-            } else {
-                setAppData(null);
-            }
-            if (isLoading) setIsLoading(false);
-        }, (error: FirestoreError) => {
-            const contextualError = new FirestorePermissionError({ operation: 'get', path: dataOwnerDocRef.path });
-            errorEmitter.emit('permission-error', contextualError);
+            // This is a new user who doesn't have a document yet.
+            setIsNewUser(true);
             setAppData(null);
+            setCoParentData(null);
+            setDataOwnerId(null);
+            setCoParentId(null);
+            setCurrentUserDoc(null);
             setIsLoading(false);
-        });
-
-      } catch (error) {
-        console.error("Error setting up data:", error);
-        const contextualError = new FirestorePermissionError({ operation: 'get', path: `/users/${user.uid}` });
-        errorEmitter.emit('permission-error', contextualError);
+        }
+    }, (error) => {
+        console.error("Error listening to current user doc:", error);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'get', path: currentUserDocRef.path }));
         setIsLoading(false);
-      }
-    };
+    });
 
-    setupData();
-
-    // Cleanup function for the useEffect hook
-    return () => {
-      if (appDataUnsubscribe) {
-        appDataUnsubscribe();
-      }
-    };
-  // The dependency array ensures this effect runs only when the user's state changes.
+    return () => unsubscribeUser();
   }, [user, firestore, isUserLoading]);
+
+
+  // Step 2: Listen to the co-parent's document if the ID exists
+  useEffect(() => {
+      if (!firestore || !coParentId) {
+          setCoParentData(null);
+          return;
+      }
+      
+      const coParentDocRef = doc(firestore, 'users', coParentId);
+      const unsubscribeCoParent = onSnapshot(coParentDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+              setCoParentData(docSnap.data() as UserDoc);
+          } else {
+              setCoParentData(null);
+          }
+      }, (error) => {
+          console.error("Error listening to co-parent doc:", error);
+          setCoParentData(null);
+      });
+
+      return () => unsubscribeCoParent();
+  }, [firestore, coParentId]);
+
+
+  // Step 3: Listen to the shared appData from the data owner's document
+  useEffect(() => {
+      if (!firestore || !dataOwnerId) {
+          setAppData(null);
+          if (!isNewUser) setIsLoading(true); // Still loading if we expect a data owner
+          else setIsLoading(false); // Not loading if it's a new user
+          return;
+      }
+
+      setIsLoading(true);
+      const dataOwnerDocRef = doc(firestore, 'users', dataOwnerId);
+      const unsubscribeAppData = onSnapshot(dataOwnerDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+              const ownerDoc = docSnap.data() as UserDoc;
+              setAppData(ownerDoc.appData || JSON.parse(JSON.stringify(initialData)));
+          } else {
+              // This can happen during unlinking, where dataOwnerId points to a doc that is being changed
+              // Or if data is inconsistent. Fallback to user's own data.
+              setAppData(currentUserDoc?.appData || null);
+          }
+          setIsLoading(false);
+      }, (error) => {
+          console.error("Error listening to app data:", error);
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'get', path: dataOwnerDocRef.path }));
+          setAppData(null);
+          setIsLoading(false);
+      });
+
+      return () => unsubscribeAppData();
+  }, [firestore, dataOwnerId, isNewUser, currentUserDoc]);
 
 
   const updateAppData = useCallback(
@@ -132,7 +147,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const newMonths = { ...appData.months, ...newData.months };
       const updatedData = { ...appData, ...newData, months: newMonths };
       
-      // The saveUserData function already correctly identifies the dataOwnerId
       saveUserData(firestore, user.uid, updatedData).catch(console.error);
     },
     [user, firestore, appData]
@@ -389,11 +403,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       coParentData,
       isNewUser,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser]
   );
 
-  if (isLoading) { // Show full-screen loader on initial load and setup
+  if (isLoading && !isNewUser) { // Show full-screen loader on initial load and setup, but not for a new user
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <Loader2 className="mr-2 h-8 w-8 animate-spin" />
