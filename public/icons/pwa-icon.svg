@@ -1,8 +1,9 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="128" fill="#F0F4F8"/>
-<g transform="translate(128, 128) scale(16)">
-<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#1C2024" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="8.5" cy="7" r="4" stroke="#1C2024" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M17 21v-2a4 4 0 0 0-4-4H9" stroke="#1C2024" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
+<rect width="512" height="512" rx="60" fill="#E8E7F4"/>
+<path d="M175 203C175 186.431 188.431 173 205 173H211C227.569 173 241 186.431 241 203V215C241 231.569 227.569 245 211 245H205C188.431 245 175 231.569 175 215V203Z" stroke="#8F80E0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M281 203C281 186.431 294.431 173 311 173H317C333.569 173 347 186.431 347 203V215C347 231.569 333.569 245 317 245H311C294.431 245 281 231.569 281 215V203Z" stroke="#8F80E0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M175 289V301C175 317.569 188.431 331 205 331H221" stroke="#8F80E0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M221 289V331" stroke="#8F80E0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M291 331H317C333.569 331 347 317.569 347 301V289" stroke="#8F80E0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M291 331V289" stroke="#8F80E_E0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
