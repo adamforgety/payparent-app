@@ -13,7 +13,7 @@ import React, {
 import type { AppData, ChildSupport, Expense, UserDoc, MonthData } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { saveUserData } from '@/lib/data-service';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
 import { doc, onSnapshot, getDoc, FirestoreError } from 'firebase/firestore';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -418,7 +418,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   if (isInitialLoad) { 
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-background">
+          <Users className="h-6 w-6 animate-pulse text-primary" />
+        </div>
         <p className="text-muted-foreground">Loading your financial data...</p>
       </div>
     );
