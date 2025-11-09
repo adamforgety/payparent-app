@@ -1,5 +1,12 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="128" fill="#8066cc"/>
-<path d="M352 384V368C352 341.49 330.51 320 304 320H208C181.49 320 160 341.49 160 368V384" stroke="white" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M256 288C288.464 288 314.667 261.867 314.667 229.333C314.667 196.8 288.464 170.667 256 170.667C223.536 170.667 197.333 196.8 197.333 229.333C197.333 261.867 223.536 288 256 288Z" stroke="white" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+<rect width="512" height="512" rx="102.4" fill="white"/>
+<g clip-path="url(#clip0_5_2)">
+<circle cx="256" cy="256" r="224" fill="#8f80e0"/>
+<path d="M296 296V232C296 218.745 285.255 208 272 208H240C226.745 208 216 218.745 216 232V296M296 296H216M296 296H328M216 296H184M306.667 172V156M205.333 172V156M184 296L173.333 348M328 296L338.667 348M256 324V348M256 180V156M360 256H384M152 256H128M256 256C256 273.673 241.673 288 224 288C206.327 288 192 273.673 192 256C192 238.327 206.327 224 224 224C241.673 224 256 238.327 256 256ZM320 256C320 273.673 305.673 288 288 288C270.327 288 256 273.673 256 256C256 238.327 270.327 224 288 224C305.673 224 320 238.327 320 256Z" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_5_2">
+<rect width="448" height="448" fill="white" transform="translate(32 32)"/>
+</clipPath>
+</defs>
 </svg>
