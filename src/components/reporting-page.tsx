@@ -95,8 +95,8 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Clothing',
   'Food',
   'Reimbursement',
-  'Child Support',
   'Credit',
+  'Child Support',
   'Other',
 ];
 
@@ -716,7 +716,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                           {periodData.map((item) => (
                             <TableRow key={item.name}>
                               <TableCell className="font-medium">
-                                <Badge variant="outline">{item.name}</Badge>
+                                <Badge
+                                  variant={item.name === 'Child Support' ? 'default' : (item.name === 'Reimbursement' || item.name === 'Credit') ? 'outline' : 'secondary'}
+                                  className={cn((item.name === 'Reimbursement' || item.name === 'Credit') && 'border-primary bg-background text-primary')}
+                                >
+                                  {item.name}
+                                </Badge>
                               </TableCell>
                               <TableCell className="text-right">
                                 ${item.amount.toFixed(2)}
