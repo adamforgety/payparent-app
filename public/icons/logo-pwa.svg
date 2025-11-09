@@ -1,9 +1,7 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="128" fill="#e0d9f7"/>
-<g transform="translate(128, 128) scale(11)">
-<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#8f80e0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="8.5" cy="7" r="4" stroke="#8f80e0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M17 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" stroke="#8f80e0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="15.5" cy="7" r="4" stroke="#8f80e0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect width="512" height="512" rx="102.4" fill="#e9e6f9"/>
+<g fill="#8f80e0">
+  <path d="M256 160c-61.76 0-112 50.24-112 112s50.24 112 112 112 112-50.24 112-112-50.24-112-112-112zm0 192c-44.183 0-80-35.817-80-80s35.817-80 80-80 80 35.817 80 80-35.817 80-80 80z"/>
+  <path d="M256 128c-12.375 0-24.312 1.89-35.688 5.406-47.687 14.75-81.562 58-81.562 108.594s33.875 93.844 81.562 108.594C231.688 356.11 243.625 358 256 358s24.312-1.89 35.688-5.406c47.687-14.75 81.562-58 81.562-108.594s-33.875-93.844-81.562-108.594C280.312 129.89 268.375 128 256 128zm0 240c-70.69 0-128-57.31-128-128s57.31-128 128-128 128 57.31 128 128-57.31 128-128 128z"/>
 </g>
 </svg>
