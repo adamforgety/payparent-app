@@ -135,7 +135,7 @@ export function ExpensesCard({
       const expense = item as Expense;
       let p1Share: number, p2Share: number;
 
-      if (expense.category === 'Reimbursement') {
+      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
         // For a reimbursement, the "Paid By" parent is owed 100%. So the *other* parent has the 100% share.
         p1Share = expense.paidBy === 'Parent 2' ? expense.amount : 0;
         p2Share = expense.paidBy === 'Parent 1' ? expense.amount : 0;
@@ -161,7 +161,7 @@ export function ExpensesCard({
         p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
       } else {
         const expense = item as Expense;
-        if (expense.category === 'Reimbursement') {
+        if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
            // When settled, the parent who was reimbursed gets a NEGATIVE settlement, as their initial outlay is now returned.
            p1Paid = expense.paidBy === 'Parent 1' ? -expense.amount : expense.amount;
            p2Paid = expense.paidBy === 'Parent 2' ? -expense.amount : expense.amount;
@@ -182,7 +182,7 @@ export function ExpensesCard({
     }
 
     const expense = item as Expense;
-    if (expense.category === 'Reimbursement') {
+    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 
@@ -258,7 +258,7 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        const { p1Owes, p2Owes } = renderItemDetails(item);
+        const { p1Owes, p2Owes, p1Paid, p2Paid } = renderItemDetails(item);
   
         acc.totalInitialAmount += item.amount;
         
@@ -267,6 +267,11 @@ export function ExpensesCard({
         
         acc.totalP1Share += getParentShare(item, 'Parent 1');
         acc.totalP2Share += getParentShare(item, 'Parent 2');
+
+        if(item.status === 'Settled') {
+          acc.totalP1Paid += p1Paid;
+          acc.totalP2Paid += p2Paid;
+        }
         
         return acc;
       },
@@ -421,8 +426,8 @@ export function ExpensesCard({
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
                     
-                    const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
-                    const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
+                    const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
 
                     return (
                       <TableRow key={item.id}>
@@ -432,8 +437,8 @@ export function ExpensesCard({
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                            className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                            variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' || item.category === 'Credit' ? 'outline' : 'secondary'}
+                            className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                           >
                             {item.category}
                           </Badge>
@@ -458,13 +463,13 @@ export function ExpensesCard({
                         </TableCell>
                         <TableCell className={cn("text-right", 
                             item.paidBy === 'Parent 1' ? 'text-green-600' : 
-                            item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
+                            (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
                         )}>
                            {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                         </TableCell>
                         <TableCell className={cn("text-right", 
                             item.paidBy === 'Parent 2' ? 'text-green-600' : 
-                            item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
+                            (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
                         )}>
                             {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                         </TableCell>
@@ -584,7 +589,11 @@ export function ExpensesCard({
              )}
             {filteredAndSortedItems.length > 0 ? (
                 filteredAndSortedItems.map((item) => {
-                    const { p1Owes, p2Owes } = renderItemDetails(item);
+                    const p1Share = getParentShare(item, 'Parent 1');
+                    const p2Share = getParentShare(item, 'Parent 2');
+                    const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
+
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -633,8 +642,8 @@ export function ExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' || item.category === 'Credit' ? 'outline' : 'secondary'}
+                                      className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>
@@ -657,23 +666,27 @@ export function ExpensesCard({
                                     </div>
                                 </div>
                             </div>
-                            {(p1Owes !== 0 || p2Owes !== 0) && item.status === 'Unsettled' && (
-                                <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
-                                    <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
-                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{parentNames['Parent 1']} Owes</span>
-                                        <span className={cn("font-semibold", p1Owes > 0 && "text-destructive", p1Owes < 0 && "text-green-600")}>
-                                          {p1Owes < 0 ? `-$${Math.abs(p1Owes).toFixed(2)}` : `$${p1Owes.toFixed(2)}`}
-                                        </span>
-                                     </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">{parentNames['Parent 2']} Owes</span>
-                                        <span className={cn("font-semibold", p2Owes > 0 && "text-destructive", p2Owes < 0 && "text-green-600")}>
-                                          {p2Owes < 0 ? `-$${Math.abs(p2Owes).toFixed(2)}` : `$${p2Owes.toFixed(2)}`}
-                                        </span>
-                                     </div>
+                            <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
+                                <p className="font-medium text-xs text-muted-foreground">Share Details</p>
+                                <div className="flex justify-between">
+                                <span className="text-muted-foreground">{parentNames['Parent 1']}'s Share</span>
+                                <span className={cn("font-semibold", 
+                                    item.paidBy === 'Parent 1' ? 'text-green-600' : 
+                                    (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
+                                )}>
+                                    {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
+                                </span>
                                 </div>
-                            )}
+                                <div className="flex justify-between">
+                                <span className="text-muted-foreground">{parentNames['Parent 2']}'s Share</span>
+                                <span className={cn("font-semibold", 
+                                    item.paidBy === 'Parent 2' ? 'text-green-600' : 
+                                    (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
+                                )}>
+                                    {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
+                                </span>
+                                </div>
+                            </div>
                         </Card>
                     );
                 })
