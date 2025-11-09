@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.ts',
   icons: {
     icon: '/icons/icon.svg',
-    apple: '/icons/logo-pwa.svg',
+    apple: '/icons/icon.svg',
   },
 };
 

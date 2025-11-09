@@ -1,12 +1,10 @@
 import { cn } from "@/lib/utils";
-import { Users } from "lucide-react";
+import Image from "next/image";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div className="bg-primary/20 text-primary rounded-lg p-2 flex items-center justify-center">
-        <Users className="h-6 w-6" />
-      </div>
+      <Image src="/icons/icon.svg" alt="PayParent Logo" width={32} height={32} />
       <h1 className="text-xl font-bold font-logo">
         <span className="text-primary">Pay</span><span className="text-foreground">Parent</span>
       </h1>
