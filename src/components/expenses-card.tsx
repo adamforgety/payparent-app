@@ -472,7 +472,7 @@ export function ExpensesCard({
                               checked={item.status === 'Settled'}
                               onCheckedChange={() => handleStatusToggle(item)}
                             />
-                            <Label htmlFor={`status-switch-${item.id}`} className={cn(item.status === 'Settled' ? 'text-green-600' : 'text-destructive')}>
+                            <Label htmlFor={`status-switch-${item.id}`} className={cn('w-16', item.status === 'Settled' ? 'text-green-600' : 'text-destructive')}>
                               {item.status}
                             </Label>
                           </div>
@@ -692,7 +692,7 @@ export function ExpensesCard({
                                         checked={item.status === 'Settled'}
                                         onCheckedChange={() => handleStatusToggle(item)}
                                         />
-                                        <Label htmlFor={`status-switch-mobile-${item.id}`} className={cn(item.status === 'Settled' ? 'text-green-600' : 'text-destructive')}>{item.status}</Label>
+                                        <Label htmlFor={`status-switch-mobile-${item.id}`} className={cn('w-16', item.status === 'Settled' ? 'text-green-600' : 'text-destructive')}>{item.status}</Label>
                                     </div>
                                 </div>
                             </div>

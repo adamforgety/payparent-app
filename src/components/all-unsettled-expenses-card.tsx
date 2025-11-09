@@ -480,7 +480,7 @@ export function AllUnsettledExpensesCard({
                              checked={false} // Always off for unsettled items
                              onCheckedChange={() => handleStatusToggle(item)}
                            />
-                           <Label htmlFor={`status-switch-all-${item.id}`} className="text-destructive">Unsettled</Label>
+                           <Label htmlFor={`status-switch-all-${item.id}`} className="w-16 text-destructive">Unsettled</Label>
                          </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
@@ -695,7 +695,7 @@ export function AllUnsettledExpensesCard({
                                          checked={false} // Always off for unsettled items
                                          onCheckedChange={() => handleStatusToggle(item)}
                                        />
-                                       <Label htmlFor={`status-switch-all-mobile-${item.id}`} className="text-destructive">Unsettled</Label>
+                                       <Label htmlFor={`status-switch-all-mobile-${item.id}`} className="w-16 text-destructive">Unsettled</Label>
                                      </div>
                                 </div>
                             </div>
