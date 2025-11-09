@@ -1,7 +1,9 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="128" fill="#E9E6F9"/>
-<g transform="translate(102.4, 102.4) scale(0.6)">
-<path d="M173.333 384V352C173.333 316.685 202.685 288 238 288H274C309.315 288 338.667 316.685 338.667 352V384M296 202.667C296 225.476 277.809 244 256 244C234.191 244 216 225.476 216 202.667C216 179.857 234.191 161.333 256 161.333C277.809 161.333 296 179.857 296 202.667Z" stroke="#8F80E0" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M346.667 384V352C346.667 316.685 317.315 288 282 288H274M216 202.667C216 179.857 234.191 161.333 256 161.333" stroke="#8F80E0" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+<rect width="512" height="512" rx="128" fill="#E2DFF4"/>
+<g transform="translate(102.4, 102.4) scale(1.6)">
+<path d="M160 216a64 64 0 1 0-128 0v8a64 64 0 0 0 64 64h0a64 64 0 0 0 64-64v-8Z" fill="#8F80E0"/>
+<circle cx="96" cy="96" r="64" fill="#8F80E0"/>
+<path d="M164 216a64 64 0 1 0-128 0v8a64 64 0 0 0 64 64h0a64 64 0 0 0 64-64v-8Z" transform="translate(64, 0)" fill="#8F80E0"/>
+<circle cx="160" cy="96" r="64" fill="#8F80E0"/>
 </g>
 </svg>
