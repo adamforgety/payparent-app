@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Child Support & Expense Tracker',
     start_url: '/',
     display: 'standalone',
-    background_color: '#6a44e4',
-    theme_color: '#6a44e4',
+    background_color: '#8066cc',
+    theme_color: '#8066cc',
     icons: [
       {
         src: '/logo.svg',
