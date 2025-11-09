@@ -49,7 +49,7 @@ const linkSchema = z.object({
 });
 
 export function CoParentLinkCard() {
-  const { auth, firestore, user } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { coParentData } = useAppContext();
   const { toast } = useToast();
   const [isLinking, startLinking] = useTransition();
@@ -126,65 +126,51 @@ export function CoParentLinkCard() {
         toast({ variant: 'destructive', title: 'Error', description: 'User or database is not available.' });
         return;
       }
-
+  
       const currentUserDocRef = doc(firestore, 'users', user.uid);
-      let coParentId: string | null = null;
-      let coParentEmail: string | null = null;
-
-      // First, try to get the coParentId from the context for immediate feedback
-      if (coParentData) {
-        coParentId = coParentData.id;
-        coParentEmail = coParentData.email;
-      } else {
-        // If context is not available, fetch the user doc directly to get the coParentId
-        try {
-            const userDocSnap = await getDoc(currentUserDocRef);
-            if (userDocSnap.exists()) {
-                const userDocData = userDocSnap.data() as UserDoc;
-                coParentId = userDocData.coParentId;
-            }
-        } catch (e) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not verify co-parent link. Please try again.' });
+      
+      try {
+        const userDocSnap = await getDoc(currentUserDocRef);
+        if (!userDocSnap.exists()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find your user profile.' });
             return;
         }
-      }
-      
-      if (!coParentId) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not find a co-parent to unlink. The accounts may already be unlinked.' });
-        return;
-      }
-      
-      const coParentDocRef = doc(firestore, 'users', coParentId);
 
-      const batch = writeBatch(firestore);
-      
-      // Reset current user to be their own data owner and remove link
-      batch.update(currentUserDocRef, { 
-        coParentId: null,
-        dataOwnerId: user.uid
-      });
-      
-      // Reset co-parent to be their own data owner and remove link
-      batch.update(coParentDocRef, { 
-        coParentId: null,
-        dataOwnerId: coParentId
-       });
-      
-      batch.commit()
-        .then(() => {
-          toast({ title: 'Unlinked Successfully', description: `Your accounts are no longer connected.` });
-        })
-        .catch((error) => {
-          const permissionError = new FirestorePermissionError({
-            path: 'batch-write',
-            operation: 'write',
-            requestResourceData: [
-              { path: currentUserDocRef.path, data: { coParentId: null, dataOwnerId: user.uid } },
-              { path: coParentDocRef.path, data: { coParentId: null, dataOwnerId: coParentId } }
-            ]
-          });
-          errorEmitter.emit('permission-error', permissionError);
+        const userDocData = userDocSnap.data() as UserDoc;
+        const coParentId = userDocData.coParentId;
+
+        if (!coParentId) {
+            toast({ title: 'Already Unlinked', description: 'Your account is not linked to a co-parent.' });
+            return;
+        }
+        
+        const coParentDocRef = doc(firestore, 'users', coParentId);
+        
+        const batch = writeBatch(firestore);
+        
+        // Reset current user to be their own data owner and remove link
+        batch.update(currentUserDocRef, { 
+          coParentId: null,
+          dataOwnerId: user.uid
         });
+        
+        // Reset co-parent to be their own data owner and remove link
+        batch.update(coParentDocRef, { 
+          coParentId: null,
+          dataOwnerId: coParentId
+         });
+        
+        await batch.commit();
+        toast({ title: 'Unlinked Successfully', description: `Your accounts are no longer connected.` });
+
+      } catch (error) {
+        const permissionError = new FirestorePermissionError({
+          path: 'batch-write',
+          operation: 'write',
+          requestResourceData: [ { path: currentUserDocRef.path, data: { coParentId: null, dataOwnerId: user.uid } } ]
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
     });
   };
 
