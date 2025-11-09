@@ -157,38 +157,22 @@ export function AllUnsettledExpensesCard({
     return items;
   }, [appData.months]);
 
-  const renderItemDetails = (item: UnsettledItem) => {
-    let p1Owes = 0;
-    let p2Owes = 0;
-  
+  const getParentShare = (item: UnsettledItem, parent: Parent): number => {
     if (item.type === 'child_support') {
-      if (item.paidBy === 'Parent 1') {
-        p1Owes = item.amount;
-      } else if (item.paidBy === 'Parent 2') {
-        p2Owes = item.amount;
-      }
-    } else {
-      const expense = item as Expense;
-      let p1Share: number, p2Share: number;
-
-      if (expense.category === 'Reimbursement') {
-        // For a reimbursement, the "Paid By" parent is owed 100%. So the *other* parent has the 100% share.
-        p1Share = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-        p2Share = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-      } else {
-        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? item.medicalExpenseSplit : item.expenseSplit;
-        p1Share = expense.amount * (split['Parent 1'] / 100);
-        p2Share = expense.amount * (split['Parent 2'] / 100);
-      }
-      
-      const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-      const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-  
-      p1Owes = p1Share - p1InitialPaid;
-      p2Owes = p2Share - p2InitialPaid;
+      return item.paidBy === parent ? item.amount : 0;
     }
-    
-    return { p1Owes, p2Owes };
+  
+    const expense = item as Expense;
+    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+      // The parent who paid gets 0 share of the cost, the other parent gets 100%
+      return expense.paidBy === parent ? 0 : expense.amount;
+    }
+  
+    const split = expense.category === 'Medical' || expense.category === 'Child Care'
+      ? item.medicalExpenseSplit
+      : item.expenseSplit;
+  
+    return expense.amount * (split[parent] / 100);
   };
 
   const filteredAndSortedItems = useMemo(() => {
@@ -319,25 +303,12 @@ export function AllUnsettledExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        let p1Paid = 0;
-        let p2Paid = 0;
-        
-        const { p1Owes, p2Owes } = renderItemDetails(item);
-
-        if (item.type === 'expense') {
-            p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-            p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-        }
-
         acc.totalAmount += item.amount;
-        acc.totalP1Paid += p1Paid;
-        acc.totalP2Paid += p2Paid;
-        acc.totalP1Owes += p1Owes;
-        acc.totalP2Owes += p2Owes;
-        
+        acc.totalP1Share += getParentShare(item, 'Parent 1');
+        acc.totalP2Share += getParentShare(item, 'Parent 2');
         return acc;
       },
-      { totalAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0 }
+      { totalAmount: 0, totalP1Share: 0, totalP2Share: 0 }
     );
   }, [filteredAndSortedItems]);
 
@@ -446,11 +417,9 @@ export function AllUnsettledExpensesCard({
                 <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                 <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                 <TableHead className="w-[150px]">Settlement Status</TableHead>
-                <TableHead className="text-right w-[100px]">Total</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Initially Paid</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Initially Paid</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableHead>
-                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableHead>
+                <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']}'s Share</TableHead>
+                <TableHead className="text-right w-[120px]">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']}'s Share</TableHead>
                 <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
                 <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
               </TableRow>
@@ -458,10 +427,11 @@ export function AllUnsettledExpensesCard({
             <TableBody>
               {filteredAndSortedItems.length > 0 ? (
                 filteredAndSortedItems.map((item) => {
-                  const { p1Owes, p2Owes } = renderItemDetails(item);
-                  const p1DisplayPaid = item.type === 'expense' && item.paidBy === 'Parent 1' ? item.amount : 0;
-                  const p2DisplayPaid = item.type === 'expense' && item.paidBy === 'Parent 2' ? item.amount : 0;
-                  
+                    const p1Share = getParentShare(item, 'Parent 1');
+                    const p2Share = getParentShare(item, 'Parent 2');
+                    
+                    const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
+
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
@@ -471,7 +441,7 @@ export function AllUnsettledExpensesCard({
                       <TableCell>
                         <Badge
                           variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                          className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                          className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                         >
                           {item.category}
                         </Badge>
@@ -492,17 +462,11 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                       <TableCell className="text-right">
-                           ${p1DisplayPaid.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                           ${p2DisplayPaid.toFixed(2)}
-                        </TableCell>
-                      <TableCell className={cn("text-right", p1Owes < 0 && "text-green-600", p1Owes > 0 && "text-destructive")}>
-                        {p1Owes < 0 ? `($${Math.abs(p1Owes).toFixed(2)})` : `$${p1Owes.toFixed(2)}`}
+                      <TableCell className={cn("text-right", item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
+                        {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                       </TableCell>
-                      <TableCell className={cn("text-right", p2Owes < 0 && "text-green-600", p2Owes > 0 && "text-destructive")}>
-                        {p2Owes < 0 ? `($${Math.abs(p2Owes).toFixed(2)})` : `$${p2Owes.toFixed(2)}`}
+                      <TableCell className={cn("text-right", item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
+                         {isP1Reimbursed ? `$${p2Share.toFixed(2)}` : `($${item.amount.toFixed(2)})`}
                       </TableCell>
                       <TableCell className="no-print text-center">
                         {item.type === 'expense' && item.receiptUrl && (
@@ -568,26 +532,22 @@ export function AllUnsettledExpensesCard({
              {filteredAndSortedItems.length > 0 && (
                  <TableFooter>
                     <TableRow>
-                        <TableCell colSpan={5}></TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Initially Paid</TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Initially Paid</TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']} Owes</TableCell>
-                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']} Owes</TableCell>
+                        <TableCell colSpan={4}></TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 1']}'s Share</TableCell>
+                        <TableCell className="text-right text-xs font-medium text-muted-foreground">{appData.months[Object.keys(appData.months)[0]].parentNames['Parent 2']}'s Share</TableCell>
                         <TableCell colSpan={2}></TableCell>
                     </TableRow>
                     <TableRow className="bg-secondary/50 font-bold">
-                        <TableCell colSpan={5}>Totals</TableCell>
+                        <TableCell colSpan={4}>Totals</TableCell>
                         <TableCell className="text-right">
-                          ${totals.totalP1Paid.toFixed(2)}
+                            ${totals.totalAmount.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totals.totalP2Paid.toFixed(2)}
+                            ${totals.totalP1Share.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right", totals.totalP1Owes < 0 && "text-green-600", totals.totalP1Owes > 0 && "text-destructive")}>
-                          {totals.totalP1Owes < 0 ? `($${Math.abs(totals.totalP1Owes).toFixed(2)})` : `$${totals.totalP1Owes.toFixed(2)}`}
-                        </TableCell>
-                        <TableCell className={cn("text-right", totals.totalP2Owes < 0 && "text-green-600", totals.totalP2Owes > 0 && "text-destructive")}>
-                          {totals.totalP2Owes < 0 ? `($${Math.abs(totals.totalP2Owes).toFixed(2)})` : `$${totals.totalP2Owes.toFixed(2)}`}
+                        <TableCell className="text-right">
+                            ${totals.totalP2Share.toFixed(2)}
                         </TableCell>
                         <TableCell colSpan={2}></TableCell>
                     </TableRow>
@@ -598,9 +558,33 @@ export function AllUnsettledExpensesCard({
 
         {/* Mobile Card View */}
         <div className="space-y-4 md:hidden">
+            {filteredAndSortedItems.length > 0 && (
+                <Card className="bg-secondary/50">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Totals for Filtered Items</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2 text-sm">
+                            <h4 className="font-medium">{parentNames['Parent 1']}</h4>
+                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">Share</span>
+                                <span className="font-semibold">${totals.totalP1Share.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                            <h4 className="font-medium">{parentNames['Parent 2']}</h4>
+                             <div className="flex justify-between">
+                                <span className="text-muted-foreground">Share</span>
+                                <span className="font-semibold">${totals.totalP2Share.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+             )}
             {filteredAndSortedItems.length > 0 ? (
                 filteredAndSortedItems.map((item) => {
-                    const { p1Owes, p2Owes } = renderItemDetails(item);
+                    const p1Share = getParentShare(item, 'Parent 1');
+                    const p2Share = getParentShare(item, 'Parent 2');
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -673,17 +657,17 @@ export function AllUnsettledExpensesCard({
                                 </div>
                             </div>
                             <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
-                                <p className="font-medium text-xs text-muted-foreground">Balance Details</p>
+                                <p className="font-medium text-xs text-muted-foreground">Share Details</p>
                                     <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{item.parentNames['Parent 1']} Owes</span>
-                                    <span className={cn("font-semibold", p1Owes > 0 && "text-destructive", p1Owes < 0 && "text-green-600")}>
-                                        {p1Owes < 0 ? `-$${Math.abs(p1Owes).toFixed(2)}` : `$${p1Owes.toFixed(2)}`}
+                                    <span className="text-muted-foreground">{item.parentNames['Parent 1']}'s Share</span>
+                                    <span className={cn("font-semibold", item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
+                                        ${p1Share.toFixed(2)}
                                     </span>
                                     </div>
                                     <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{item.parentNames['Parent 2']} Owes</span>
-                                    <span className={cn("font-semibold", p2Owes > 0 && "text-destructive", p2Owes < 0 && "text-green-600")}>
-                                        {p2Owes < 0 ? `-$${Math.abs(p2Owes).toFixed(2)}` : `$${p2Owes.toFixed(2)}`}
+                                    <span className="text-muted-foreground">{item.parentNames['Parent 2']}'s Share</span>
+                                    <span className={cn("font-semibold", item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
+                                        ${p2Share.toFixed(2)}
                                     </span>
                                     </div>
                             </div>
@@ -703,3 +687,5 @@ export function AllUnsettledExpensesCard({
     </Card>
   );
 }
+
+    

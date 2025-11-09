@@ -7,6 +7,7 @@ export type ExpenseCategory =
   | 'Food'
   | 'Child Support'
   | 'Reimbursement'
+  | 'Credit'
   | 'Other';
 
 export type PaymentStatus = 'Unsettled' | 'Settled';
@@ -74,3 +75,5 @@ export interface UserDoc {
   coParentId: string | null;
   dataOwnerId: string;
 }
+
+    
