@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -45,6 +46,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
   const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
   const [coParentId, setCoParentId] = useState<string | null>(null);
@@ -74,11 +76,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
             setCoParentId(null);
             setCurrentUserDoc(null);
             setIsLoading(false);
+            setIsInitialLoad(false);
         }
     }, (error) => {
         console.error("Error listening to current user doc:", error);
         errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'get', path: currentUserDocRef.path }));
         setIsLoading(false);
+        setIsInitialLoad(false);
     });
 
     return () => unsubscribeUser();
@@ -113,7 +117,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       if (!firestore || !dataOwnerId) {
           setAppData(null);
           if (!isNewUser) setIsLoading(true); // Still loading if we expect a data owner
-          else setIsLoading(false); // Not loading if it's a new user
+          else {
+            setIsLoading(false);
+            setIsInitialLoad(false);
+          }
           return;
       }
 
@@ -129,11 +136,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
               setAppData(currentUserDoc?.appData || null);
           }
           setIsLoading(false);
+          setIsInitialLoad(false);
       }, (error) => {
           console.error("Error listening to app data:", error);
           errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'get', path: dataOwnerDocRef.path }));
           setAppData(null);
           setIsLoading(false);
+          setIsInitialLoad(false);
       });
 
       return () => unsubscribeAppData();
@@ -406,7 +415,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser]
   );
 
-  if (isLoading && !isNewUser) { // Show full-screen loader on initial load and setup, but not for a new user
+  if (isInitialLoad) { 
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <Loader2 className="mr-2 h-8 w-8 animate-spin" />
@@ -427,3 +436,5 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
+
+    

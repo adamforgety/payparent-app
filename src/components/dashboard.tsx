@@ -483,7 +483,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab }: { appDat
 }
 
 export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
-  const { appData, isLoading, isNewUser } = useAppContext();
+  const { appData, isNewUser } = useAppContext();
   const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
 
   useEffect(() => {
@@ -494,7 +494,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
     return <GettingStartedPage onFinish={() => setShowGettingStarted(false)} />;
   }
 
-  if (isLoading || !appData) {
+  if (!appData) {
      return (
        <div className="container mx-auto p-4 md:p-8">
             <PageHeader totalExpenses={0} onShowGettingStarted={() => setShowGettingStarted(true)} />
@@ -512,3 +512,5 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
 
   return <DashboardUI appData={appData} initialDate={new Date()} activeTab={activeTab} setActiveTab={setActiveTab} />;
 }
+
+    
