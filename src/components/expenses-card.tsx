@@ -359,6 +359,9 @@ export function ExpensesCard({
     </TableHead>
   );
 
+  const settledCount = localItems.filter(item => item.status === 'Settled').length;
+  const totalCount = localItems.length;
+
   return (
     <Card>
       <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -547,7 +550,13 @@ export function ExpensesCard({
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={4}></TableCell>
+                    <TableCell colSpan={4}>
+                      {totalCount > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {settledCount} of {totalCount} settled
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']}'s Share</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']}'s Share</TableCell>
