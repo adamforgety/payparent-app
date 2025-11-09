@@ -258,15 +258,10 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        const { p1Paid, p2Paid, p1Owes, p2Owes } = renderItemDetails(item);
+        const { p1Owes, p2Owes } = renderItemDetails(item);
   
         acc.totalInitialAmount += item.amount;
         
-        if (item.status === 'Settled') {
-          acc.totalP1Paid += p1Paid;
-          acc.totalP2Paid += p2Paid;
-        }
-
         if (p1Owes > 0) acc.totalP1Owes += p1Owes;
         if (p2Owes > 0) acc.totalP2Owes += p2Owes;
         
@@ -571,10 +566,6 @@ export function ExpensesCard({
                     <CardContent className="space-y-4">
                         <div className="space-y-2 text-sm">
                             <h4 className="font-medium">{parentNames['Parent 1']}</h4>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Settlement</span>
-                                <span>${totals.totalP1Paid.toFixed(2)}</span>
-                            </div>
                              <div className="flex justify-between">
                                 <span className="text-muted-foreground">Share</span>
                                 <span className="font-semibold">${totals.totalP1Share.toFixed(2)}</span>
@@ -583,10 +574,6 @@ export function ExpensesCard({
                         <Separator />
                         <div className="space-y-2 text-sm">
                             <h4 className="font-medium">{parentNames['Parent 2']}</h4>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Settlement</span>
-                                <span>${totals.totalP2Paid.toFixed(2)}</span>
-                            </div>
                              <div className="flex justify-between">
                                 <span className="text-muted-foreground">Share</span>
                                 <span className="font-semibold">${totals.totalP2Share.toFixed(2)}</span>
