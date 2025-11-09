@@ -1,3 +1,4 @@
+
 'use client';
 
 import { LogOut, User as UserIcon, HelpCircle } from 'lucide-react';
@@ -16,6 +17,7 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 interface PageHeaderProps {
   totalExpenses: number;
@@ -44,7 +46,19 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
     <header className="no-print sticky top-0 z-10 border-b bg-background/80 p-4 backdrop-blur-sm">
       <div className="container mx-auto flex items-center justify-between">
         <Logo />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+           <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-full" onClick={onShowGettingStarted}>
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Getting Started Guide</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -61,11 +75,6 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
                   <p>My Account</p>
                   <p className='text-xs text-muted-foreground font-normal'>{user.email}</p>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onShowGettingStarted}>
-                  <HelpCircle className="mr-2 h-4 w-4" />
-                  <span>Getting Started</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
