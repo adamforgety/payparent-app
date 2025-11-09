@@ -415,7 +415,7 @@ export function ExpensesCard({
                   <SortableHeader sortKey="description">Description</SortableHeader>
                   <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
                   <SortableHeader sortKey="paidBy" className="w-[140px]">Initial Payer</SortableHeader>
-                  <SortableHeader sortKey="status" className="w-[150px]">Status</SortableHeader>
+                  <SortableHeader sortKey="status" className="w-[160px]">Status</SortableHeader>
                   <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>
@@ -579,23 +579,17 @@ export function ExpensesCard({
             {filteredAndSortedItems.length > 0 && (
                 <Card className="bg-secondary/50">
                     <CardHeader>
-                        <CardTitle className="text-lg">Totals for Filtered Items</CardTitle>
+                        <CardTitle className="text-lg">Totals for {format(currentDate, 'MMMM yyyy')}</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2 text-sm">
-                            <h4 className="font-medium">{parentNames['Parent 1']}</h4>
-                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Share</span>
-                                <span className="font-semibold">${totals.totalP1Share.toFixed(2)}</span>
-                            </div>
+                    <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="font-medium">{parentNames['Parent 1']}'s Share</span>
+                            <span className="font-semibold">${totals.totalP1Share.toFixed(2)}</span>
                         </div>
                         <Separator />
-                        <div className="space-y-2 text-sm">
-                            <h4 className="font-medium">{parentNames['Parent 2']}</h4>
-                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Share</span>
-                                <span className="font-semibold">${totals.totalP2Share.toFixed(2)}</span>
-                            </div>
+                        <div className="flex justify-between items-center">
+                            <span className="font-medium">{parentNames['Parent 2']}'s Share</span>
+                            <span className="font-semibold">${totals.totalP2Share.toFixed(2)}</span>
                         </div>
                     </CardContent>
                 </Card>
