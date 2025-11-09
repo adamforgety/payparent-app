@@ -38,21 +38,23 @@ import {
 } from '@/components/ui/select';
 import { ExportButton } from './export-button';
 
-function DashboardUI({ initialData, initialDate }: { initialData: AppData, initialDate: Date }) {
+interface DashboardProps {
+    activeTab: string;
+    setActiveTab: (tab: string) => void;
+}
+
+function DashboardUI({ appData, initialDate, activeTab, setActiveTab }: { appData: AppData, initialDate: Date } & DashboardProps) {
   const { updateAppData, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, batchUpdateMonths } = useAppContext();
   const [currentDate, setCurrentDate] = useState(initialDate);
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
   const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(String(getYear(initialDate)));
   const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(format(initialDate, 'yyyy-MM'));
   const { toast } = useToast();
   
-  const { appData, isNewUser, isLoading: isContextLoading } = useAppContext();
-
   const monthId = format(currentDate, 'yyyy-MM');
 
   useEffect(() => {
-    if (appData && !appData.months[monthId] && !isContextLoading) {
+    if (appData && !appData.months[monthId]) {
       const monthKeys = Object.keys(appData.months).sort();
       const mostRecentMonthId = monthKeys[monthKeys.length - 1];
       const mostRecentMonthData = appData.months[mostRecentMonthId] || appData.months[Object.keys(appData.months)[0]];
@@ -80,7 +82,7 @@ function DashboardUI({ initialData, initialDate }: { initialData: AppData, initi
       
       updateAppData({ months: { ...appData.months, [monthId]: newMonthData } });
     }
-  }, [appData, monthId, currentDate, updateAppData, isContextLoading]);
+  }, [appData, monthId, currentDate, updateAppData]);
 
   const { currentMonthData, availableYears, availableMonthsForYear } = useMemo(() => {
     if (!appData) {
@@ -182,7 +184,8 @@ function DashboardUI({ initialData, initialDate }: { initialData: AppData, initi
   if (!appData || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
-            <div className="flex flex-col items-center justify-center gap-4 mb-8">
+            <PageHeader totalExpenses={0} onShowGettingStarted={() => {}} />
+            <div className="flex flex-col items-center justify-center gap-4 mb-8 pt-8">
               <Skeleton className="h-10 w-52" />
             </div>
              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8 mt-6">
@@ -479,7 +482,7 @@ function DashboardUI({ initialData, initialDate }: { initialData: AppData, initi
   );
 }
 
-export function Dashboard() {
+export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
   const { appData, isLoading, isNewUser } = useAppContext();
   const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
 
@@ -494,7 +497,8 @@ export function Dashboard() {
   if (isLoading || !appData) {
      return (
        <div className="container mx-auto p-4 md:p-8">
-            <div className="flex flex-col items-center justify-center gap-4 mb-8">
+            <PageHeader totalExpenses={0} onShowGettingStarted={() => setShowGettingStarted(true)} />
+            <div className="flex flex-col items-center justify-center gap-4 mb-8 pt-8">
               <Skeleton className="h-10 w-52" />
             </div>
              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8 mt-6">
@@ -506,5 +510,5 @@ export function Dashboard() {
     );
   }
 
-  return <DashboardUI initialData={appData} initialDate={new Date()} />;
+  return <DashboardUI appData={appData} initialDate={new Date()} activeTab={activeTab} setActiveTab={setActiveTab} />;
 }
