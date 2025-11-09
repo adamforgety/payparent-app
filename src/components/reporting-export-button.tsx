@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ParentNames, Parent } from '@/lib/types';
+import type { ParentNames, Parent, Expense, ExpenseSplit, MedicalExpenseSplit } from '@/lib/types';
 import { Button } from './ui/button';
 import type { Transaction } from './reporting-page';
 
@@ -22,27 +22,29 @@ export function ReportingExportButton({
   parentNames
 }: ReportingExportButtonProps) {
   
-  const getPaidAmount = (transaction: Transaction, parent: Parent) => {
-      if (transaction.status !== 'Settled') return 0;
-  
-      if (transaction.category === 'Child Support') {
-          return transaction.paidBy === parent ? transaction.amount : 0;
-      }
-  
-      const expense = transaction as any; // Cast to access medical/expense splits
-      if (expense.category === 'Reimbursement') {
-        return expense.paidBy === parent ? -expense.amount : expense.amount;
-      }
+  const getParentShare = (transaction: Transaction, parent: Parent): number => {
+    if (transaction.category === 'Child Support') {
+        return transaction.paidBy === parent ? transaction.amount : 0;
+    }
 
-      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-      return expense.amount * (split[parent] / 100);
+    const expense = transaction as (Expense & { expenseSplit: ExpenseSplit, medicalExpenseSplit: MedicalExpenseSplit });
+    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+        return expense.paidBy === parent ? 0 : expense.amount;
+    }
+
+    const split = expense.category === 'Medical' || expense.category === 'Child Care'
+        ? expense.medicalExpenseSplit
+        : expense.expenseSplit;
+
+    return expense.amount * (split[parent] / 100);
   };
+
 
   const handleExport = () => {
     const dataToExport = transactions
       .map((item) => {
-        const parent1Paid = getPaidAmount(item, 'Parent 1');
-        const parent2Paid = getPaidAmount(item, 'Parent 2');
+        const parent1Share = getParentShare(item, 'Parent 1');
+        const parent2Share = getParentShare(item, 'Parent 2');
 
         return {
           Date: format(new Date(item.date), 'yyyy-MM-dd'),
@@ -50,8 +52,8 @@ export function ReportingExportButton({
           Category: item.category,
           'Initially Paid By': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
           'Initial Amount': item.amount,
-          [`${parentNames['Parent 1']} Settlement`]: parent1Paid.toFixed(2),
-          [`${parentNames['Parent 2']} Settlement`]: parent2Paid.toFixed(2),
+          [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
+          [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
           Status: item.status,
         };
       });

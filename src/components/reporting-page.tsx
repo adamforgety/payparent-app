@@ -96,6 +96,7 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Food',
   'Reimbursement',
   'Child Support',
+  'Credit',
   'Other',
 ];
 
@@ -246,19 +247,16 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     }
   }, [selectedYear, availableMonths, selectedMonth]);
   
-  const getPaidAmount = (transaction: Transaction, parent: Parent) => {
-      if (transaction.status !== 'Settled') return 0;
-  
+  const getParentShare = (transaction: Transaction, parent: Parent): number => {
       if (transaction.category === 'Child Support') {
           return transaction.paidBy === parent ? transaction.amount : 0;
       }
   
       const expense = transaction as EnrichedExpense;
-      if (expense.category === 'Reimbursement') {
-        return expense.paidBy === parent ? -expense.amount : expense.amount;
+      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+          return expense.paidBy === parent ? 0 : expense.amount;
       }
 
-      // For standard settled expenses, the "paid" amount is their share
       const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
       return expense.amount * (split[parent] / 100);
   };
@@ -277,14 +275,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       const description = transaction.description.toLowerCase();
       const category = transaction.category.toLowerCase();
       
-      const parent1Paid = getPaidAmount(transaction, 'Parent 1');
-      const parent2Paid = getPaidAmount(transaction, 'Parent 2');
+      const parent1Share = getParentShare(transaction, 'Parent 1');
+      const parent2Share = getParentShare(transaction, 'Parent 2');
 
       return paidByName.includes(lowercasedFilter) ||
              description.includes(lowercasedFilter) ||
              category.includes(lowercasedFilter) ||
-             parent1Paid.toFixed(2).includes(lowercasedFilter) ||
-             parent2Paid.toFixed(2).includes(lowercasedFilter);
+             parent1Share.toFixed(2).includes(lowercasedFilter) ||
+             parent2Share.toFixed(2).includes(lowercasedFilter);
     });
   }, [allTransactions, searchTerm]);
 
@@ -296,11 +294,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         let bValue: string | number;
 
         if (sortConfig.key === 'parent1Paid') {
-          aValue = getPaidAmount(a, 'Parent 1');
-          bValue = getPaidAmount(b, 'Parent 1');
+          aValue = getParentShare(a, 'Parent 1');
+          bValue = getParentShare(b, 'Parent 1');
         } else if (sortConfig.key === 'parent2Paid') {
-          aValue = getPaidAmount(a, 'Parent 2');
-          bValue = getPaidAmount(b, 'Parent 2');
+          aValue = getParentShare(a, 'Parent 2');
+          bValue = getParentShare(b, 'Parent 2');
         } else if (sortConfig.key === 'paidBy') {
             aValue = a.paidBy === 'None' ? '' : a.parentNames[a.paidBy];
             bValue = b.paidBy === 'None' ? '' : b.parentNames[b.paidBy];
@@ -328,15 +326,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     return sortableItems;
   }, [filteredTransactions, sortConfig]);
 
-  const { totalAmount, totalParent1Paid, totalParent2Paid } = useMemo(() => {
+  const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
     return sortedTransactions.reduce(
       (totals, transaction) => {
         totals.totalAmount += transaction.amount;
-        totals.totalParent1Paid += getPaidAmount(transaction, 'Parent 1');
-        totals.totalParent2Paid += getPaidAmount(transaction, 'Parent 2');
+        totals.totalParent1Share += getParentShare(transaction, 'Parent 1');
+        totals.totalParent2Share += getParentShare(transaction, 'Parent 2');
         return totals;
       },
-      { totalAmount: 0, totalParent1Paid: 0, totalParent2Paid: 0 }
+      { totalAmount: 0, totalParent1Share: 0, totalParent2Share: 0 }
     );
   }, [sortedTransactions]);
   
@@ -500,21 +498,24 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         sortKey="parent1Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 1']} Settlement
+                        {parentNamesForPeriod['Parent 1']}'s Share
                       </SortableHeader>
                       <SortableHeader
                         sortKey="parent2Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 2']} Settlement
+                        {parentNamesForPeriod['Parent 2']}'s Share
                       </SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedTransactions.length > 0 ? (
                       sortedTransactions.map((transaction) => {
-                        const parent1Paid = getPaidAmount(transaction, 'Parent 1');
-                        const parent2Paid = getPaidAmount(transaction, 'Parent 2');
+                        const parent1Share = getParentShare(transaction, 'Parent 1');
+                        const parent2Share = getParentShare(transaction, 'Parent 2');
+
+                        const isP1Reimbursed = (transaction.category === 'Reimbursement' || transaction.category === 'Credit') && transaction.paidBy === 'Parent 1';
+                        const isP2Reimbursed = (transaction.category === 'Reimbursement' || transaction.category === 'Credit') && transaction.paidBy === 'Parent 2';
 
                         return (
                           <TableRow key={transaction.id}>
@@ -526,8 +527,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                className={cn(transaction.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                                variant={transaction.category === 'Child Support' ? 'default' : (transaction.category === 'Reimbursement' || transaction.category === 'Credit') ? 'outline' : 'secondary'}
+                                className={cn((transaction.category === 'Reimbursement' || transaction.category === 'Credit') && 'border-primary bg-background text-primary')}
                               >
                                 {transaction.category}
                               </Badge>
@@ -552,11 +553,11 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             <TableCell className="text-right font-semibold">
                               ${transaction.amount.toFixed(2)}
                             </TableCell>
-                            <TableCell className={cn("text-right", parent1Paid < 0 && 'text-green-600')}>
-                              {parent1Paid < 0 ? `($${Math.abs(parent1Paid).toFixed(2)})` : `$${parent1Paid.toFixed(2)}`}
+                            <TableCell className={cn("text-right", transaction.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
+                              {isP1Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent1Share.toFixed(2)}`}
                             </TableCell>
-                            <TableCell className={cn("text-right", parent2Paid < 0 && 'text-green-600')}>
-                              {parent2Paid < 0 ? `($${Math.abs(parent2Paid).toFixed(2)})` : `$${parent2Paid.toFixed(2)}`}
+                            <TableCell className={cn("text-right", transaction.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
+                              {isP2Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent2Share.toFixed(2)}`}
                             </TableCell>
                           </TableRow>
                         );
@@ -579,10 +580,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                           ${totalAmount.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totalParent1Paid.toFixed(2)}
+                          ${totalParent1Share.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ${totalParent2Paid.toFixed(2)}
+                          ${totalParent2Share.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableFooter>
