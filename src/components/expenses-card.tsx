@@ -425,9 +425,29 @@ export function ExpensesCard({
                   filteredAndSortedItems.map((item) => {
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
-                    
                     const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
                     const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
+
+                    let p1Color, p2Color;
+
+                    if (item.type === 'child_support') {
+                        // Child Support Logic
+                        const payingParent = item.paidBy;
+                        const receivingParent = payingParent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+                        
+                        if (item.paidBy === 'Parent 1') { // Parent 1 is paying
+                            p1Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
+                            p2Color = 'text-green-600';
+                        } else { // Parent 2 is paying
+                            p1Color = 'text-green-600';
+                            p2Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
+                        }
+                    } else {
+                        // Regular Expense Logic
+                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
+                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
+                    }
+
 
                     return (
                       <TableRow key={item.id}>
@@ -461,16 +481,10 @@ export function ExpensesCard({
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right", 
-                            item.paidBy === 'Parent 1' ? 'text-green-600' : 
-                            (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
-                        )}>
+                         <TableCell className={cn("text-right", p1Color)}>
                            {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                         </TableCell>
-                        <TableCell className={cn("text-right", 
-                            item.paidBy === 'Parent 2' ? 'text-green-600' : 
-                            (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
-                        )}>
+                        <TableCell className={cn("text-right", p2Color)}>
                             {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                         </TableCell>
                         <TableCell className="no-print text-center">
@@ -594,6 +608,23 @@ export function ExpensesCard({
                     const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
                     const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
 
+                    let p1Color, p2Color;
+
+                    if (item.type === 'child_support') {
+                        if (item.paidBy === 'Parent 1') { // Parent 1 is paying
+                            p1Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
+                            p2Color = 'text-green-600';
+                        } else { // Parent 2 is paying
+                            p1Color = 'text-green-600';
+                            p2Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
+                        }
+                    } else {
+                        // Regular Expense Logic
+                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
+                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
+                    }
+
+
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -670,19 +701,13 @@ export function ExpensesCard({
                                 <p className="font-medium text-xs text-muted-foreground">Share Details</p>
                                 <div className="flex justify-between">
                                 <span className="text-muted-foreground">{parentNames['Parent 1']}'s Share</span>
-                                <span className={cn("font-semibold", 
-                                    item.paidBy === 'Parent 1' ? 'text-green-600' : 
-                                    (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
-                                )}>
+                                <span className={cn("font-semibold", p1Color)}>
                                     {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                                 </span>
                                 </div>
                                 <div className="flex justify-between">
                                 <span className="text-muted-foreground">{parentNames['Parent 2']}'s Share</span>
-                                <span className={cn("font-semibold", 
-                                    item.paidBy === 'Parent 2' ? 'text-green-600' : 
-                                    (item.status === 'Settled' ? 'text-green-600' : 'text-destructive')
-                                )}>
+                                <span className={cn("font-semibold", p2Color)}>
                                     {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                                 </span>
                                 </div>

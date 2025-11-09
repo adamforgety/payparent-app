@@ -437,9 +437,24 @@ export function AllUnsettledExpensesCard({
                 filteredAndSortedItems.map((item) => {
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
-                    
                     const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
                     const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
+
+                    let p1Color, p2Color;
+
+                    if (item.type === 'child_support') {
+                        if (item.paidBy === 'Parent 1') { // Parent 1 is paying
+                            p1Color = 'text-destructive'; // Unsettled is always red for paying parent
+                            p2Color = 'text-green-600';
+                        } else { // Parent 2 is paying
+                            p1Color = 'text-green-600';
+                            p2Color = 'text-destructive'; // Unsettled is always red for paying parent
+                        }
+                    } else {
+                        // Regular Expense Logic
+                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive';
+                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive';
+                    }
 
                   return (
                     <TableRow key={item.id}>
@@ -471,10 +486,10 @@ export function AllUnsettledExpensesCard({
                       <TableCell className="text-right font-semibold">
                         ${item.amount.toFixed(2)}
                       </TableCell>
-                      <TableCell className={cn("text-right", item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
+                      <TableCell className={cn("text-right", p1Color)}>
                          {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                       </TableCell>
-                      <TableCell className={cn("text-right", item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
+                      <TableCell className={cn("text-right", p2Color)}>
                          {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                       </TableCell>
                       <TableCell className="no-print text-center">
@@ -596,6 +611,23 @@ export function AllUnsettledExpensesCard({
                     const p2Share = getParentShare(item, 'Parent 2');
                     const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
                     const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
+                    
+                    let p1Color, p2Color;
+
+                    if (item.type === 'child_support') {
+                        if (item.paidBy === 'Parent 1') { // Parent 1 is paying
+                            p1Color = 'text-destructive';
+                            p2Color = 'text-green-600';
+                        } else { // Parent 2 is paying
+                            p1Color = 'text-green-600';
+                            p2Color = 'text-destructive';
+                        }
+                    } else {
+                        // Regular Expense Logic
+                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive';
+                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive';
+                    }
+
                     return (
                         <Card key={item.id} className="overflow-hidden">
                             <div className="p-4 space-y-3">
@@ -671,13 +703,13 @@ export function AllUnsettledExpensesCard({
                                 <p className="font-medium text-xs text-muted-foreground">Share Details</p>
                                     <div className="flex justify-between">
                                     <span className="text-muted-foreground">{item.parentNames['Parent 1']}'s Share</span>
-                                    <span className={cn("font-semibold", item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive')}>
+                                    <span className={cn("font-semibold", p1Color)}>
                                          {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                                     </span>
                                     </div>
                                     <div className="flex justify-between">
                                     <span className="text-muted-foreground">{item.parentNames['Parent 2']}'s Share</span>
-                                    <span className={cn("font-semibold", item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive')}>
+                                    <span className={cn("font-semibold", p2Color)}>
                                          {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                                     </span>
                                     </div>
@@ -698,8 +730,3 @@ export function AllUnsettledExpensesCard({
     </Card>
   );
 }
-
-    
-    
-
-    
