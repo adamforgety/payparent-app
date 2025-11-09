@@ -456,17 +456,17 @@ export function ExpensesCard({
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right",
-                          item.paidBy === 'Parent 1' ? 'text-green-600' :
-                          item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
+                        <TableCell className={cn("text-right", 
+                            item.paidBy === 'Parent 1' ? 'text-green-600' : 
+                            item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
                         )}>
-                           {isP1Reimbursed ? `($${p1Share.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
+                           {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                         </TableCell>
-                        <TableCell className={cn("text-right",
-                          item.paidBy === 'Parent 2' ? 'text-green-600' :
-                          item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
+                        <TableCell className={cn("text-right", 
+                            item.paidBy === 'Parent 2' ? 'text-green-600' : 
+                            item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
                         )}>
-                            {isP2Reimbursed ? `($${p2Share.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
+                            {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                         </TableCell>
                         <TableCell className="no-print text-center">
                             {item.type === 'expense' && item.receiptUrl && (
