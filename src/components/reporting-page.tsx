@@ -548,7 +548,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 )}
                             </TableCell>
                             <TableCell>
-                                <Badge variant={transaction.status === 'Settled' ? 'success' : 'destructive'}>{transaction.status}</Badge>
+                              <span className={cn('font-medium', transaction.status === 'Settled' ? 'text-green-600' : 'text-destructive')}>
+                                {transaction.status}
+                              </span>
                             </TableCell>
                             <TableCell className="text-right font-semibold">
                               ${transaction.amount.toFixed(2)}
