@@ -54,14 +54,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    const setupListeners = async () => {
+    let appDataUnsubscribe: (() => void) | undefined;
+
+    const setupData = async () => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
         const currentUserDocRef = doc(firestore, 'users', user.uid);
         const userDocSnap = await getDoc(currentUserDocRef);
 
         if (!userDocSnap.exists()) {
-          console.log('User document not found for UID:', user.uid);
           setIsNewUser(true);
           setAppData(null);
           setCoParentData(null);
@@ -80,6 +81,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           const coParentDocSnap = await getDoc(coParentDocRef);
           if (coParentDocSnap.exists()) {
             setCoParentData(coParentDocSnap.data() as UserDoc);
+          } else {
+             setCoParentData(null);
           }
         } else {
           setCoParentData(null);
@@ -87,15 +90,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
         // Set up the single, authoritative listener for the shared appData
         const dataOwnerDocRef = doc(firestore, 'users', dataOwnerId);
-        const unsubscribeAppData = onSnapshot(dataOwnerDocRef, (dataDocSnap) => {
+        appDataUnsubscribe = onSnapshot(dataOwnerDocRef, (dataDocSnap) => {
             if (dataDocSnap.exists()) {
                 const ownerDoc = dataDocSnap.data() as UserDoc;
                 setAppData(ownerDoc.appData || JSON.parse(JSON.stringify(initialData)));
             } else {
-                console.warn(`Data owner document with ID ${dataOwnerId} not found.`);
-                setAppData(null); // Or handle fallback
+                setAppData(null);
             }
-            // Only set loading to false after the first successful data fetch
             if (isLoading) setIsLoading(false);
         }, (error: FirestoreError) => {
             const contextualError = new FirestorePermissionError({ operation: 'get', path: dataOwnerDocRef.path });
@@ -104,29 +105,20 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
             setIsLoading(false);
         });
 
-        // Return the cleanup function for the appData listener
-        return unsubscribeAppData;
-
       } catch (error) {
-        console.error("Error setting up data listeners:", error);
+        console.error("Error setting up data:", error);
         const contextualError = new FirestorePermissionError({ operation: 'get', path: `/users/${user.uid}` });
         errorEmitter.emit('permission-error', contextualError);
         setIsLoading(false);
       }
     };
 
-    let unsubscribe: (() => void) | undefined;
-    
-    setupListeners().then(cleanup => {
-        if (cleanup) {
-            unsubscribe = cleanup;
-        }
-    });
+    setupData();
 
     // Cleanup function for the useEffect hook
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
+      if (appDataUnsubscribe) {
+        appDataUnsubscribe();
       }
     };
   // The dependency array ensures this effect runs only when the user's state changes.
@@ -422,5 +414,3 @@ export const useAppContext = (): AppContextType => {
   }
   return context;
 };
-
-    
