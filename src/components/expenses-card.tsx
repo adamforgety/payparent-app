@@ -258,17 +258,24 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        const { p1Paid, p2Paid } = renderItemDetails(item);
+        const { p1Paid, p2Paid, p1Owes, p2Owes } = renderItemDetails(item);
   
         acc.totalInitialAmount += item.amount;
-        acc.totalP1Paid += p1Paid;
-        acc.totalP2Paid += p2Paid;
+        
+        if (item.status === 'Settled') {
+          acc.totalP1Paid += p1Paid;
+          acc.totalP2Paid += p2Paid;
+        }
+
+        if (p1Owes > 0) acc.totalP1Owes += p1Owes;
+        if (p2Owes > 0) acc.totalP2Owes += p2Owes;
+        
         acc.totalP1Share += getParentShare(item, 'Parent 1');
         acc.totalP2Share += getParentShare(item, 'Parent 2');
         
         return acc;
       },
-      { totalInitialAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Share: 0, totalP2Share: 0 }
+      { totalInitialAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0, totalP1Share: 0, totalP2Share: 0 }
     );
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
   
@@ -419,6 +426,9 @@ export function ExpensesCard({
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
                     
+                    const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
+
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
@@ -455,13 +465,13 @@ export function ExpensesCard({
                           item.paidBy === 'Parent 1' ? 'text-green-600' :
                           item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
                         )}>
-                           ${p1Share.toFixed(2)}
+                           {isP1Reimbursed ? `($${p1Share.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
                         </TableCell>
                         <TableCell className={cn("text-right",
                           item.paidBy === 'Parent 2' ? 'text-green-600' :
                           item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
                         )}>
-                            ${p2Share.toFixed(2)}
+                            {isP2Reimbursed ? `($${p2Share.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                         </TableCell>
                         <TableCell className="no-print text-center">
                             {item.type === 'expense' && item.receiptUrl && (
