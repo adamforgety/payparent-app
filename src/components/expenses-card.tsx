@@ -550,7 +550,14 @@ export function ExpensesCard({
               {filteredAndSortedItems.length > 0 && (
                 <TableFooter>
                   <TableRow>
-                    <TableCell colSpan={3}></TableCell>
+                    <TableCell colSpan={4}></TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']}'s Share</TableCell>
+                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']}'s Share</TableCell>
+                    <TableCell colSpan={2}></TableCell>
+                  </TableRow>
+                  <TableRow className="bg-secondary/50 font-bold">
+                    <TableCell colSpan={3}>Totals</TableCell>
                     <TableCell>
                       {totalCount > 0 && (
                         <div className="text-xs text-muted-foreground">
@@ -558,13 +565,6 @@ export function ExpensesCard({
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']}'s Share</TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']}'s Share</TableCell>
-                    <TableCell colSpan={2}></TableCell>
-                  </TableRow>
-                  <TableRow className="bg-secondary/50 font-bold">
-                    <TableCell colSpan={4}>Totals</TableCell>
                     <TableCell className="text-right">
                         ${totals.totalInitialAmount.toFixed(2)}
                     </TableCell>
