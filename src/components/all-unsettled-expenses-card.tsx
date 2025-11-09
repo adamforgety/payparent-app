@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date-fns';
@@ -77,6 +76,14 @@ export function AllUnsettledExpensesCard({
   const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
+
+  const parentNames = useMemo(() => {
+    if (!appData?.months || Object.keys(appData.months).length === 0) {
+      return { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' };
+    }
+    const firstMonthId = Object.keys(appData.months)[0];
+    return appData.months[firstMonthId].parentNames;
+  }, [appData.months]);
 
   useEffect(() => {
     if (initialYearFilter) setYearFilter(initialYearFilter);
@@ -440,7 +447,7 @@ export function AllUnsettledExpensesCard({
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' || item.category === 'Credit' ? 'outline' : 'secondary'}
                           className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                         >
                           {item.category}
@@ -633,8 +640,8 @@ export function AllUnsettledExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
+                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' || item.category === 'Credit' ? 'outline' : 'secondary'}
+                                      className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>
@@ -688,4 +695,5 @@ export function AllUnsettledExpensesCard({
   );
 }
 
+    
     
