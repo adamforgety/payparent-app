@@ -58,7 +58,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
+    ['Medical', 'Child Care', 'Education', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z
@@ -175,7 +175,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
-            Enter the total amount for the expense. The app will automatically calculate each parent's share based on your settings.
+            Enter the total amount for an expense. The app will automatically calculate each parent's share based on your settings.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -210,8 +210,8 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="Medical">Medical</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
                         <SelectItem value="Child Care">Child Care</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
                         <SelectItem value="Activities">Activities</SelectItem>
                         <SelectItem value="Clothing">Clothing</SelectItem>
                         <SelectItem value="Food">Food</SelectItem>

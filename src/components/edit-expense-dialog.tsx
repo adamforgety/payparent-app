@@ -57,7 +57,7 @@ const expenseSchema = z.object({
     required_error: 'Please select who paid.',
   }),
   category: z.enum(
-    ['Medical', 'Education', 'Child Care', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
+    ['Medical', 'Child Care', 'Education', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
     { required_error: 'Please select a category.' }
   ),
   receipt: z
@@ -218,8 +218,8 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
                     </FormControl>
                     <SelectContent>
                         <SelectItem value="Medical">Medical</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
                         <SelectItem value="Child Care">Child Care</SelectItem>
+                        <SelectItem value="Education">Education</SelectItem>
                         <SelectItem value="Activities">Activities</SelectItem>
                         <SelectItem value="Clothing">Clothing</SelectItem>
                         <SelectItem value="Food">Food</SelectItem>
