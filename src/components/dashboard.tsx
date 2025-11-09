@@ -1,3 +1,4 @@
+
 'use client';
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
@@ -37,20 +38,21 @@ import {
 } from '@/components/ui/select';
 import { ExportButton } from './export-button';
 
-function DashboardComponent() {
-  const { appData, updateAppData, isLoading, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, isNewUser, batchUpdateMonths } = useAppContext();
-  const [currentDate, setCurrentDate] = useState(new Date());
+function DashboardUI({ initialData, initialDate }: { initialData: AppData, initialDate: Date }) {
+  const { updateAppData, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, batchUpdateMonths } = useAppContext();
+  const [currentDate, setCurrentDate] = useState(initialDate);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
-  const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(null);
-  const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(null);
-  const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
+  const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(String(getYear(initialDate)));
+  const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(format(initialDate, 'yyyy-MM'));
   const { toast } = useToast();
+  
+  const { appData, isNewUser, isLoading: isContextLoading } = useAppContext();
 
   const monthId = format(currentDate, 'yyyy-MM');
-  
+
   useEffect(() => {
-    if (appData && !appData.months[monthId] && !isLoading) {
+    if (appData && !appData.months[monthId] && !isContextLoading) {
       const monthKeys = Object.keys(appData.months).sort();
       const mostRecentMonthId = monthKeys[monthKeys.length - 1];
       const mostRecentMonthData = appData.months[mostRecentMonthId] || appData.months[Object.keys(appData.months)[0]];
@@ -59,7 +61,6 @@ function DashboardComponent() {
       
       const newMonthDate = parse(monthId, 'yyyy-MM', new Date());
 
-      // When creating a new month, carry over the amount, but reset paidBy and status.
       const childSupportSettings: ChildSupport = {
         amount: mostRecentMonthData.childSupport.amount,
         paidBy: 'None', 
@@ -79,14 +80,7 @@ function DashboardComponent() {
       
       updateAppData({ months: { ...appData.months, [monthId]: newMonthData } });
     }
-  }, [appData, monthId, currentDate, updateAppData, isLoading]);
-
-  useEffect(() => {
-    // Sync the unsettled filters with the main date scroller
-    setUnsettledYearFilter(String(getYear(currentDate)));
-    setUnsettledMonthFilter(format(currentDate, 'yyyy-MM'));
-  }, [currentDate]);
-
+  }, [appData, monthId, currentDate, updateAppData, isContextLoading]);
 
   const { currentMonthData, availableYears, availableMonthsForYear } = useMemo(() => {
     if (!appData) {
@@ -96,14 +90,13 @@ function DashboardComponent() {
 
     const allMonthKeys = Object.keys(appData.months).sort();
     const allYears = Array.from(new Set(allMonthKeys.map(key => key.substring(0, 4))))
-      .filter(year => parseInt(year, 10) >= 2000) // Filter out invalid years
+      .filter(year => parseInt(year, 10) >= 2000)
       .sort((a,b) => parseInt(b) - parseInt(a));
     const currentYear = String(getYear(currentDate));
     if (!allYears.includes(currentYear)) {
       allYears.push(currentYear);
       allYears.sort((a,b) => parseInt(b) - parseInt(a));
     }
-
 
     const monthsForYear = Array.from({ length: 12 }, (_, i) => {
       const monthDate = setDateFnsMonth(setYear(new Date(), parseInt(currentYear)), i);
@@ -120,7 +113,6 @@ function DashboardComponent() {
     };
   }, [appData, monthId, currentDate]);
 
-
   const handleDateChange = (direction: 'next' | 'prev') => {
     setCurrentDate((prevDate) =>
       direction === 'next' ? addMonths(prevDate, 1) : subMonths(prevDate, 1)
@@ -133,14 +125,12 @@ function DashboardComponent() {
       const updatedMonths = { ...appData.months };
       const currentMonthDate = parse(monthId, 'yyyy-MM', new Date());
       
-      // Iterate over all months and update the current one and all future ones
       for (const key in updatedMonths) {
           const monthDate = parse(key, 'yyyy-MM', new Date());
           if (isAfter(monthDate, currentMonthDate) || isEqual(monthDate, currentMonthDate)) {
               updatedMonths[key] = {
                   ...updatedMonths[key],
                   ...dataToUpdate,
-                  // Ensure specific nested objects are merged correctly if they exist in dataToUpdate
                   ...(dataToUpdate.childSupport && { childSupport: { ...updatedMonths[key].childSupport, ...dataToUpdate.childSupport } }),
                   ...(dataToUpdate.expenseSplit && { expenseSplit: { ...updatedMonths[key].expenseSplit, ...dataToUpdate.expenseSplit } }),
                   ...(dataToUpdate.medicalExpenseSplit && { medicalExpenseSplit: { ...updatedMonths[key].medicalExpenseSplit, ...dataToUpdate.medicalExpenseSplit } }),
@@ -160,11 +150,6 @@ function DashboardComponent() {
         description: 'Please select who paid for child support before switching tabs.',
       });
       return;
-    }
-    // When user navigates away from unsettled tab, sync filters back to current date
-    if (value !== 'expenses' || (value === 'expenses' && expensesSubTab !== 'unsettled')) {
-      setUnsettledYearFilter(String(getYear(currentDate)));
-      setUnsettledMonthFilter(format(currentDate, 'yyyy-MM'));
     }
     setActiveTab(value);
   };
@@ -193,12 +178,8 @@ function DashboardComponent() {
         updateAppData({ months: { ...appData.months, [csMonthId]: updatedMonthData } });
     }
   };
-  
-  if (showGettingStarted) {
-    return <GettingStartedPage onFinish={() => setShowGettingStarted(false)} />;
-  }
 
-  if (isLoading || !appData || !currentMonthData) {
+  if (!appData || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
@@ -210,14 +191,11 @@ function DashboardComponent() {
                 <Skeleton className="h-96" />
              </div>
        </div>
-    )
+    );
   }
 
   const expenses = currentMonthData.expenses || [];
-  const totalExpenses = expenses.reduce(
-    (sum, exp) => sum + exp.amount,
-    0
-  );
+  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   return (
     <DashboardProvider
@@ -227,7 +205,7 @@ function DashboardComponent() {
       <div className="flex flex-col">
         <PageHeader
           totalExpenses={totalExpenses}
-          onShowGettingStarted={() => setShowGettingStarted(true)}
+          onShowGettingStarted={() => { /* This will be handled by the parent */ }}
         />
         <main className="container mx-auto p-4 md:p-8 pb-24 md:pb-8">
           <div className="mb-8 hidden print-only">
@@ -502,9 +480,18 @@ function DashboardComponent() {
 }
 
 export function Dashboard() {
-  const { isLoading, isNewUser } = useAppContext();
+  const { appData, isLoading, isNewUser } = useAppContext();
+  const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
 
-  if (isLoading && !isNewUser) {
+  useEffect(() => {
+    setShowGettingStarted(isNewUser);
+  }, [isNewUser]);
+
+  if (showGettingStarted) {
+    return <GettingStartedPage onFinish={() => setShowGettingStarted(false)} />;
+  }
+
+  if (isLoading || !appData) {
      return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
@@ -516,8 +503,8 @@ export function Dashboard() {
                 <Skeleton className="h-96" />
              </div>
        </div>
-    )
+    );
   }
 
-  return <DashboardComponent />;
+  return <DashboardUI initialData={appData} initialDate={new Date()} />;
 }
