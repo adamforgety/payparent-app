@@ -175,7 +175,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
           <DialogDescription>
-            Log a new child-related expense. It will be added to the correct month based on the date you select.
+            Enter the total amount for the expense. The app will automatically calculate each parent's share based on your settings.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
