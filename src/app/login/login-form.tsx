@@ -174,10 +174,6 @@ export function LoginForm() {
     <main className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-            <div className="flex justify-center mb-2">
-                <Image src="/icons/pwa-icon.svg" alt="PWA Icon Preview" width={64} height={64} />
-            </div>
-            <p className="text-xs text-muted-foreground pb-2">PWA Icon Preview</p>
             <div className="flex justify-center mb-4">
              <Logo />
             </div>

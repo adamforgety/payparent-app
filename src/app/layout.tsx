@@ -7,8 +7,8 @@ export const metadata: Metadata = {
   description: 'Child Support & Expense Tracker',
   manifest: '/manifest.ts',
   icons: {
-    icon: '/icons/icon.svg',
-    apple: '/icons/icon.svg',
+    icon: '/icons/pwa-icon.svg',
+    apple: '/icons/pwa-icon.svg',
   },
 };
 
