@@ -6,8 +6,6 @@ import { useFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PageHeader } from '@/components/page-header';
 
 function App() {
   const { user, isUserLoading } = useFirebase();
