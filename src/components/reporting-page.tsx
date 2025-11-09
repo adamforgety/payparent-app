@@ -672,7 +672,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   <div>
                     <ChartContainer
                       config={chartConfig}
-                      className="min-h-[250px] w-full"
+                      className="h-[250px] w-full"
                     >
                       <BarChart data={periodData} accessibilityLayer>
                         <CartesianGrid vertical={false} />
