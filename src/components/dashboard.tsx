@@ -504,7 +504,7 @@ function DashboardComponent() {
 export function Dashboard() {
   const { isLoading, isNewUser } = useAppContext();
 
-  if (isLoading) {
+  if (isLoading && !isNewUser) {
      return (
        <div className="container mx-auto p-4 md:p-8">
             <div className="flex flex-col items-center justify-center gap-4 mb-8">
