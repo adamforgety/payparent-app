@@ -41,9 +41,10 @@ import { ExportButton } from './export-button';
 interface DashboardProps {
     activeTab: string;
     setActiveTab: (tab: string) => void;
+    onShowGettingStarted: () => void;
 }
 
-function DashboardUI({ appData, initialDate, activeTab, setActiveTab }: { appData: AppData, initialDate: Date } & DashboardProps) {
+function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGettingStarted }: { appData: AppData, initialDate: Date } & DashboardProps) {
   const { updateAppData, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, batchUpdateMonths } = useAppContext();
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
@@ -184,7 +185,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab }: { appDat
   if (!appData || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
-            <PageHeader totalExpenses={0} onShowGettingStarted={() => {}} />
+            <PageHeader totalExpenses={0} onShowGettingStarted={onShowGettingStarted} />
             <div className="flex flex-col items-center justify-center gap-4 mb-8 pt-8">
               <Skeleton className="h-10 w-52" />
             </div>
@@ -208,7 +209,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab }: { appDat
       <div className="flex flex-col">
         <PageHeader
           totalExpenses={totalExpenses}
-          onShowGettingStarted={() => { /* This will be handled by the parent */ }}
+          onShowGettingStarted={onShowGettingStarted}
         />
         <main className="container mx-auto p-4 md:p-8 pb-24 md:pb-8">
           <div className="mb-8 hidden print-only">
@@ -482,22 +483,13 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab }: { appDat
   );
 }
 
-export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
-  const { appData, isNewUser } = useAppContext();
-  const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
+export function Dashboard({ activeTab, setActiveTab, onShowGettingStarted }: DashboardProps) {
+  const { appData, isLoading } = useAppContext();
 
-  useEffect(() => {
-    setShowGettingStarted(isNewUser);
-  }, [isNewUser]);
-
-  if (showGettingStarted) {
-    return <GettingStartedPage onFinish={() => setShowGettingStarted(false)} />;
-  }
-
-  if (!appData) {
+  if (isLoading || !appData) {
      return (
        <div className="container mx-auto p-4 md:p-8">
-            <PageHeader totalExpenses={0} onShowGettingStarted={() => setShowGettingStarted(true)} />
+            <PageHeader totalExpenses={0} onShowGettingStarted={onShowGettingStarted} />
             <div className="flex flex-col items-center justify-center gap-4 mb-8 pt-8">
               <Skeleton className="h-10 w-52" />
             </div>
@@ -510,7 +502,7 @@ export function Dashboard({ activeTab, setActiveTab }: DashboardProps) {
     );
   }
 
-  return <DashboardUI appData={appData} initialDate={new Date()} activeTab={activeTab} setActiveTab={setActiveTab} />;
+  return <DashboardUI appData={appData} initialDate={new Date()} activeTab={activeTab} setActiveTab={setActiveTab} onShowGettingStarted={onShowGettingStarted} />;
 }
 
     

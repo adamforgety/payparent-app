@@ -6,17 +6,25 @@ import { useFirebase } from '@/firebase';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { GettingStartedPage } from '@/components/getting-started-page';
+import { useAppContext } from '@/context/app-context';
 
-function App() {
+function AppContent() {
   const { user, isUserLoading } = useFirebase();
+  const { isNewUser } = useAppContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    setShowGettingStarted(isNewUser);
+  }, [isNewUser]);
 
   if (isUserLoading || !user) {
     return (
@@ -26,16 +34,24 @@ function App() {
       </div>
     );
   }
+  
+  if (showGettingStarted) {
+    return <GettingStartedPage onFinish={() => setShowGettingStarted(false)} />;
+  }
 
   return (
-    <AppContextProvider>
-      <div className="min-h-screen bg-background text-foreground">
-        <Dashboard activeTab={activeTab} setActiveTab={setActiveTab} />
-      </div>
-    </AppContextProvider>
+      <Dashboard 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onShowGettingStarted={() => setShowGettingStarted(true)}
+      />
   );
 }
 
 export default function Home() {
-  return <App />;
+  return (
+    <AppContextProvider>
+      <AppContent />
+    </AppContextProvider>
+  );
 }
