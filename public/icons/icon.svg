@@ -1,9 +1,7 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="96" fill="#E9E6F9"/>
-<g transform="scale(1.2) translate(42, 42)">
-<path d="M170.667 341.333V314.667C170.667 289.462 190.796 269.333 216 269.333H242.667C267.871 269.333 288 289.462 288 314.667V341.333" stroke="#8F80E0" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M229.333 202.667C229.333 222.428 213.095 238.667 193.333 238.667C173.572 238.667 157.333 222.428 157.333 202.667C157.333 182.905 173.572 166.667 193.333 166.667C213.095 166.667 229.333 182.905 229.333 202.667Z" stroke="#8F80E0" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M256 341.333V314.667C256 300.956 261.268 287.809 270.621 278.456" stroke="#8F80E0" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M229.333 166.667C236.435 169.52 242.733 174.13 247.667 180.012" stroke="#8F80E0" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+<rect width="512" height="512" rx="128" fill="#E9E6F9"/>
+<g transform="translate(102.4, 102.4) scale(0.6)">
+<path d="M173.333 384V352C173.333 316.685 202.685 288 238 288H274C309.315 288 338.667 316.685 338.667 352V384M296 202.667C296 225.476 277.809 244 256 244C234.191 244 216 225.476 216 202.667C216 179.857 234.191 161.333 256 161.333C277.809 161.333 296 179.857 296 202.667Z" stroke="#8F80E0" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M346.667 384V352C346.667 316.685 317.315 288 282 288H274M216 202.667C216 179.857 234.191 161.333 256 161.333" stroke="#8F80E0" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </svg>
