@@ -407,8 +407,6 @@ export function ExpensesCard({
                   <SortableHeader sortKey="paidBy" className="w-[140px]">Initially Paid By</SortableHeader>
                   <SortableHeader sortKey="status" className="w-[150px]">Settlement Status</SortableHeader>
                   <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
-                  <TableHead className="text-right w-[140px]">{parentNames['Parent 1']} Settlement</TableHead>
-                  <TableHead className="text-right w-[140px]">{parentNames['Parent 2']} Settlement</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
                   <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>
                   <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
@@ -418,18 +416,9 @@ export function ExpensesCard({
               <TableBody>
                 {filteredAndSortedItems.length > 0 ? (
                   filteredAndSortedItems.map((item) => {
-                    const { p1Paid, p2Paid } = renderItemDetails(item);
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
                     
-                    let p1DisplayPaid = p1Paid;
-                    let p2DisplayPaid = p2Paid;
-
-                    if (item.status === 'Unsettled') {
-                        p1DisplayPaid = 0;
-                        p2DisplayPaid = 0;
-                    }
-
                     return (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
@@ -462,16 +451,16 @@ export function ExpensesCard({
                         <TableCell className="text-right font-semibold">
                           ${item.amount.toFixed(2)}
                         </TableCell>
-                        <TableCell className={cn("text-right", p1DisplayPaid < 0 && 'text-green-600')}>
-                          {p1DisplayPaid < 0 ? `($${Math.abs(p1DisplayPaid).toFixed(2)})` : `$${p1DisplayPaid.toFixed(2)}`}
-                        </TableCell>
-                        <TableCell className={cn("text-right", p2DisplayPaid < 0 && 'text-green-600')}>
-                          {p2DisplayPaid < 0 ? `($${Math.abs(p2DisplayPaid).toFixed(2)})` : `$${p2DisplayPaid.toFixed(2)}`}
-                        </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={cn("text-right",
+                          item.paidBy === 'Parent 1' ? 'text-green-600' :
+                          item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
+                        )}>
                            ${p1Share.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={cn("text-right",
+                          item.paidBy === 'Parent 2' ? 'text-green-600' :
+                          item.status === 'Settled' ? 'text-green-600' : 'text-destructive'
+                        )}>
                             ${p2Share.toFixed(2)}
                         </TableCell>
                         <TableCell className="no-print text-center">
@@ -529,7 +518,7 @@ export function ExpensesCard({
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                       {searchTerm ? `No results for "${searchTerm}".` : `No ${statusFilter !== 'all' ? statusFilter : ''} transactions logged for this month.`}
                     </TableCell>
                   </TableRow>
@@ -540,8 +529,6 @@ export function ExpensesCard({
                   <TableRow>
                     <TableCell colSpan={4}></TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">Initial Total</TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']} Settlement</TableCell>
-                    <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']} Settlement</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 1']}'s Share</TableCell>
                     <TableCell className="text-right text-xs font-medium text-muted-foreground">{parentNames['Parent 2']}'s Share</TableCell>
                     <TableCell colSpan={2}></TableCell>
@@ -550,12 +537,6 @@ export function ExpensesCard({
                     <TableCell colSpan={4}>Totals</TableCell>
                     <TableCell className="text-right">
                         ${totals.totalInitialAmount.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${totals.totalP1Paid.toFixed(2)}
-                    </TableCell>
-                     <TableCell className="text-right">
-                      ${totals.totalP2Paid.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right">
                       ${totals.totalP1Share.toFixed(2)}
