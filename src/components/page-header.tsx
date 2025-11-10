@@ -31,7 +31,7 @@ interface PageHeaderProps {
 export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderProps) {
   const auth = useAuth();
   const { user } = useFirebase();
-  const { appData, coParentData } = useAppContext();
+  const { appData } = useAppContext();
   const router = useRouter();
 
   const handleSignOut = () => {
@@ -48,26 +48,14 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
   const hasNotifications = useMemo(() => {
     if (!appData || !user) return false;
 
-    // A simplified but more robust check:
-    // If a co-parent exists, and my ID is NOT the co-parent's ID, I must be the owner.
-    let myRole: 'Parent 1' | 'Parent 2';
-    if (coParentData) {
-      // In a linked setup, the `dataOwnerId` is the key. The owner is Parent 1.
-      myRole = user.uid === coParentData.dataOwnerId ? 'Parent 1' : 'Parent 2';
-    } else {
-      // If not linked, I am the owner.
-      myRole = 'Parent 1';
-    }
-    const otherParent = myRole === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-
+    // Show badge if there are ANY unsettled reimbursements
     return Object.values(appData.months).some(month =>
       month.expenses.some(expense =>
         (expense.category === 'Reimbursement' || expense.category === 'Credit') &&
-        expense.status === 'Unsettled' &&
-        expense.paidBy === otherParent
+        expense.status === 'Unsettled'
       )
     );
-  }, [appData, user, coParentData]);
+  }, [appData, user]);
 
 
   return (
