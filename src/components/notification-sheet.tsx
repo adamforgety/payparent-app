@@ -7,55 +7,56 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
 import { type ReactNode, useMemo } from 'react';
-import type { Expense, Notification } from '@/lib/types';
+import type { Expense, UserDoc } from '@/lib/types';
 import { useAppContext } from '@/context/app-context';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import { ScrollArea } from './ui/scroll-area';
 import { Bell, AlertCircle } from 'lucide-react';
-import { Button } from './ui/button';
 
 interface NotificationSheetProps {
   children: ReactNode;
 }
 
 export function NotificationSheet({ children }: NotificationSheetProps) {
-  const { firestore, user } = useFirebase();
-  const { appData } = useAppContext();
+  const { user } = useFirebase();
+  const { appData, coParentData, isLoading } = useAppContext();
 
-  const notificationsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'users', user.uid, 'notifications'),
-      orderBy('createdAt', 'desc')
-    );
-  }, [firestore, user]);
+  const currentUserParentLabel = useMemo(() => {
+    if (!user || !appData || !coParentData) return null;
+    
+    // Find which parent the current user is. This is a bit tricky with shared data.
+    // We assume the non-co-parent is the current user if names are customized.
+    // This logic might need refinement based on how parent labels are assigned.
+    const monthData = Object.values(appData.months)[0];
+    if (!monthData) return null;
 
-  const { data: notifications, isLoading } = useCollection<Notification>(notificationsQuery);
+    if (monthData.parentNames['Parent 1'] === user.email) return 'Parent 1';
+    if (monthData.parentNames['Parent 2'] === user.email) return 'Parent 2';
+    
+    // Fallback if emails don't match names (e.g. names are nicknames)
+    // This is less reliable. A better approach would be to store user UIDs against Parent 1/2.
+    // For now, we'll make a simple assumption.
+    return 'Parent 1'; // Default assumption
 
-  const allExpenses = useMemo(() => {
-    if (!appData) return new Map<string, Expense>();
-    const expenseMap = new Map<string, Expense>();
-    Object.values(appData.months).forEach(month => {
-      month.expenses.forEach(expense => {
-        expenseMap.set(expense.id, expense);
-      });
-    });
-    return expenseMap;
-  }, [appData]);
+  }, [user, appData, coParentData]);
 
-  const activeNotifications = useMemo(() => {
-    if (!notifications) return [];
-    return notifications.filter(notif => {
-      const expense = allExpenses.get(notif.expenseId);
-      return expense && expense.status === 'Unsettled';
-    });
-  }, [notifications, allExpenses]);
+  const reimbursementRequests = useMemo(() => {
+    if (!appData || !currentUserParentLabel) return [];
+    
+    const otherParent = currentUserParentLabel === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
+    const allExpenses = Object.values(appData.months).flatMap(month => month.expenses);
+
+    return allExpenses.filter(expense => 
+      (expense.category === 'Reimbursement' || expense.category === 'Credit') &&
+      expense.status === 'Unsettled' &&
+      expense.paidBy === otherParent
+    ).sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+  }, [appData, currentUserParentLabel]);
+  
   return (
     <Sheet>
       <SheetTrigger asChild>{children}</SheetTrigger>
@@ -73,21 +74,19 @@ export function NotificationSheet({ children }: NotificationSheetProps) {
             <div className="space-y-4">
             {isLoading ? (
                 <p>Loading notifications...</p>
-            ) : activeNotifications.length > 0 ? (
-                activeNotifications.map(notification => {
-                    const expense = allExpenses.get(notification.expenseId);
+            ) : reimbursementRequests.length > 0 ? (
+                reimbursementRequests.map(expense => {
+                    const monthData = Object.values(appData!.months).find(m => m.expenses.some(e => e.id === expense.id));
+                    const payerName = monthData ? monthData.parentNames[expense.paidBy] : 'Your co-parent';
+
                     return (
-                        <div key={notification.id} className="flex items-start gap-3 rounded-lg border p-3">
+                        <div key={expense.id} className="flex items-start gap-3 rounded-lg border p-3">
                              <AlertCircle className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
                             <div className="text-sm">
-                                <p>{notification.message}</p>
-                                {expense && (
-                                     <p className="font-bold">${expense.amount.toFixed(2)}</p>
-                                )}
+                                <p>{payerName} requested a reimbursement for "{expense.description}".</p>
+                                <p className="font-bold">${expense.amount.toFixed(2)}</p>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    {notification.createdAt
-                                    ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true })
-                                    : 'just now'}
+                                    {formatDistanceToNow(parseISO(expense.date), { addSuffix: true })}
                                 </p>
                             </div>
                         </div>

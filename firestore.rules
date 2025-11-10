@@ -55,14 +55,6 @@ service cloud.firestore {
                       (request.resource.data.keys().hasAny(['coParentId', 'dataOwnerId'])) ||
                       isAuthorizedToAccessData(userId);
 
-      /**
-       * @description Rules for the notifications sub-collection.
-       * - A user can read and write notifications within their own document.
-       * @path /users/{userId}/notifications/{notificationId}
-       */
-      match /notifications/{notificationId} {
-        allow read, write: if isOwner(userId);
-      }
     }
   }
 }

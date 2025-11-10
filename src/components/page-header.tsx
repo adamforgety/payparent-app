@@ -6,7 +6,7 @@ import { signOut } from 'firebase/auth';
 
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth, useFirebase } from '@/firebase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +19,8 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { NotificationSheet } from './notification-sheet';
-import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/context/app-context';
-import type { Expense } from '@/lib/types';
+import type { Expense, UserDoc } from '@/lib/types';
 import { useMemo } from 'react';
 
 interface PageHeaderProps {
@@ -31,14 +30,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderProps) {
   const auth = useAuth();
-  const { user, firestore } = useFirebase();
-  const { appData } = useAppContext();
+  const { user } = useFirebase();
+  const { appData, coParentData } = useAppContext();
   const router = useRouter();
 
   const handleSignOut = () => {
     signOut(auth).then(() => {
-      // Redirect immediately after sign-out is initiated.
-      // The onAuthStateChanged listener will handle the final state cleanup.
       router.push('/login');
     });
   };
@@ -48,19 +45,33 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
     return email[0].toUpperCase();
   };
 
-  const allExpenses = useMemo(() => {
-    if (!appData) return [];
-    return Object.values(appData.months).flatMap(month => month.expenses);
-  }, [appData]);
+  const currentUserParentLabel = useMemo(() => {
+    if (!user || !appData || !coParentData) return null;
+    // Find which parent the current user is. This is a bit tricky with shared data.
+    const monthData = Object.values(appData.months)[0];
+    if (!monthData) return null;
 
-  const reimbursementExpenses = useMemo(() => {
-    return allExpenses.filter(
-      (expense: Expense) =>
+    if (monthData.parentNames['Parent 1'] === user.email) return 'Parent 1';
+    if (monthData.parentNames['Parent 2'] === user.email) return 'Parent 2';
+    
+    // Fallback assumption
+    return 'Parent 1';
+  }, [user, appData, coParentData]);
+
+  const hasNotifications = useMemo(() => {
+    if (!appData || !currentUserParentLabel) return false;
+
+    const otherParent = currentUserParentLabel === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+
+    return Object.values(appData.months).some(month =>
+      month.expenses.some(expense =>
         (expense.category === 'Reimbursement' || expense.category === 'Credit') &&
         expense.status === 'Unsettled' &&
-        expense.paidBy !== user?.uid // Assuming paidBy stores the user ID of the payer
+        expense.paidBy === otherParent
+      )
     );
-  }, [allExpenses, user]);
+  }, [appData, currentUserParentLabel]);
+
 
   return (
     <header className="no-print sticky top-0 z-10 border-b bg-background/80 p-4 backdrop-blur-sm">
@@ -84,7 +95,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
             <NotificationSheet>
               <Button variant="outline" size="icon" className="rounded-full relative">
                 <Bell className="h-5 w-5" />
-                {reimbursementExpenses.length > 0 && (
+                {hasNotifications && (
                   <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
                 )}
               </Button>
