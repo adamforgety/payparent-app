@@ -41,18 +41,24 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const manageNotification = async (
     firestore: any,
     expense: Expense,
-    coParentId: string | null,
-    ownerName: string | null
+    currentUserId: string,
+    coParentId: string | null
 ) => {
-    if (!coParentId || !ownerName) return;
+    if (!coParentId || !currentUserId) return;
 
     if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
-        const recipientId = expense.paidBy === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-        const otherParentId = expense.paidBy === 'Parent 1' ? coParentId : ownerName;
+        const currentUserDocRef = doc(firestore, 'users', currentUserId);
+        const currentUserDoc = await getDoc(currentUserDocRef);
+        if (!currentUserDoc.exists()) return;
 
-        const notifRef = collection(firestore, 'users', otherParentId, 'notifications');
+        const currentUserData = currentUserDoc.data() as UserDoc;
+        const ownerName = currentUserData.appData.months[format(new Date(expense.date), 'yyyy-MM')]?.parentNames[expense.paidBy] || 'Your co-parent';
+
+        // The recipient is always the other person.
+        const notifRef = collection(firestore, 'users', coParentId, 'notifications');
+        
         const newNotification: Omit<Notification, 'id' | 'createdAt'> = {
-            recipientId: otherParentId,
+            recipientId: coParentId,
             expenseId: expense.id,
             message: `${ownerName} requested a reimbursement for "${expense.description}".`,
             type: 'reimbursement_request',
@@ -67,7 +73,7 @@ const manageNotification = async (
              errorEmitter.emit(
                 'permission-error',
                 new FirestorePermissionError({
-                    path: `users/${otherParentId}/notifications`,
+                    path: `users/${coParentId}/notifications`,
                     operation: 'create',
                     requestResourceData: newNotification,
                 })
@@ -213,7 +219,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const addExpense = (
     newExpense: Omit<Expense, 'id' | 'year' | 'month'>
   ) => {
-    if (!appData?.months) return;
+    if (!appData?.months || !user) return;
 
     const expenseDate = new Date(newExpense.date);
     const targetMonthId = format(expenseDate, 'yyyy-MM');
@@ -267,15 +273,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
     updateAppData({ months: newMonths });
     
-    if (firestore) {
-      manageNotification(firestore, newExpenseWithId, coParentData?.id ?? null, user?.displayName ?? user?.email ?? 'A user');
+    if (firestore && user) {
+      manageNotification(firestore, newExpenseWithId, user.uid, coParentData?.id ?? null);
     }
   };
 
   const addImportedExpenses = (
     importedExpenses: Omit<Expense, 'id' | 'year' | 'month'>[]
   ) => {
-    if (!appData?.months) return {};
+    if (!appData?.months || !user) return {};
 
     const newMonths = { ...appData.months };
     const monthSummary: { [monthId: string]: number } = {};
@@ -333,8 +339,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
       newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
       
-      if (firestore) {
-        manageNotification(firestore, newExpenseWithId, coParentData?.id ?? null, user?.displayName ?? user?.email ?? 'A user');
+      if (firestore && user) {
+        manageNotification(firestore, newExpenseWithId, user.uid, coParentData?.id ?? null);
       }
     });
 
@@ -358,7 +364,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const updateExpense = (updatedExpense: Expense, originalMonthId: string) => {
-    if (!appData) return;
+    if (!appData || !user) return;
 
     const newDate = new Date(updatedExpense.date);
     const newMonthId = format(newDate, 'yyyy-MM');
@@ -424,8 +430,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     updateAppData({ months: newMonths });
-    if (firestore) {
-      manageNotification(firestore, updatedExpense, coParentData?.id ?? null, user?.displayName ?? user?.email ?? 'A user');
+    if (firestore && user) {
+      manageNotification(firestore, updatedExpense, user.uid, coParentData?.id ?? null);
     }
   };
 
