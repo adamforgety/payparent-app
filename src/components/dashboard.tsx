@@ -2,7 +2,7 @@
 'use client';
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon, ChevronDown } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
@@ -54,6 +54,9 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(String(getYear(initialDate)));
   const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(format(initialDate, 'yyyy-MM'));
   const { toast } = useToast();
+  const [isDateDropdownOpen, setDateDropdownOpen] = useState(false);
+  const yearRef = useRef<HTMLDivElement>(null);
+  const monthRef = useRef<HTMLDivElement>(null);
   
   const monthId = format(currentDate, 'yyyy-MM');
 
@@ -87,6 +90,15 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
       updateAppData({ months: { ...appData.months, [monthId]: newMonthData } });
     }
   }, [appData, monthId, currentDate, updateAppData]);
+  
+  useEffect(() => {
+    if (isDateDropdownOpen) {
+      setTimeout(() => {
+        yearRef.current?.scrollIntoView({ block: 'center' });
+        monthRef.current?.scrollIntoView({ block: 'center' });
+      }, 100);
+    }
+  }, [isDateDropdownOpen]);
 
   const { currentMonthData, availableYears, availableMonthsForYear } = useMemo(() => {
     if (!appData) {
@@ -236,7 +248,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={setDateDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4">
                   {format(currentDate, 'MMMM yyyy')}
@@ -249,15 +261,19 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <DropdownMenuLabel>Year</DropdownMenuLabel>
                     <ScrollArea className="h-48">
                       <DropdownMenuGroup>
-                        {availableYears.map(year => (
-                          <DropdownMenuItem
-                            key={year}
-                            onSelect={() => setCurrentDate(setYear(currentDate, parseInt(year)))}
-                            className={getYear(currentDate) === parseInt(year) ? 'font-bold bg-secondary' : ''}
-                          >
-                            {year}
-                          </DropdownMenuItem>
-                        ))}
+                        {availableYears.map(year => {
+                          const isSelected = getYear(currentDate) === parseInt(year);
+                          return (
+                            <DropdownMenuItem
+                              key={year}
+                              ref={isSelected ? yearRef : null}
+                              onSelect={() => setCurrentDate(setYear(currentDate, parseInt(year)))}
+                              className={isSelected ? 'font-bold bg-secondary' : ''}
+                            >
+                              {year}
+                            </DropdownMenuItem>
+                          );
+                        })}
                       </DropdownMenuGroup>
                     </ScrollArea>
                   </div>
@@ -265,15 +281,19 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <DropdownMenuLabel>Month</DropdownMenuLabel>
                     <ScrollArea className="h-48">
                       <DropdownMenuGroup>
-                        {availableMonthsForYear.map(month => (
-                          <DropdownMenuItem
-                            key={month.value}
-                            onSelect={() => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month.value)))}
-                            className={getMonth(currentDate) === parseInt(month.value) ? 'font-bold bg-secondary' : ''}
-                          >
-                            {month.label}
-                          </DropdownMenuItem>
-                        ))}
+                        {availableMonthsForYear.map(month => {
+                           const isSelected = getMonth(currentDate) === parseInt(month.value);
+                          return (
+                            <DropdownMenuItem
+                              key={month.value}
+                              ref={isSelected ? monthRef : null}
+                              onSelect={() => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month.value)))}
+                              className={isSelected ? 'font-bold bg-secondary' : ''}
+                            >
+                              {month.label}
+                            </DropdownMenuItem>
+                          );
+                        })}
                       </DropdownMenuGroup>
                     </ScrollArea>
                   </div>
