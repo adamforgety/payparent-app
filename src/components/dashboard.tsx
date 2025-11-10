@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
@@ -344,12 +345,6 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     parentNames={currentMonthData.parentNames}
                     appData={appData}
                   >
-                     <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
-                        <Button>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Expense
-                        </Button>
-                      </AddExpenseDialog>
                       <ImportExpensesDialog
                         onImport={addImportedExpenses}
                         parentNames={currentMonthData.parentNames}
