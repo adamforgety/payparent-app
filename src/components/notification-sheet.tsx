@@ -12,7 +12,7 @@ import { useFirebase } from '@/firebase';
 import { type ReactNode, useMemo } from 'react';
 import type { Expense } from '@/lib/types';
 import { useAppContext } from '@/context/app-context';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ScrollArea } from './ui/scroll-area';
 import { Bell, AlertCircle } from 'lucide-react';
 import { SheetTrigger } from './ui/sheet';
@@ -83,9 +83,7 @@ export function NotificationSheet({ children }: NotificationSheetProps) {
                       </p>
                       <p className="font-bold">${expense.amount.toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(parseISO(expense.date), {
-                          addSuffix: true,
-                        })}
+                        {format(parseISO(expense.date), 'MMMM yyyy')}
                       </p>
                     </div>
                   </div>
