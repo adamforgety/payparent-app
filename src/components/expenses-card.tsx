@@ -3,7 +3,7 @@
 'use client';
 
 import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
-import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet, Plus, Banknote } from 'lucide-react';
+import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet, Plus, Banknote, Upload } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
 
@@ -327,7 +327,6 @@ export function ExpensesCard({
             </div>
         </div>
         <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
-            {children}
             <div className="flex items-center space-x-2">
                 <Label htmlFor="settle-all-switch" className="text-sm">Settle All</Label>
                 <Switch
@@ -337,6 +336,7 @@ export function ExpensesCard({
                     disabled={localItems.length === 0}
                 />
             </div>
+            {children}
         </div>
       </CardHeader>
       <CardContent>
@@ -674,5 +674,6 @@ export function ExpensesCard({
 type StatusFilter = 'all' | 'settled' | 'unsettled';
 
     
+
 
 
