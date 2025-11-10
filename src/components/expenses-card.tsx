@@ -42,6 +42,7 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { ExportButton } from './export-button';
+import { ImportExpensesDialog } from './import-expenses-dialog';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -90,7 +91,7 @@ export function ExpensesCard({
   parentNames,
   appData,
 }: ExpensesCardProps) {
-  const { batchUpdateMonths } = useAppContext();
+  const { batchUpdateMonths, addImportedExpenses } = useAppContext();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [localItems, setLocalItems] = useState<DisplayItem[]>([]);
   const { toast } = useToast();
@@ -336,7 +337,24 @@ export function ExpensesCard({
                     disabled={localItems.length === 0}
                 />
             </div>
-            {children}
+            <ImportExpensesDialog
+                onImport={addImportedExpenses}
+                parentNames={parentNames}
+                appData={appData}
+            >
+              <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+            </ImportExpensesDialog>
+             <ExportButton
+                expenses={expenses}
+                childSupport={childSupport}
+                currentDate={currentDate}
+                parentNames={parentNames}
+                expenseSplit={expenseSplit}
+                medicalExpenseSplit={medicalExpenseSplit}
+            />
         </div>
       </CardHeader>
       <CardContent>
@@ -672,8 +690,3 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
-
-    
-
-
-
