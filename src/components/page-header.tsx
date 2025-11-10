@@ -27,9 +27,10 @@ interface PageHeaderProps {
   totalExpenses: number;
   onShowGettingStarted: () => void;
   onGoToUnsettled: (monthId: string) => void;
+  onGoHome: () => void;
 }
 
-export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettled }: PageHeaderProps) {
+export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettled, onGoHome }: PageHeaderProps) {
   const auth = useAuth();
   const { user } = useFirebase();
   const { appData } = useAppContext();
@@ -62,7 +63,9 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
   return (
     <header className="no-print sticky top-0 z-10 border-b bg-background/80 p-4 backdrop-blur-sm">
       <div className="container mx-auto flex items-center justify-between">
-        <Logo />
+        <Button variant="link" className="p-0 h-auto" onClick={onGoHome}>
+          <Logo />
+        </Button>
         <div className="flex items-center gap-2">
            <TooltipProvider>
             <Tooltip>
