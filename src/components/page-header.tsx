@@ -45,23 +45,20 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
     return email[0].toUpperCase();
   };
 
-  const currentUserParentLabel = useMemo(() => {
-    if (!user || !appData || !coParentData) return null;
-    // Find which parent the current user is. This is a bit tricky with shared data.
-    const monthData = Object.values(appData.months)[0];
-    if (!monthData) return null;
-
-    if (monthData.parentNames['Parent 1'] === user.email) return 'Parent 1';
-    if (monthData.parentNames['Parent 2'] === user.email) return 'Parent 2';
-    
-    // Fallback assumption
-    return 'Parent 1';
-  }, [user, appData, coParentData]);
-
   const hasNotifications = useMemo(() => {
-    if (!appData || !currentUserParentLabel) return false;
+    if (!appData || !user) return false;
 
-    const otherParent = currentUserParentLabel === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+    // A simplified but more robust check:
+    // If a co-parent exists, and my ID is NOT the co-parent's ID, I must be the owner.
+    let myRole: 'Parent 1' | 'Parent 2';
+    if (coParentData) {
+      // In a linked setup, the `dataOwnerId` is the key. The owner is Parent 1.
+      myRole = user.uid === coParentData.dataOwnerId ? 'Parent 1' : 'Parent 2';
+    } else {
+      // If not linked, I am the owner.
+      myRole = 'Parent 1';
+    }
+    const otherParent = myRole === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
     return Object.values(appData.months).some(month =>
       month.expenses.some(expense =>
@@ -70,7 +67,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
         expense.paidBy === otherParent
       )
     );
-  }, [appData, currentUserParentLabel]);
+  }, [appData, user, coParentData]);
 
 
   return (
