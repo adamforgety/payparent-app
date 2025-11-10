@@ -632,7 +632,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
                               >
                                 {transaction.category}
                               </Badge>
@@ -823,7 +823,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 <TableRow key={item.name}>
                                 <TableCell className="font-medium">
                                     <Badge
-                                    variant={item.name === 'Child Support' ? 'default' : item.name === 'Reimbursement' ? 'outline' : 'secondary'}
+                                    variant={item.name === 'Child Support' ? 'default' : item.name === 'Reimbursement' ? 'reimbursement' : 'outline'}
                                     >
                                     {item.name}
                                     </Badge>

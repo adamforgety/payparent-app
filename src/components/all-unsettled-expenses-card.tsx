@@ -284,7 +284,7 @@ export function AllUnsettledExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        // Only add to total amount if it's not a reimbursement or credit
+        // Only add to total amount if it's not a reimbursement
         if (item.category !== 'Reimbursement') {
           acc.totalAmount += item.amount;
         }
@@ -408,7 +408,7 @@ export function AllUnsettledExpensesCard({
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
                         >
                           {item.category}
                         </Badge>
@@ -619,7 +619,7 @@ export function AllUnsettledExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
                                     >
                                       {item.category}
                                     </Badge>
