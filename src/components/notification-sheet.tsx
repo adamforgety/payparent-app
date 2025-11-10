@@ -35,8 +35,7 @@ export function NotificationSheet({ children, onGoToUnsettled }: NotificationShe
         monthData.expenses
           .filter(
             (expense) =>
-              (expense.category === 'Reimbursement' ||
-                expense.category === 'Credit') &&
+              expense.category === 'Reimbursement' &&
               expense.status === 'Unsettled'
           )
           .map((expense) => ({ ...expense, monthId }))

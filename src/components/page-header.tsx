@@ -53,7 +53,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
     // Show badge if there are ANY unsettled reimbursements
     return Object.values(appData.months).some(month =>
       month.expenses.some(expense =>
-        (expense.category === 'Reimbursement' || expense.category === 'Credit') &&
+        expense.category === 'Reimbursement' &&
         expense.status === 'Unsettled'
       )
     );

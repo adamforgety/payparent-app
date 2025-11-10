@@ -101,7 +101,6 @@ const ALL_CATEGORIES: ExpenseCategory[] = [
   'Clothing',
   'Food',
   'Reimbursement',
-  'Credit',
   'Other',
 ];
 

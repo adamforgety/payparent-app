@@ -28,7 +28,7 @@ export function ReportingExportButton({
     }
 
     const expense = transaction as (Expense & { expenseSplit: ExpenseSplit, medicalExpenseSplit: MedicalExpenseSplit });
-    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+    if (expense.category === 'Reimbursement') {
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 

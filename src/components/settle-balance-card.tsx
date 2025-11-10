@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Scale, ArrowRight } from 'lucide-react';

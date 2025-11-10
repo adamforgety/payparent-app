@@ -42,7 +42,7 @@ export function ExportButton({
     }
 
     const expense = item as Expense;
-    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+    if (expense.category === 'Reimbursement') {
       // If the parent is the one who paid, they are *owed* this amount, so their share of the "cost" is negative.
       if (expense.paidBy === parent) {
         return -expense.amount;

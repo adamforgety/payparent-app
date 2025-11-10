@@ -127,7 +127,7 @@ export function ExpensesCard({
     }
 
     const expense = item as Expense;
-    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+    if (expense.category === 'Reimbursement') {
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 
@@ -203,14 +203,14 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        if (item.category !== 'Reimbursement' && item.category !== 'Credit') {
+        if (item.category !== 'Reimbursement') {
           acc.totalInitialAmount += item.amount;
         }
         
         let p1Share = getParentShare(item, 'Parent 1');
         let p2Share = getParentShare(item, 'Parent 2');
 
-        if (item.category === 'Reimbursement' || item.category === 'Credit') {
+        if (item.category === 'Reimbursement') {
           if (item.paidBy === 'Parent 1') {
             // Parent 1 paid, so they get a credit. Their "share" is negative.
             p1Share -= item.amount;
@@ -378,8 +378,8 @@ export function ExpensesCard({
                   filteredAndSortedItems.map((item) => {
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
-                    const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
-                    const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
+                    const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
 
                     let p1Color, p2Color;
 
@@ -406,8 +406,8 @@ export function ExpensesCard({
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
-                            className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
+                            variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                            className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                           >
                             {item.category}
                           </Badge>
@@ -548,8 +548,8 @@ export function ExpensesCard({
                 filteredAndSortedItems.map((item) => {
                     const p1Share = getParentShare(item, 'Parent 1');
                     const p2Share = getParentShare(item, 'Parent 2');
-                    const isP1Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 1';
-                    const isP2Reimbursed = (item.category === 'Reimbursement' || item.category === 'Credit') && item.paidBy === 'Parent 2';
+                    const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
+                    const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
 
                     let p1Color, p2Color;
 
@@ -616,8 +616,8 @@ export function ExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : (item.category === 'Reimbursement' || item.category === 'Credit') ? 'outline' : 'secondary'}
-                                      className={cn((item.category === 'Reimbursement' || item.category === 'Credit') && 'border-primary bg-background text-primary')}
+                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>
@@ -674,4 +674,5 @@ export function ExpensesCard({
 type StatusFilter = 'all' | 'settled' | 'unsettled';
 
     
+
 

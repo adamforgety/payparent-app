@@ -1,3 +1,4 @@
+
 export type ExpenseCategory =
   | 'Medical'
   | 'Education'
@@ -7,7 +8,6 @@ export type ExpenseCategory =
   | 'Food'
   | 'Child Support'
   | 'Reimbursement'
-  | 'Credit'
   | 'Other';
 
 export type PaymentStatus = 'Unsettled' | 'Settled';

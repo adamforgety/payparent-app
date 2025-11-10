@@ -95,7 +95,6 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Clothing',
   'Food',
   'Reimbursement',
-  'Credit',
   'Child Support',
   'Other',
 ];
@@ -328,7 +327,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       }
   
       const expense = transaction as EnrichedExpense;
-      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+      if (expense.category === 'Reimbursement') {
           return expense.paidBy === parent ? 0 : expense.amount;
       }
 
@@ -619,8 +618,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         const parent1Share = getParentShare(transaction, 'Parent 1');
                         const parent2Share = getParentShare(transaction, 'Parent 2');
 
-                        const isP1Reimbursed = (transaction.category === 'Reimbursement' || transaction.category === 'Credit') && transaction.paidBy === 'Parent 1';
-                        const isP2Reimbursed = (transaction.category === 'Reimbursement' || transaction.category === 'Credit') && transaction.paidBy === 'Parent 2';
+                        const isP1Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 1';
+                        const isP2Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 2';
 
                         return (
                           <TableRow key={transaction.id}>
@@ -632,8 +631,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={transaction.category === 'Child Support' ? 'default' : (transaction.category === 'Reimbursement' || transaction.category === 'Credit') ? 'outline' : 'secondary'}
-                                className={cn((transaction.category === 'Reimbursement' || transaction.category === 'Credit') && 'border-primary bg-background text-primary')}
+                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'outline' : 'secondary'}
+                                className={cn(transaction.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                               >
                                 {transaction.category}
                               </Badge>
@@ -824,8 +823,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 <TableRow key={item.name}>
                                 <TableCell className="font-medium">
                                     <Badge
-                                    variant={item.name === 'Child Support' ? 'default' : (item.name === 'Reimbursement' || item.name === 'Credit') ? 'outline' : 'secondary'}
-                                    className={cn((item.name === 'Reimbursement' || item.name === 'Credit') && 'border-primary bg-background text-primary')}
+                                    variant={item.name === 'Child Support' ? 'default' : item.name === 'Reimbursement' ? 'outline' : 'secondary'}
+                                    className={cn(item.name === 'Reimbursement' && 'border-primary bg-background text-primary')}
                                     >
                                     {item.name}
                                     </Badge>
