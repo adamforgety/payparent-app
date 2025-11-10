@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -21,16 +22,11 @@ export function AddExpenseChooser({ parentNames, currentDate, appData }: AddExpe
   const [isSingleOpen, setIsSingleOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  const openSingle = () => {
+  const openDialog = (setter: (isOpen: boolean) => void) => {
     setIsChooserOpen(false);
-    setIsSingleOpen(true);
+    setter(true);
   };
-
-  const openImport = () => {
-    setIsChooserOpen(false);
-    setIsImportOpen(true);
-  };
-
+  
   return (
     <>
       <Dialog open={isChooserOpen} onOpenChange={setIsChooserOpen}>
@@ -45,36 +41,33 @@ export function AddExpenseChooser({ parentNames, currentDate, appData }: AddExpe
             <DialogDescription>How would you like to add an expense?</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-4 pt-4">
-            <Button variant="outline" onClick={openSingle} className="h-20 flex-col gap-2">
+            <Button variant="outline" onClick={() => openDialog(setIsSingleOpen)} className="h-20 flex-col gap-2">
               <Banknote className="h-6 w-6" />
               <span>Add Single Expense</span>
             </Button>
-            <Button variant="outline" onClick={openImport} className="h-20 flex-col gap-2">
+            <Button variant="outline" onClick={() => openDialog(setIsImportOpen)} className="h-20 flex-col gap-2">
               <Upload className="h-6 w-6" />
               <span>Bulk Import from File</span>
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* These dialogs are managed separately to prevent conflicts */}
+      
       <AddExpenseDialog
+        open={isSingleOpen}
+        onOpenChange={setIsSingleOpen}
         onAddExpense={addExpense}
         parentNames={parentNames}
         currentDate={currentDate}
-        onOpenChange={setIsSingleOpen} // Controlled by state
-      >
-        <div data-trigger-for="add-single-expense" style={{ display: isSingleOpen ? 'block' : 'none' }}></div>
-      </AddExpenseDialog>
+      />
 
       <ImportExpensesDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
         onImport={addImportedExpenses}
         parentNames={parentNames}
         appData={appData}
-        onOpenChange={setIsImportOpen} // Controlled by state
-      >
-        <div data-trigger-for="import-expenses" style={{ display: isImportOpen ? 'block' : 'none' }}></div>
-      </ImportExpensesDialog>
+      />
     </>
   );
 }

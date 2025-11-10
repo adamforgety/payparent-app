@@ -79,15 +79,13 @@ interface AddExpenseDialogProps {
   onAddExpense: (expense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
   parentNames: ParentNames;
   currentDate: Date;
-  children: ReactNode;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, children, onOpenChange }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open, onOpenChange }: AddExpenseDialogProps) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
-  
-  const isOpen = !!children; // Dialog is open if children are provided.
 
   const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
@@ -102,7 +100,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
   const selectedCategory = form.watch('category');
 
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       form.reset({
         description: '',
         amount: '' as any,
@@ -112,7 +110,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
         receipt: undefined,
       });
     }
-  }, [isOpen, currentDate, form]);
+  }, [open, currentDate, form]);
 
   const receiptRef = form.register('receipt');
 
@@ -156,10 +154,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>

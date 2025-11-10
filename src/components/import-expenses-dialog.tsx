@@ -60,7 +60,7 @@ interface ImportExpensesDialogProps {
   onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => { [monthId: string]: number };
   parentNames: ParentNames;
   appData: AppData;
-  children: ReactNode;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -172,14 +172,12 @@ const ResizingTextarea = (props: React.ComponentProps<typeof Textarea>) => {
 };
 
 
-export function ImportExpensesDialog({ onImport, parentNames, appData, children, onOpenChange }: ImportExpensesDialogProps) {
+export function ImportExpensesDialog({ onImport, parentNames, appData, open, onOpenChange }: ImportExpensesDialogProps) {
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
   const [successfulImports, setSuccessfulImports] = useState<ParsedExpense[]>([]);
   const [failedImports, setFailedImports] = useState<FailedImport[]>([]);
   const [duplicateImports, setDuplicateImports] = useState<DuplicateImport[]>([]);
   const { toast } = useToast();
-
-  const isOpen = !!children;
 
   const allExistingExpenses = useMemo(() => {
     if (!appData) return [];
@@ -508,10 +506,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, children,
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChangeInternal}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChangeInternal}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
