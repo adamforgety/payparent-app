@@ -29,65 +29,59 @@ export function ExportButton({
   medicalExpenseSplit,
   asChild = false,
 }: ExportButtonProps) {
-  const handleExport = () => {
-    const childSupportItem =
-      childSupport.amount > 0 && childSupport.paidBy !== 'None'
-        ? {
-            id: 'child-support',
-            date: startOfMonth(currentDate).toISOString(),
-            description: 'Child Support',
-            amount: childSupport.amount,
-            paidBy: childSupport.paidBy,
-            category: 'Child Support' as const,
-            status: childSupport.status,
-            year: currentDate.getFullYear(),
-            month: currentDate.getMonth() + 1,
-          }
-        : null;
+  const getParentShare = (item: Expense | (typeof childSupportItem), parent: Parent): number => {
+    if (item.category === 'Child Support') {
+      const csItem = item as typeof childSupportItem;
+      return csItem.paidBy === parent ? csItem.amount : 0;
+    }
 
+    const expense = item as Expense;
+    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+      return expense.paidBy === parent ? 0 : expense.amount;
+    }
+
+    const split =
+      expense.category === 'Medical' || expense.category === 'Child Care'
+        ? medicalExpenseSplit
+        : expenseSplit;
+
+    return expense.amount * (split[parent] / 100);
+  };
+  
+  const childSupportItem =
+    childSupport.amount > 0 && childSupport.paidBy !== 'None'
+      ? {
+          id: 'child-support',
+          date: startOfMonth(currentDate).toISOString(),
+          description: 'Child Support',
+          amount: childSupport.amount,
+          paidBy: childSupport.paidBy,
+          category: 'Child Support' as const,
+          status: childSupport.status,
+          year: currentDate.getFullYear(),
+          month: currentDate.getMonth() + 1,
+        }
+      : null;
+
+  const handleExport = () => {
     const allItems: (Expense | (typeof childSupportItem))[] = [
       ...(childSupportItem ? [childSupportItem] : []),
       ...expenses,
     ];
 
     const dataToExport = allItems.map((item) => {
-      let parent1Owes = 0;
-      let parent2Owes = 0;
-
-      if (item.category === 'Child Support') {
-        if (item.paidBy === 'Parent 1') {
-          parent1Owes = item.amount;
-        } else if (item.paidBy === 'Parent 2') {
-          parent2Owes = item.amount;
-        }
-      } else {
-        let p1Share = 0;
-        let p2Share = 0;
-
-        if (item.category === 'Reimbursement' || item.category === 'Credit') {
-          p1Share = item.paidBy === 'Parent 1' ? 0 : item.amount;
-          p2Share = item.paidBy === 'Parent 2' ? 0 : item.amount;
-        } else {
-          const split = item.category === 'Medical' || item.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-          p1Share = item.amount * (split['Parent 1'] / 100);
-          p2Share = item.amount * (split['Parent 2'] / 100);
-        }
-
-        const p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-        const p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-
-        parent1Owes = p1Share - p1Paid;
-        parent2Owes = p2Share - p2Paid;
-      }
+      const p1Share = getParentShare(item, 'Parent 1');
+      const p2Share = getParentShare(item, 'Parent 2');
 
       return {
         Date: format(new Date(item.date), 'yyyy-MM-dd'),
         Description: item.description,
         Category: item.category,
-        'Initial Payer': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy],
-        Amount: item.amount,
-        [`${parentNames['Parent 1']} Owes`]: parent1Owes.toFixed(2),
-        [`${parentNames['Parent 2']} Owes`]: parent2Owes.toFixed(2),
+        'Initial Payer': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
+        'Initial Amount': item.amount,
+        [`${parentNames['Parent 1']}'s Share`]: p1Share.toFixed(2),
+        [`${parentNames['Parent 2']}'s Share`]: p2Share.toFixed(2),
+        Status: item.status,
       };
     });
 
