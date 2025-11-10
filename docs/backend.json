@@ -184,6 +184,47 @@
         "email",
         "dataOwnerId"
       ]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents an in-app notification for a user.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "recipientId": {
+          "type": "string",
+          "description": "The ID of the user who should receive the notification."
+        },
+        "expenseId": {
+          "type": "string",
+          "description": "The ID of the expense this notification is related to."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the notification was created."
+        },
+        "message": {
+          "type": "string",
+          "description": "The content of the notification message."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "reimbursement_request"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "recipientId",
+        "expenseId",
+        "createdAt",
+        "message",
+        "type"
+      ]
     }
   },
   "auth": {
@@ -265,6 +306,26 @@
             {
               "name": "monthlyCalculationId",
               "description": "The unique identifier for the monthly calculation record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores in-app notifications for a user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (recipient)."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique identifier for the notification."
             }
           ]
         }

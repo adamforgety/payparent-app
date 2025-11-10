@@ -66,6 +66,15 @@ export interface AppData {
   };
 }
 
+export interface Notification {
+  id: string;
+  recipientId: string;
+  expenseId: string;
+  createdAt: any; // Firestore Timestamp
+  message: string;
+  type: 'reimbursement_request';
+}
+
 // This is the definitive structure for the /users/{userId} document
 export interface UserDoc {
   id: string;

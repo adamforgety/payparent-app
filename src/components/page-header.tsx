@@ -1,12 +1,12 @@
 
 'use client';
 
-import { LogOut, User as UserIcon, HelpCircle } from 'lucide-react';
+import { LogOut, User as UserIcon, HelpCircle, Bell } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { useAuth, useFirebase } from '@/firebase';
+import { useAuth, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,11 @@ import {
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { NotificationSheet } from './notification-sheet';
+import { collection } from 'firebase/firestore';
+import { useAppContext } from '@/context/app-context';
+import type { Expense } from '@/lib/types';
+import { useMemo } from 'react';
 
 interface PageHeaderProps {
   totalExpenses: number;
@@ -26,7 +31,8 @@ interface PageHeaderProps {
 
 export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderProps) {
   const auth = useAuth();
-  const { user } = useFirebase();
+  const { user, firestore } = useFirebase();
+  const { appData } = useAppContext();
   const router = useRouter();
 
   const handleSignOut = () => {
@@ -41,6 +47,20 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
     if (!email) return null;
     return email[0].toUpperCase();
   };
+
+  const allExpenses = useMemo(() => {
+    if (!appData) return [];
+    return Object.values(appData.months).flatMap(month => month.expenses);
+  }, [appData]);
+
+  const reimbursementExpenses = useMemo(() => {
+    return allExpenses.filter(
+      (expense: Expense) =>
+        (expense.category === 'Reimbursement' || expense.category === 'Credit') &&
+        expense.status === 'Unsettled' &&
+        expense.paidBy !== user?.uid // Assuming paidBy stores the user ID of the payer
+    );
+  }, [allExpenses, user]);
 
   return (
     <header className="no-print sticky top-0 z-10 border-b bg-background/80 p-4 backdrop-blur-sm">
@@ -59,6 +79,18 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          {user && (
+            <NotificationSheet>
+              <Button variant="outline" size="icon" className="rounded-full relative">
+                <Bell className="h-5 w-5" />
+                {reimbursementExpenses.length > 0 && (
+                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                )}
+              </Button>
+            </NotificationSheet>
+          )}
+
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

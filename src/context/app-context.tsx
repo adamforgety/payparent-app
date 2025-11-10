@@ -10,12 +10,12 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import type { AppData, ChildSupport, Expense, UserDoc, MonthData } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, UserDoc, MonthData, Notification } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { saveUserData } from '@/lib/data-service';
 import { Loader2, Users } from 'lucide-react';
 import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
-import { doc, onSnapshot, getDoc, FirestoreError } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, FirestoreError, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { initialData } from '@/lib/data';
 
@@ -36,6 +36,45 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// Helper function to manage notifications
+const manageNotification = async (
+    firestore: any,
+    expense: Expense,
+    coParentId: string | null,
+    ownerName: string | null
+) => {
+    if (!coParentId || !ownerName) return;
+
+    if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
+        const recipientId = expense.paidBy === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+        const otherParentId = expense.paidBy === 'Parent 1' ? coParentId : ownerName;
+
+        const notifRef = collection(firestore, 'users', otherParentId, 'notifications');
+        const newNotification: Omit<Notification, 'id' | 'createdAt'> = {
+            recipientId: otherParentId,
+            expenseId: expense.id,
+            message: `${ownerName} requested a reimbursement for "${expense.description}".`,
+            type: 'reimbursement_request',
+        };
+
+        try {
+            await addDoc(notifRef, {
+                ...newNotification,
+                createdAt: serverTimestamp(),
+            });
+        } catch (error) {
+             errorEmitter.emit(
+                'permission-error',
+                new FirestorePermissionError({
+                    path: `users/${otherParentId}/notifications`,
+                    operation: 'create',
+                    requestResourceData: newNotification,
+                })
+            );
+        }
+    }
+};
 
 export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -227,6 +266,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
     newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
     updateAppData({ months: newMonths });
+    
+    if (firestore) {
+      manageNotification(firestore, newExpenseWithId, coParentData?.id ?? null, user?.displayName ?? user?.email ?? 'A user');
+    }
   };
 
   const addImportedExpenses = (
@@ -289,6 +332,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
       const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
       newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
+      
+      if (firestore) {
+        manageNotification(firestore, newExpenseWithId, coParentData?.id ?? null, user?.displayName ?? user?.email ?? 'A user');
+      }
     });
 
     updateAppData({ months: newMonths });
@@ -377,6 +424,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     updateAppData({ months: newMonths });
+    if (firestore) {
+      manageNotification(firestore, updatedExpense, coParentData?.id ?? null, user?.displayName ?? user?.email ?? 'A user');
+    }
   };
 
   const contextValue = useMemo(
