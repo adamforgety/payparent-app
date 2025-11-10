@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -138,4 +139,26 @@ body > svg:last-of-type {
 
 .embla__dot--selected:after {
   background-color: hsl(var(--primary));
+}
+
+@layer components {
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 z-50 h-16 border-t bg-background shadow-[0_-1px_3px_rgba(0,0,0,0.05)];
+  }
+
+  .bottom-nav-grid {
+    @apply grid h-full grid-cols-5 items-center;
+  }
+
+  .bottom-nav-item {
+    @apply flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground transition-colors;
+  }
+  
+  .bottom-nav-item.active {
+    @apply text-primary;
+  }
+
+  .bottom-nav-add-button {
+    @apply relative -top-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105;
+  }
 }

@@ -3,7 +3,7 @@
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon, ChevronDown, LayoutDashboard, Settings, ReceiptText as ExpensesIcon, FileText as ReportingIcon } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface DashboardProps {
     activeTab: string;
@@ -239,6 +240,193 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   const expenses = currentMonthData.expenses || [];
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
+  const renderContent = () => {
+    switch(activeTab) {
+      case 'dashboard':
+        return (
+          <div className="mt-6">
+            <Tabs defaultValue="parent-1" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger
+                  value="parent-1"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  {currentMonthData.parentNames['Parent 1']}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="parent-2"
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  {currentMonthData.parentNames['Parent 2']}
+                </TabsTrigger>
+              </TabsList>
+               <TabsContent value="parent-1" className="mt-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+                  <div className="lg:col-span-1">
+                    <SettleBalanceCard
+                        parent="Parent 1"
+                        expenses={expenses}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        childSupport={currentMonthData.childSupport}
+                        parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                        currentMonthId={monthId}
+                        onGoToExpenses={handleGoToUnsettled}
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <SummaryDetailsCard
+                        parent="Parent 1"
+                        expenses={expenses}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        childSupport={currentMonthData.childSupport}
+                        parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                        currentMonthId={monthId}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="parent-2" className="mt-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+                  <div className="lg:col-span-1">
+                    <SettleBalanceCard
+                        parent="Parent 2"
+                        expenses={expenses}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        childSupport={currentMonthData.childSupport}
+                        parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                        currentMonthId={monthId}
+                        onGoToExpenses={handleGoToUnsettled}
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <SummaryDetailsCard
+                        parent="Parent 2"
+                        expenses={expenses}
+                        expenseSplit={currentMonthData.expenseSplit}
+                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        childSupport={currentMonthData.childSupport}
+                        parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                        currentMonthId={monthId}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        );
+      case 'expenses':
+        return (
+          <div className="mt-6">
+             <Tabs value={expensesSubTab} onValueChange={setExpensesSubTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="monthly" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Monthly Ledger</TabsTrigger>
+                  <TabsTrigger value="unsettled" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">All Unsettled</TabsTrigger>
+                </TabsList>
+                <TabsContent value="monthly" className="mt-6">
+                  <ExpensesCard
+                    expenses={expenses}
+                    childSupport={currentMonthData.childSupport}
+                    expenseSplit={currentMonthData.expenseSplit}
+                    medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                    onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
+                    onUpdateExpense={handleUpdateExpense}
+                    onUpdateChildSupport={(cs) => updateChildSupportForSingleMonth(cs, monthId)}
+                    currentDate={currentDate}
+                    parentNames={currentMonthData.parentNames}
+                    appData={appData}
+                  >
+                     <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
+                        <Button>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Expense
+                        </Button>
+                      </AddExpenseDialog>
+                      <ImportExpensesDialog
+                        onImport={addImportedExpenses}
+                        parentNames={currentMonthData.parentNames}
+                        appData={appData}
+                      />
+                      <ExportButton
+                          expenses={expenses}
+                          childSupport={currentMonthData.childSupport}
+                          currentDate={currentDate}
+                          parentNames={currentMonthData.parentNames}
+                          expenseSplit={currentMonthData.expenseSplit}
+                          medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                      />
+                  </ExpensesCard>
+                </TabsContent>
+                <TabsContent value="unsettled" className="mt-6">
+                    <AllUnsettledExpensesCard 
+                        appData={appData}
+                        onUpdateExpense={handleUpdateExpense}
+                        onUpdateChildSupport={updateChildSupportForSingleMonth}
+                        onDeleteExpense={handleDeleteExpense}
+                        currentDate={currentDate}
+                        isDashboardAllMonthsView={isAllMonthsView}
+                    />
+                </TabsContent>
+             </Tabs>
+            </div>
+        );
+      case 'reporting':
+        return (
+          <div className="mt-6">
+            <ReportingPage appData={appData} />
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="mt-6">
+            <Tabs defaultValue="app" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="app" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">App Settings</TabsTrigger>
+                <TabsTrigger value="account" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Account Settings</TabsTrigger>
+              </TabsList>
+              <TabsContent value="app">
+                <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                  <ParentNamesCard
+                      parentNames={currentMonthData.parentNames}
+                      onUpdate={(parentNames: ParentNames) => updateSettingsForCurrentAndFutureMonths({ parentNames })}
+                  />
+                  <ChildSupportCard
+                    childSupport={currentMonthData.childSupport}
+                    onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
+                    parentNames={currentMonthData.parentNames}
+                  />
+                  <ParentSplitCard
+                    expenseSplit={currentMonthData.expenseSplit}
+                    onUpdate={(expenseSplit: ExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ expenseSplit })}
+                    parentNames={currentMonthData.parentNames}
+                  />
+                  <MedicalSplitCard
+                    expenseSplit={currentMonthData.medicalExpenseSplit}
+                    onUpdate={(medicalExpenseSplit: MedicalExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ medicalExpenseSplit })}
+                    parentNames={currentMonthData.parentNames}
+                  />
+                </div>
+              </TabsContent>
+              <TabsContent value="account">
+                 <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
+                    <CoParentLinkCard />
+                    <AccountSettingsCard />
+                 </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
+
   return (
     <DashboardProvider
       onUpdateExpense={handleUpdateExpense}
@@ -354,209 +542,37 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
               <ArrowRight className="h-5 w-5" />
             </Button>
           </div>
+          
+          {renderContent()}
 
-
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 no-print h-auto bg-transparent p-0">
-              <TabsTrigger value="dashboard" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Dashboard</TabsTrigger>
-              <TabsTrigger value="expenses" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Expenses</TabsTrigger>
-              <TabsTrigger value="reporting" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Reporting</TabsTrigger>
-              <TabsTrigger value="settings" className="text-lg rounded-t-md rounded-b-none data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none">Settings</TabsTrigger>
-            </TabsList>
-            <TabsContent value="dashboard">
-              <div className="mt-6">
-                <Tabs defaultValue="parent-1" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger
-                      value="parent-1"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                    >
-                      {currentMonthData.parentNames['Parent 1']}
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="parent-2"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                    >
-                      {currentMonthData.parentNames['Parent 2']}
-                    </TabsTrigger>
-                  </TabsList>
-                   <TabsContent value="parent-1" className="mt-6">
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-                      <div className="lg:col-span-1">
-                        <SettleBalanceCard
-                            parent="Parent 1"
-                            expenses={expenses}
-                            expenseSplit={currentMonthData.expenseSplit}
-                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                            childSupport={currentMonthData.childSupport}
-                            parentNames={currentMonthData.parentNames}
-                            appData={appData}
-                            currentMonthId={monthId}
-                            onGoToExpenses={handleGoToUnsettled}
-                        />
-                      </div>
-                      <div className="lg:col-span-2">
-                        <SummaryDetailsCard
-                            parent="Parent 1"
-                            expenses={expenses}
-                            expenseSplit={currentMonthData.expenseSplit}
-                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                            childSupport={currentMonthData.childSupport}
-                            parentNames={currentMonthData.parentNames}
-                            appData={appData}
-                            currentMonthId={monthId}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="parent-2" className="mt-6">
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-                      <div className="lg:col-span-1">
-                        <SettleBalanceCard
-                            parent="Parent 2"
-                            expenses={expenses}
-                            expenseSplit={currentMonthData.expenseSplit}
-                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                            childSupport={currentMonthData.childSupport}
-                            parentNames={currentMonthData.parentNames}
-                            appData={appData}
-                            currentMonthId={monthId}
-                            onGoToExpenses={handleGoToUnsettled}
-                        />
-                      </div>
-                      <div className="lg:col-span-2">
-                        <SummaryDetailsCard
-                            parent="Parent 2"
-                            expenses={expenses}
-                            expenseSplit={currentMonthData.expenseSplit}
-                            medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                            childSupport={currentMonthData.childSupport}
-                            parentNames={currentMonthData.parentNames}
-                            appData={appData}
-                            currentMonthId={monthId}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </TabsContent>
-            <TabsContent value="expenses">
-               <div className="mt-6">
-                 <Tabs value={expensesSubTab} onValueChange={setExpensesSubTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="monthly" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Monthly Ledger</TabsTrigger>
-                      <TabsTrigger value="unsettled" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">All Unsettled</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="monthly" className="mt-6">
-                      <ExpensesCard
-                        expenses={expenses}
-                        childSupport={currentMonthData.childSupport}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                        onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
-                        onUpdateExpense={handleUpdateExpense}
-                        onUpdateChildSupport={(cs) => updateChildSupportForSingleMonth(cs, monthId)}
-                        currentDate={currentDate}
-                        parentNames={currentMonthData.parentNames}
-                        appData={appData}
-                      >
-                         <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
-                            <Button>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Expense
-                            </Button>
-                          </AddExpenseDialog>
-                          <ImportExpensesDialog
-                            onImport={addImportedExpenses}
-                            parentNames={currentMonthData.parentNames}
-                            appData={appData}
-                          />
-                          <ExportButton
-                              expenses={expenses}
-                              childSupport={currentMonthData.childSupport}
-                              currentDate={currentDate}
-                              parentNames={currentMonthData.parentNames}
-                              expenseSplit={currentMonthData.expenseSplit}
-                              medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                          />
-                      </ExpensesCard>
-                    </TabsContent>
-                    <TabsContent value="unsettled" className="mt-6">
-                        <AllUnsettledExpensesCard 
-                            appData={appData}
-                            onUpdateExpense={handleUpdateExpense}
-                            onUpdateChildSupport={updateChildSupportForSingleMonth}
-                            onDeleteExpense={handleDeleteExpense}
-                            currentDate={currentDate}
-                            isDashboardAllMonthsView={isAllMonthsView}
-                        />
-                    </TabsContent>
-                 </Tabs>
-                </div>
-            </TabsContent>
-            <TabsContent value="reporting">
-               <div className="mt-6">
-                <ReportingPage appData={appData} />
-              </div>
-            </TabsContent>
-            <TabsContent value="settings">
-              <div className="mt-6">
-                <Tabs defaultValue="app" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="app" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">App Settings</TabsTrigger>
-                    <TabsTrigger value="account" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Account Settings</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="app">
-                    <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
-                      <ParentNamesCard
-                          parentNames={currentMonthData.parentNames}
-                          onUpdate={(parentNames: ParentNames) => updateSettingsForCurrentAndFutureMonths({ parentNames })}
-                      />
-                      <ChildSupportCard
-                        childSupport={currentMonthData.childSupport}
-                        onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
-                        parentNames={currentMonthData.parentNames}
-                      />
-                      <ParentSplitCard
-                        expenseSplit={currentMonthData.expenseSplit}
-                        onUpdate={(expenseSplit: ExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ expenseSplit })}
-                        parentNames={currentMonthData.parentNames}
-                      />
-                      <MedicalSplitCard
-                        expenseSplit={currentMonthData.medicalExpenseSplit}
-                        onUpdate={(medicalExpenseSplit: MedicalExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ medicalExpenseSplit })}
-                        parentNames={currentMonthData.parentNames}
-                      />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="account">
-                     <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
-                        <CoParentLinkCard />
-                        <AccountSettingsCard />
-                     </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </TabsContent>
-          </Tabs>
-          <div className="fixed bottom-4 right-4 z-50 no-print">
-            <TooltipProvider>
-                <Tooltip>
-                <TooltipTrigger asChild>
-                      <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
-                        <Button size="icon" className="w-14 h-14 rounded-full shadow-lg">
-                            <Plus className="w-6 w-6" />
-                        </Button>
-                      </AddExpenseDialog>
-                </TooltipTrigger>
-                <TooltipContent side="left" sideOffset={15}>
-                    <p>Add New Expense</p>
-                </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-          </div>
         </main>
+        <nav className="bottom-nav no-print">
+            <div className="bottom-nav-grid">
+                <button className={cn('bottom-nav-item', activeTab === 'dashboard' && 'active')} onClick={() => handleTabChange('dashboard')}>
+                    <LayoutDashboard className="h-5 w-5"/>
+                    <span>Dashboard</span>
+                </button>
+                <button className={cn('bottom-nav-item', activeTab === 'expenses' && 'active')} onClick={() => handleTabChange('expenses')}>
+                    <ExpensesIcon className="h-5 w-5"/>
+                    <span>Expenses</span>
+                </button>
+                <div className="flex justify-center">
+                    <AddExpenseDialog onAddExpense={addExpense} parentNames={currentMonthData.parentNames} currentDate={currentDate}>
+                        <button className="bottom-nav-add-button">
+                            <Plus className="h-6 w-6"/>
+                        </button>
+                    </AddExpenseDialog>
+                </div>
+                <button className={cn('bottom-nav-item', activeTab === 'reporting' && 'active')} onClick={() => handleTabChange('reporting')}>
+                    <ReportingIcon className="h-5 w-5"/>
+                    <span>Reporting</span>
+                </button>
+                <button className={cn('bottom-nav-item', activeTab === 'settings' && 'active')} onClick={() => handleTabChange('settings')}>
+                    <Settings className="h-5 w-5"/>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </nav>
       </div>
     </DashboardProvider>
   );
