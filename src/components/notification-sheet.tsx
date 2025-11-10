@@ -83,7 +83,7 @@ export function NotificationSheet({ children, onGoToUnsettled }: NotificationShe
                   >
                     <AlertCircle className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm break-words">
+                      <p className="text-sm break-words whitespace-normal">
                         {payerName} requested a reimbursement for "
                         {expense.description}".
                       </p>
