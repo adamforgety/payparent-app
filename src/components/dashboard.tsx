@@ -200,7 +200,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   if (!appData || !currentMonthData) {
     return (
        <div className="container mx-auto p-4 md:p-8">
-            <PageHeader totalExpenses={0} onShowGettingStarted={onShowGettingStarted} />
+            <PageHeader totalExpenses={0} onShowGettingStarted={onShowGettingStarted} onGoToUnsettled={handleGoToUnsettled} />
             <div className="flex flex-col items-center justify-center gap-4 mb-8 pt-8">
               <Skeleton className="h-10 w-52" />
             </div>
@@ -225,6 +225,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
         <PageHeader
           totalExpenses={totalExpenses}
           onShowGettingStarted={onShowGettingStarted}
+          onGoToUnsettled={handleGoToUnsettled}
         />
         <main className="container mx-auto p-4 md:p-8 pb-24 md:pb-8">
           <div className="mb-8 hidden print-only">
@@ -544,7 +545,7 @@ export function Dashboard({ activeTab, setActiveTab, onShowGettingStarted }: Das
   if (isLoading || !appData) {
      return (
        <div className="container mx-auto p-4 md:p-8">
-            <PageHeader totalExpenses={0} onShowGettingStarted={onShowGettingStarted} />
+            <PageHeader totalExpenses={0} onShowGettingStarted={onShowGettingStarted} onGoToUnsettled={() => {}} />
             <div className="flex flex-col items-center justify-center gap-4 mb-8 pt-8">
               <Skeleton className="h-10 w-52" />
             </div>

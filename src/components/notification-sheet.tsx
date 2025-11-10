@@ -7,44 +7,51 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetClose,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { useFirebase } from '@/firebase';
-import { type ReactNode, useMemo } from 'react';
-import type { Expense } from '@/lib/types';
+import { type ReactNode, useMemo, useState } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { format, parseISO } from 'date-fns';
 import { ScrollArea } from './ui/scroll-area';
 import { Bell, AlertCircle } from 'lucide-react';
-import { SheetTrigger } from './ui/sheet';
+import { Button } from './ui/button';
 
 interface NotificationSheetProps {
   children: ReactNode;
+  onGoToUnsettled: (monthId: string) => void;
 }
 
-export function NotificationSheet({ children }: NotificationSheetProps) {
+export function NotificationSheet({ children, onGoToUnsettled }: NotificationSheetProps) {
   const { user } = useFirebase();
   const { appData, isLoading } = useAppContext();
+  const [isOpen, setIsOpen] = useState(false);
 
   const reimbursementRequests = useMemo(() => {
     if (!appData || !user) return [];
 
-    const allExpenses = Object.values(appData.months).flatMap(
-      (month) => month.expenses
-    );
-
-    // Show all unsettled reimbursements, regardless of who paid.
-    return allExpenses
-      .filter(
-        (expense) =>
-          (expense.category === 'Reimbursement' ||
-            expense.category === 'Credit') &&
-          expense.status === 'Unsettled'
+    return Object.entries(appData.months)
+      .flatMap(([monthId, monthData]) =>
+        monthData.expenses
+          .filter(
+            (expense) =>
+              (expense.category === 'Reimbursement' ||
+                expense.category === 'Credit') &&
+              expense.status === 'Unsettled'
+          )
+          .map((expense) => ({ ...expense, monthId }))
       )
       .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
   }, [appData, user]);
 
+  const handleNotificationClick = (monthId: string) => {
+    setIsOpen(false); // Close the sheet
+    onGoToUnsettled(monthId);
+  };
+
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>{children}</SheetTrigger>
       <SheetContent>
         <SheetHeader>
@@ -63,17 +70,17 @@ export function NotificationSheet({ children }: NotificationSheetProps) {
               <p>Loading notifications...</p>
             ) : reimbursementRequests.length > 0 ? (
               reimbursementRequests.map((expense) => {
-                const monthData = Object.values(appData!.months).find((m) =>
-                  m.expenses.some((e) => e.id === expense.id)
-                );
+                const monthData = appData!.months[expense.monthId];
                 const payerName = monthData
                   ? monthData.parentNames[expense.paidBy]
                   : 'A parent';
 
                 return (
-                  <div
+                  <Button
                     key={expense.id}
-                    className="flex items-start gap-3 rounded-lg border p-3"
+                    variant="ghost"
+                    className="flex items-start gap-3 rounded-lg border p-3 text-left w-full h-auto"
+                    onClick={() => handleNotificationClick(expense.monthId)}
                   >
                     <AlertCircle className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
                     <div className="text-sm">
@@ -86,7 +93,7 @@ export function NotificationSheet({ children }: NotificationSheetProps) {
                         {format(parseISO(expense.date), 'MMMM yyyy')}
                       </p>
                     </div>
-                  </div>
+                  </Button>
                 );
               })
             ) : (

@@ -26,9 +26,10 @@ import { useMemo } from 'react';
 interface PageHeaderProps {
   totalExpenses: number;
   onShowGettingStarted: () => void;
+  onGoToUnsettled: (monthId: string) => void;
 }
 
-export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderProps) {
+export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettled }: PageHeaderProps) {
   const auth = useAuth();
   const { user } = useFirebase();
   const { appData } = useAppContext();
@@ -77,7 +78,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted }: PageHeaderPr
           </TooltipProvider>
 
           {user && (
-            <NotificationSheet>
+            <NotificationSheet onGoToUnsettled={onGoToUnsettled}>
               <Button variant="outline" size="icon" className="rounded-full relative">
                 <Bell className="h-5 w-5" />
                 {hasNotifications && (
