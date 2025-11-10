@@ -7,7 +7,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetClose,
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { useFirebase } from '@/firebase';
@@ -83,8 +82,8 @@ export function NotificationSheet({ children, onGoToUnsettled }: NotificationShe
                     onClick={() => handleNotificationClick(expense.monthId)}
                   >
                     <AlertCircle className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
-                    <div className="text-sm">
-                      <p>
+                    <div className="text-sm flex-1 min-w-0">
+                      <p className="break-words">
                         {payerName} requested a reimbursement for "
                         {expense.description}".
                       </p>
