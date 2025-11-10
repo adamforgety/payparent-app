@@ -33,7 +33,7 @@ interface AllUnsettledExpensesCardProps {
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
   currentDate: Date;
-  isAllMonthsView: boolean;
+  isDashboardAllMonthsView: boolean;
 }
 
 type UnsettledItem = {
@@ -67,12 +67,18 @@ export function AllUnsettledExpensesCard({
   onUpdateChildSupport,
   onDeleteExpense,
   currentDate,
-  isAllMonthsView,
+  isDashboardAllMonthsView,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
   const { batchUpdateMonths } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
+  const [showAllMonths, setShowAllMonths] = useState(isDashboardAllMonthsView);
+
+  useEffect(() => {
+    setShowAllMonths(isDashboardAllMonthsView);
+  }, [isDashboardAllMonthsView]);
+
 
   const parentNames = useMemo(() => {
     if (!appData?.months || Object.keys(appData.months).length === 0) {
@@ -154,10 +160,10 @@ export function AllUnsettledExpensesCard({
     const yearFilter = String(getYear(currentDate));
     const monthFilter = format(currentDate, 'yyyy-MM');
 
-    if (!isAllMonthsView) {
-      items = items.filter(item => item.monthId === monthFilter);
-    } else {
+    if (showAllMonths) {
       items = items.filter(item => item.monthId.startsWith(yearFilter));
+    } else {
+      items = items.filter(item => item.monthId === monthFilter);
     }
     
     const lowercasedFilter = searchTerm.toLowerCase();
@@ -209,7 +215,7 @@ export function AllUnsettledExpensesCard({
 
 
     return items;
-  }, [allUnsettledItems, currentDate, isAllMonthsView, searchTerm, sortConfig]);
+  }, [allUnsettledItems, currentDate, showAllMonths, searchTerm, sortConfig]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -322,7 +328,15 @@ export function AllUnsettledExpensesCard({
                 </CardDescription>
               </div>
             </div>
-             <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
+             <div className="no-print flex w-full flex-wrap items-center justify-end gap-4">
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="show-all-months-switch"
+                        checked={showAllMonths}
+                        onCheckedChange={setShowAllMonths}
+                    />
+                    <Label htmlFor="show-all-months-switch">Show All Months</Label>
+                </div>
                 <Button 
                     onClick={handleMarkVisibleSettled} 
                     disabled={filteredAndSortedItems.length === 0}

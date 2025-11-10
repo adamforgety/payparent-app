@@ -489,7 +489,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                             onUpdateChildSupport={updateChildSupportForSingleMonth}
                             onDeleteExpense={handleDeleteExpense}
                             currentDate={currentDate}
-                            isAllMonthsView={isAllMonthsView}
+                            isDashboardAllMonthsView={isAllMonthsView}
                         />
                     </TabsContent>
                  </Tabs>
