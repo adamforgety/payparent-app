@@ -7,6 +7,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { useFirebase } from '@/firebase';
 import { type ReactNode, useMemo } from 'react';
