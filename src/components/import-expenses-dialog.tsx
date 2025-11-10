@@ -518,7 +518,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
                     <p>
                         Bulk-add expenses by uploading an Excel file. After uploading, you will assign categories and payers before finalizing the import.
                     </p>
-                    <Alert variant="default" className="bg-secondary/50 border-primary/50">
+                    <Alert variant="default" className="bg-secondary/50 border-primary/50 text-left">
                         <Info className="h-4 w-4 text-primary" />
                         <AlertDescription>
                         <ul className="list-disc list-outside pl-5 space-y-1">
