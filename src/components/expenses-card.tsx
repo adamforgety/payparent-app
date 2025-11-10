@@ -121,61 +121,6 @@ export function ExpensesCard({
     setLocalItems(allItems);
   }, [expenses, childSupport, currentDate]);
 
-  const renderItemDetails = (item: DisplayItem) => {
-    let p1Owes = 0;
-    let p2Owes = 0;
-  
-    if (item.type === 'child_support') {
-      if (item.paidBy === 'Parent 1') {
-        p1Owes = item.amount;
-      } else if (item.paidBy === 'Parent 2') {
-        p2Owes = item.amount;
-      }
-    } else { // Standard Expense
-      const expense = item as Expense;
-      let p1Share: number, p2Share: number;
-
-      if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
-        // For a reimbursement, the "Paid By" parent is owed 100%. So the *other* parent has the 100% share.
-        p1Share = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-        p2Share = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-      } else {
-        const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-        p1Share = expense.amount * (split['Parent 1'] / 100);
-        p2Share = expense.amount * (split['Parent 2'] / 100);
-      }
-      
-      const p1InitialPaid = expense.paidBy === 'Parent 1' ? expense.amount : 0;
-      const p2InitialPaid = expense.paidBy === 'Parent 2' ? expense.amount : 0;
-  
-      p1Owes = p1Share - p1InitialPaid;
-      p2Owes = p2Share - p2InitialPaid;
-    }
-    
-    let p1Paid = 0;
-    let p2Paid = 0;
-
-    if (item.status === 'Settled') {
-      if (item.type === 'child_support') {
-        p1Paid = item.paidBy === 'Parent 1' ? item.amount : 0;
-        p2Paid = item.paidBy === 'Parent 2' ? item.amount : 0;
-      } else {
-        const expense = item as Expense;
-        if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
-           // When settled, the parent who was reimbursed gets a NEGATIVE settlement, as their initial outlay is now returned.
-           p1Paid = expense.paidBy === 'Parent 1' ? -expense.amount : expense.amount;
-           p2Paid = expense.paidBy === 'Parent 2' ? -expense.amount : expense.amount;
-        } else {
-          const split = expense.category === 'Medical' || expense.category === 'Child Care' ? medicalExpenseSplit : expenseSplit;
-          p1Paid = expense.amount * (split['Parent 1'] / 100);
-          p2Paid = expense.amount * (split['Parent 2'] / 100);
-        }
-      }
-    }
-    
-    return { p1Paid, p2Paid, p1Owes, p2Owes };
-  };
-
   const getParentShare = (item: DisplayItem, parent: Parent): number => {
     if (item.type === 'child_support') {
         return item.paidBy === parent ? item.amount : 0;
@@ -258,24 +203,16 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        const { p1Owes, p2Owes, p1Paid, p2Paid } = renderItemDetails(item);
-  
-        acc.totalInitialAmount += item.amount;
-        
-        if (p1Owes > 0) acc.totalP1Owes += p1Owes;
-        if (p2Owes > 0) acc.totalP2Owes += p2Owes;
-        
+        // Only add to total amount if it's not a reimbursement or credit
+        if (item.category !== 'Reimbursement' && item.category !== 'Credit') {
+          acc.totalInitialAmount += item.amount;
+        }
         acc.totalP1Share += getParentShare(item, 'Parent 1');
         acc.totalP2Share += getParentShare(item, 'Parent 2');
-
-        if(item.status === 'Settled') {
-          acc.totalP1Paid += p1Paid;
-          acc.totalP2Paid += p2Paid;
-        }
         
         return acc;
       },
-      { totalInitialAmount: 0, totalP1Paid: 0, totalP2Paid: 0, totalP1Owes: 0, totalP2Owes: 0, totalP1Share: 0, totalP2Share: 0 }
+      { totalInitialAmount: 0, totalP1Share: 0, totalP2Share: 0 }
     );
   }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
   

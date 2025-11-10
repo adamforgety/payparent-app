@@ -311,7 +311,10 @@ export function AllUnsettledExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        acc.totalAmount += item.amount;
+        // Only add to total amount if it's not a reimbursement or credit
+        if (item.category !== 'Reimbursement' && item.category !== 'Credit') {
+          acc.totalAmount += item.amount;
+        }
         acc.totalP1Share += getParentShare(item, 'Parent 1');
         acc.totalP2Share += getParentShare(item, 'Parent 2');
         return acc;
