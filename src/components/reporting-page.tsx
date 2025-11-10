@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -101,15 +100,18 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Other',
 ];
 
-interface ReportData {
+interface SummaryData {
     availableYears: string[];
     availableMonths: { value: string; label: string; }[];
     periodData: { name: string; amount: number; }[];
     totalPeriodExpenses: number;
-    allTransactions: Transaction[];
     parentNamesForPeriod: ParentNames;
     reportTitle: string;
     reportDescription: string;
+}
+
+interface TransactionsData {
+    allTransactions: Transaction[];
 }
 
 export function ReportingPage({ appData }: ReportingPageProps) {
@@ -122,30 +124,30 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
   const [settledOnly, setSettledOnly] = useState(true);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [isCalculating, setIsCalculating] = useState(true);
+  
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [transactionsData, setTransactionsData] = useState<TransactionsData | null>(null);
+  
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
 
   useEffect(() => {
-    setIsCalculating(true);
-    
-    const calculationTimeout = setTimeout(() => {
-      const reportTitleForMonth = (month: string) => month === 'all' ? 'Annual Report' : 'Monthly Report';
-      const reportDescriptionForPeriod = (year: string, month: string) => 
-        `An overview of all expenses for ${month === 'all' ? `the year ${year}` : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
+    setIsSummaryLoading(true);
+    setTransactionsData(null); // Invalidate transaction data when filters change
 
+    const calculationTimeout = setTimeout(() => {
       if (!appData?.months || Object.keys(appData.months).length === 0) {
         const year = String(getYear(new Date()));
-        setReportData({
+        setSummaryData({
           availableYears: [year],
           availableMonths: [],
           periodData: [],
           totalPeriodExpenses: 0,
-          allTransactions: [],
           parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
-          reportTitle: reportTitleForMonth(selectedMonth),
-          reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
+          reportTitle: 'Annual Report',
+          reportDescription: `An overview of all expenses for the year ${year}.`,
         });
-        setIsCalculating(false);
+        setIsSummaryLoading(false);
         return;
       }
       
@@ -227,39 +229,98 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       });
 
       const chartData = Object.entries(aggregated)
-        .map(([name, amount]) => ({
-          name,
-          amount,
-        }))
+        .map(([name, amount]) => ({ name, amount }))
         .filter((item) => item.amount > 0)
         .sort((a, b) => b.amount - a.amount);
         
-      transactionsForReport.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const reportTitle = selectedMonth === 'all' ? 'Annual Report' : 'Monthly Report';
+      const reportDescription = `An overview of all expenses for ${selectedMonth === 'all' ? `the year ${selectedYear}` : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
 
-      setReportData({
+      setSummaryData({
         availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
         availableMonths: monthsForSelectedYear,
         periodData: chartData,
         totalPeriodExpenses: total,
-        allTransactions: transactionsForReport,
         parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
-        reportTitle: reportTitleForMonth(selectedMonth),
-        reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
+        reportTitle,
+        reportDescription,
       });
 
-      setIsCalculating(false);
+      setIsSummaryLoading(false);
 
-    }, 100); // Small delay to allow UI to update
+    }, 100);
 
     return () => clearTimeout(calculationTimeout);
 
   }, [appData, selectedYear, selectedMonth, selectedCategories, settledOnly]);
   
   useEffect(() => {
-    if(reportData?.availableMonths && selectedMonth !== 'all' && !reportData.availableMonths.some(m => m.value === selectedMonth)) {
+    if (activeSubTab !== 'transactions' || !summaryData) return;
+    if (transactionsData) return; // Already loaded
+
+    setIsTransactionsLoading(true);
+
+    const calculationTimeout = setTimeout(() => {
+        if (!appData?.months) {
+            setTransactionsData({ allTransactions: [] });
+            setIsTransactionsLoading(false);
+            return;
+        }
+
+        const today = startOfMonth(new Date());
+        let filteredMonthKeys = Object.keys(appData.months)
+            .filter(monthId => monthId.startsWith(selectedYear) && !isAfter(parse(monthId, 'yyyy-MM', new Date()), today));
+        
+        if (selectedMonth !== 'all') {
+            filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
+        }
+
+        let allTransactionsForPeriod: Transaction[] = [];
+        filteredMonthKeys.forEach(monthId => {
+            const monthData = appData.months[monthId];
+            if (monthData) {
+                monthData.expenses.forEach(expense => {
+                    allTransactionsForPeriod.push({
+                        ...expense,
+                        parentNames: monthData.parentNames,
+                        expenseSplit: monthData.expenseSplit,
+                        medicalExpenseSplit: monthData.medicalExpenseSplit,
+                    });
+                });
+                const monthDate = parse(monthId, 'yyyy-MM', new Date());
+                const isFutureMonth = isAfter(monthDate, today);
+                if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
+                    allTransactionsForPeriod.push({
+                        ...monthData.childSupport,
+                        id: `cs-${monthId}`,
+                        date: monthDate.toISOString(),
+                        description: 'Child Support',
+                        category: 'Child Support',
+                        parentNames: monthData.parentNames,
+                        year: monthData.year,
+                        month: monthData.month
+                    });
+                }
+            }
+        });
+        
+        const transactionsForReport = settledOnly
+            ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
+            : allTransactionsForPeriod;
+
+        setTransactionsData({ allTransactions: transactionsForReport });
+        setIsTransactionsLoading(false);
+    }, 100);
+
+    return () => clearTimeout(calculationTimeout);
+  }, [activeSubTab, transactionsData, appData, selectedYear, selectedMonth, settledOnly, summaryData]);
+
+
+  useEffect(() => {
+    if(summaryData?.availableMonths && selectedMonth !== 'all' && !summaryData.availableMonths.some(m => m.value === selectedMonth)) {
       setSelectedMonth('all');
     }
-  }, [selectedYear, reportData?.availableMonths, selectedMonth]);
+  }, [selectedYear, summaryData?.availableMonths, selectedMonth]);
   
   const getParentShare = (transaction: Transaction, parent: Parent): number => {
       if (transaction.category === 'Child Support') {
@@ -276,12 +337,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   };
 
   const filteredTransactions = useMemo(() => {
-    if (!reportData) return [];
+    if (!transactionsData) return [];
     const lowercasedFilter = searchTerm.toLowerCase();
     if (!lowercasedFilter) {
-      return reportData.allTransactions;
+      return transactionsData.allTransactions;
     }
-    return reportData.allTransactions.filter(transaction => {
+    return transactionsData.allTransactions.filter(transaction => {
       let paidByName = '';
       if (transaction.paidBy && transaction.paidBy !== 'None') {
         paidByName = transaction.parentNames[transaction.paidBy]?.toLowerCase() || '';
@@ -299,7 +360,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
              parent1Share.toFixed(2).includes(lowercasedFilter) ||
              parent2Share.toFixed(2).includes(lowercasedFilter);
     });
-  }, [reportData, searchTerm]);
+  }, [transactionsData, searchTerm]);
 
   const sortedTransactions = useMemo(() => {
     let sortableItems = [...filteredTransactions];
@@ -373,21 +434,21 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
 
   const chartConfig = useMemo(() => {
-    if (!reportData) return {};
+    if (!summaryData) return {};
     const config: any = {
       amount: {
         label: "Amount",
         color: "hsl(var(--primary))",
       },
     };
-    reportData.periodData.forEach((item, index) => {
+    summaryData.periodData.forEach((item, index) => {
       config[item.name] = {
         label: item.name,
         color: `hsl(var(--chart-${(index % 5) + 1}))`,
       };
     });
     return config;
-  }, [reportData]);
+  }, [summaryData]);
 
   const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
     <TableHead className={className}>
@@ -408,50 +469,32 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     }
   };
 
-  if (isCalculating || !reportData) {
-    return (
-        <div className="mt-6">
-            <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="summary">Summary</TabsTrigger>
-                    <TabsTrigger value="transactions">Transactions</TabsTrigger>
-                </TabsList>
-            </Tabs>
-            <Card className="mt-6">
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-lg" />
-                            <div>
-                                <Skeleton className="h-6 w-48" />
-                                <Skeleton className="h-4 w-64 mt-2" />
-                            </div>
-                        </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                            <Skeleton className="h-10 w-32" />
-                            <Skeleton className="h-10 w-40" />
-                            <Skeleton className="h-10 w-32" />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <Skeleton className="h-64 w-full" />
-                        <Skeleton className="h-40 w-full" />
-                    </div>
-                </CardContent>
-            </Card>
+  const renderLoadingSkeleton = () => (
+    <Card className="mt-6">
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-64 mt-2" />
+                </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-40" />
+                <Skeleton className="h-10 w-32" />
+            </div>
         </div>
-    );
-  }
-
-  const {
-      availableYears,
-      availableMonths,
-      periodData,
-      totalPeriodExpenses,
-      parentNamesForPeriod,
-  } = reportData;
+      </CardHeader>
+      <CardContent>
+          <div className="space-y-4">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-40 w-full" />
+          </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="mt-6">
@@ -461,6 +504,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           <TabsTrigger value="transactions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Transactions</TabsTrigger>
         </TabsList>
         <TabsContent value="transactions" className="mt-6">
+          {(isTransactionsLoading || !summaryData) ? renderLoadingSkeleton() : (
           <Card>
             <CardHeader>
                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -479,7 +523,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableYears.map((year) => (
+                        {summaryData.availableYears.map((year) => (
                           <SelectItem key={year} value={year}>
                             {year}
                           </SelectItem>
@@ -489,14 +533,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <Select
                       value={selectedMonth}
                       onValueChange={setSelectedMonth}
-                      disabled={availableMonths.length === 0}
+                      disabled={summaryData.availableMonths.length === 0}
                     >
                       <SelectTrigger className="w-full sm:w-40">
                         <SelectValue placeholder="Select month" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Months</SelectItem>
-                        {availableMonths.map((month) => (
+                        {summaryData.availableMonths.map((month) => (
                           <SelectItem key={month.value} value={month.value}>
                             {month.label}
                           </SelectItem>
@@ -513,7 +557,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                               'MMMM-yyyy'
                             )
                       }
-                      parentNames={parentNamesForPeriod}
+                      parentNames={summaryData.parentNamesForPeriod}
                     />
                   </div>
                 </div>
@@ -559,13 +603,13 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         sortKey="parent1Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 1']}'s Share
+                        {summaryData.parentNamesForPeriod['Parent 1']}'s Share
                       </SortableHeader>
                       <SortableHeader
                         sortKey="parent2Paid"
                         className="text-right"
                       >
-                        {parentNamesForPeriod['Parent 2']}'s Share
+                        {summaryData.parentNamesForPeriod['Parent 2']}'s Share
                       </SortableHeader>
                     </TableRow>
                   </TableHeader>
@@ -655,166 +699,169 @@ export function ReportingPage({ appData }: ReportingPageProps) {
               </div>
             </CardContent>
           </Card>
+          )}
         </TabsContent>
         <TabsContent value="summary" className="mt-6">
-          <Card>
-             <CardHeader>
-               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                      <BarChartIcon className="h-5 w-5 text-secondary-foreground" />
-                    </span>
-                    <div>
-                      <CardTitle>Expense Summary</CardTitle>
-                      <CardDescription>A summary of contributions by category for the selected period.</CardDescription>
+          {(isSummaryLoading || !summaryData) ? renderLoadingSkeleton() : (
+            <Card>
+                <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                        <BarChartIcon className="h-5 w-5 text-secondary-foreground" />
+                        </span>
+                        <div>
+                        <CardTitle>Expense Summary</CardTitle>
+                        <CardDescription>A summary of contributions by category for the selected period.</CardDescription>
+                        </div>
                     </div>
-                  </div>
-                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger className="w-full sm:w-32">
-                        <SelectValue placeholder="Select year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableYears.map((year) => (
-                          <SelectItem key={year} value={year}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={selectedMonth}
-                      onValueChange={setSelectedMonth}
-                      disabled={availableMonths.length === 0}
-                    >
-                      <SelectTrigger className="w-full sm:w-40">
-                        <SelectValue placeholder="Select month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Months</SelectItem>
-                        {availableMonths.map((month) => (
-                          <SelectItem key={month.value} value={month.value}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="w-full sm:w-48">
-                            Filter Categories
-                            <ChevronDown className="ml-2 h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56">
-                          <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem
-                            checked={selectedCategories.length === ALL_CATEGORIES.length}
-                            onCheckedChange={(checked) => handleCategoryFilterChange('all', !!checked)}
-                          >
-                            Select All
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuSeparator />
-                          {ALL_CATEGORIES.map((category) => (
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-full sm:w-32">
+                            <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {summaryData.availableYears.map((year) => (
+                            <SelectItem key={year} value={year}>
+                                {year}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <Select
+                        value={selectedMonth}
+                        onValueChange={setSelectedMonth}
+                        disabled={summaryData.availableMonths.length === 0}
+                        >
+                        <SelectTrigger className="w-full sm:w-40">
+                            <SelectValue placeholder="Select month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Months</SelectItem>
+                            {summaryData.availableMonths.map((month) => (
+                            <SelectItem key={month.value} value={month.value}>
+                                {month.label}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full sm:w-48">
+                                Filter Categories
+                                <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56">
+                            <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
                             <DropdownMenuCheckboxItem
-                              key={category}
-                              checked={selectedCategories.includes(category)}
-                              onCheckedChange={(checked) => handleCategoryFilterChange(category, !!checked)}
+                                checked={selectedCategories.length === ALL_CATEGORIES.length}
+                                onCheckedChange={(checked) => handleCategoryFilterChange('all', !!checked)}
                             >
-                              {category}
+                                Select All
                             </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
-                </div>
-             </CardHeader>
-            <CardContent>
-              {periodData.length > 0 ? (
-                <div className="space-y-8">
-                  <div>
-                    <ChartContainer
-                      config={chartConfig}
-                      className="h-[250px] w-full"
-                    >
-                      <BarChart data={periodData} accessibilityLayer>
-                        <CartesianGrid vertical={false} />
-                        <XAxis
-                          dataKey="name"
-                          tickLine={false}
-                          tickMargin={10}
-                          axisLine={false}
-                        />
-                        <YAxis tickFormatter={(value) => `$${value}`} />
-                        <Tooltip
-                          cursor={false}
-                          content={<ChartTooltipContent indicator="dot" />}
-                        />
-                        <Bar
-                          dataKey="amount"
-                          fill="hsl(var(--primary))"
-                          radius={4}
-                        />
-                      </BarChart>
-                    </ChartContainer>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">
-                      Category Breakdown
-                    </h3>
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Category</TableHead>
-                            <TableHead className="text-right">
-                              Total Amount
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {periodData.map((item) => (
-                            <TableRow key={item.name}>
-                              <TableCell className="font-medium">
-                                <Badge
-                                  variant={item.name === 'Child Support' ? 'default' : (item.name === 'Reimbursement' || item.name === 'Credit') ? 'outline' : 'secondary'}
-                                  className={cn((item.name === 'Reimbursement' || item.name === 'Credit') && 'border-primary bg-background text-primary')}
+                            <DropdownMenuSeparator />
+                            {ALL_CATEGORIES.map((category) => (
+                                <DropdownMenuCheckboxItem
+                                key={category}
+                                checked={selectedCategories.includes(category)}
+                                onCheckedChange={(checked) => handleCategoryFilterChange(category, !!checked)}
                                 >
-                                  {item.name}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                ${item.amount.toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                          <TableRow className="bg-secondary/50 font-bold">
-                            <TableCell>Total</TableCell>
-                            <TableCell className="text-right">
-                              ${totalPeriodExpenses.toFixed(2)}
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                                {category}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                    <ReceiptText className="h-8 w-8" />
-                  </div>
-                  <p className="font-medium">
-                    No transactions for this period or selection.
-                  </p>
-                  <p className="text-sm">
-                    Once you record transactions, a summary will appear here.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                {summaryData.periodData.length > 0 ? (
+                    <div className="space-y-8">
+                    <div>
+                        <ChartContainer
+                        config={chartConfig}
+                        className="h-[250px] w-full"
+                        >
+                        <BarChart data={summaryData.periodData} accessibilityLayer>
+                            <CartesianGrid vertical={false} />
+                            <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            />
+                            <YAxis tickFormatter={(value) => `$${value}`} />
+                            <Tooltip
+                            cursor={false}
+                            content={<ChartTooltipContent indicator="dot" />}
+                            />
+                            <Bar
+                            dataKey="amount"
+                            fill="hsl(var(--primary))"
+                            radius={4}
+                            />
+                        </BarChart>
+                        </ChartContainer>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">
+                        Category Breakdown
+                        </h3>
+                        <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Category</TableHead>
+                                <TableHead className="text-right">
+                                Total Amount
+                                </TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {summaryData.periodData.map((item) => (
+                                <TableRow key={item.name}>
+                                <TableCell className="font-medium">
+                                    <Badge
+                                    variant={item.name === 'Child Support' ? 'default' : (item.name === 'Reimbursement' || item.name === 'Credit') ? 'outline' : 'secondary'}
+                                    className={cn((item.name === 'Reimbursement' || item.name === 'Credit') && 'border-primary bg-background text-primary')}
+                                    >
+                                    {item.name}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    ${item.amount.toFixed(2)}
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            <TableRow className="bg-secondary/50 font-bold">
+                                <TableCell>Total</TableCell>
+                                <TableCell className="text-right">
+                                ${summaryData.totalPeriodExpenses.toFixed(2)}
+                                </TableCell>
+                            </TableRow>
+                            </TableBody>
+                        </Table>
+                        </div>
+                    </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
+                        <ReceiptText className="h-8 w-8" />
+                    </div>
+                    <p className="font-medium">
+                        No transactions for this period or selection.
+                    </p>
+                    <p className="text-sm">
+                        Once you record transactions, a summary will appear here.
+                    </p>
+                    </div>
+                )}
+                </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
