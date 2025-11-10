@@ -42,11 +42,11 @@ export function AddExpenseChooser({ parentNames, currentDate, appData }: AddExpe
           </DialogHeader>
           <div className="grid grid-cols-1 gap-4 pt-4">
             <Button variant="outline" onClick={() => openDialog(setIsSingleOpen)} className="h-20 flex-col gap-2">
-              <Banknote className="h-6 w-6" />
+              <Banknote className="h-6 w-6 text-primary" />
               <span>Add Single Expense</span>
             </Button>
             <Button variant="outline" onClick={() => openDialog(setIsImportOpen)} className="h-20 flex-col gap-2">
-              <Upload className="h-6 w-6" />
+              <Upload className="h-6 w-6 text-primary" />
               <span>Bulk Import from File</span>
             </Button>
           </div>

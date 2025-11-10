@@ -176,7 +176,7 @@ export function SummaryDetailsCard({
       <CardHeader>
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-            <Info className="h-5 w-5 text-secondary-foreground" />
+            <Info className="h-5 w-5 text-primary" />
           </span>
           <div>
             <CardTitle>Balance Details</CardTitle>

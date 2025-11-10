@@ -510,7 +510,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                      <BarChartIcon className="h-5 w-5 text-secondary-foreground" />
+                      <BarChartIcon className="h-5 w-5 text-primary" />
                     </span>
                     <div>
                       <CardTitle>All Transactions Report</CardTitle>
@@ -707,7 +707,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                        <BarChartIcon className="h-5 w-5 text-secondary-foreground" />
+                        <BarChartIcon className="h-5 w-5 text-primary" />
                         </span>
                         <div>
                         <CardTitle>Expense Summary</CardTitle>
@@ -847,7 +847,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 ) : (
                     <div className="flex flex-col items-center justify-center gap-4 text-center min-h-[300px] text-muted-foreground">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary">
-                        <ReceiptText className="h-8 w-8" />
+                        <ReceiptText className="h-8 w-8 text-primary" />
                     </div>
                     <p className="font-medium">
                         No transactions for this period or selection.

@@ -75,7 +75,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full" onClick={onShowGettingStarted}>
-                      <HelpCircle className="h-5 w-5" />
+                      <HelpCircle className="h-5 w-5 text-primary" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -87,7 +87,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
               {user && (
                 <NotificationSheet onGoToUnsettled={onGoToUnsettled}>
                   <Button variant="outline" size="icon" className="rounded-full relative">
-                    <Bell className="h-5 w-5" />
+                    <Bell className="h-5 w-5 text-primary" />
                     {hasNotifications && (
                       <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
                     )}
