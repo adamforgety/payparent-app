@@ -80,12 +80,20 @@ interface AddExpenseDialogProps {
   parentNames: ParentNames;
   currentDate: Date;
   children?: ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, children }: AddExpenseDialogProps) {
+export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, children, onOpenChange }: AddExpenseDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (onOpenChange && open) {
+      onOpenChange(false); // Close the chooser when this opens
+    }
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
@@ -162,7 +170,7 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, child
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children ?? (
           <Button>

@@ -34,6 +34,11 @@ export function AddExpenseChooser({
 }: AddExpenseChooserProps) {
   const [isChooserOpen, setIsChooserOpen] = useState(false);
 
+  // This function will be passed to the dialogs so they can close the main chooser.
+  const handleDialogSelect = () => {
+    setIsChooserOpen(false);
+  };
+
   return (
     <Dialog open={isChooserOpen} onOpenChange={setIsChooserOpen}>
       <DialogTrigger asChild>
@@ -49,32 +54,32 @@ export function AddExpenseChooser({
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
-          {/* This component will manage its own open state */}
+          {/* AddExpenseDialog will now control its own state and close the chooser */}
           <AddExpenseDialog
             onAddExpense={onAddExpense}
             parentNames={parentNames}
             currentDate={currentDate}
+            onOpenChange={handleDialogSelect}
           >
             <Button
               variant="outline"
               className="h-24 w-full flex-col gap-2"
-              onClick={() => setIsChooserOpen(false)}
             >
               <FilePlus className="h-6 w-6" />
               <span>Add Single Expense</span>
             </Button>
           </AddExpenseDialog>
 
-          {/* This component will also manage its own open state */}
+          {/* ImportExpensesDialog will do the same */}
           <ImportExpensesDialog
             onImport={onImportExpenses}
             parentNames={parentNames}
             appData={appData}
+            onOpenChange={handleDialogSelect}
           >
             <Button
               variant="outline"
               className="h-24 w-full flex-col gap-2"
-              onClick={() => setIsChooserOpen(false)}
             >
               <Upload className="h-6 w-6" />
               <span>Bulk Import</span>

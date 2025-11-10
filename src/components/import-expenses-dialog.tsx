@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,6 +60,8 @@ interface ImportExpensesDialogProps {
   onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => { [monthId: string]: number };
   parentNames: ParentNames;
   appData: AppData;
+  children?: ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }
 
 type ParsedExpense = Omit<Expense, 'id' | 'year' | 'month'>;
@@ -170,7 +172,7 @@ const ResizingTextarea = (props: React.ComponentProps<typeof Textarea>) => {
 };
 
 
-export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportExpensesDialogProps) {
+export function ImportExpensesDialog({ onImport, parentNames, appData, children, onOpenChange }: ImportExpensesDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
   const [successfulImports, setSuccessfulImports] = useState<ParsedExpense[]>([]);
@@ -196,10 +198,13 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
   };
 
   const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (onOpenChange && open) {
+        onOpenChange(false); // Close the chooser when this opens
+    }
     if (!open) {
       resetState();
     }
-    setIsOpen(open);
   }
   
   const handleDownloadTemplate = () => {
@@ -507,10 +512,12 @@ export function ImportExpensesDialog({ onImport, parentNames, appData }: ImportE
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Upload className="mr-2 h-4 w-4" />
-          Import
-        </Button>
+        {children ?? (
+            <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+            </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
