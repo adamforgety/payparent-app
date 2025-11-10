@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -644,7 +645,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                     variant={
                                       transaction.paidBy === 'Parent 1'
                                         ? 'secondary'
-                                        : 'outline'
+                                        : 'info'
                                     }
                                   >
                                     {transaction.parentNames[transaction.paidBy]}

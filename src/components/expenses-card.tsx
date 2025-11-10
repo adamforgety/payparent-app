@@ -96,6 +96,7 @@ export function ExpensesCard({
   const monthId = format(currentDate, 'yyyy-MM');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
@@ -326,6 +327,21 @@ export function ExpensesCard({
             </div>
         </div>
         <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
+             <Button
+                variant="outline"
+                onClick={() => setIsImportOpen(true)}
+                aria-label="Import Expenses"
+            >
+                <Upload className="h-4 w-4 mr-2" />
+                Import
+            </Button>
+             <ImportExpensesDialog
+                open={isImportOpen}
+                onOpenChange={setIsImportOpen}
+                onImport={addImportedExpenses}
+                parentNames={parentNames}
+                appData={appData}
+            />
             <div className="flex items-center space-x-2">
                 <Label htmlFor="settle-all-switch" className="text-sm">Settle All</Label>
                 <Switch
@@ -419,7 +435,7 @@ export function ExpensesCard({
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
+                          {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{parentNames[item.paidBy]}</Badge>}
                         </TableCell>
                         <TableCell>
                            <div className="flex items-center space-x-2">
@@ -632,7 +648,7 @@ export function ExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">Initial Payer</span>
-                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{parentNames[item.paidBy]}</Badge>}
+                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{parentNames[item.paidBy]}</Badge>}
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <span className="text-muted-foreground">Status</span>

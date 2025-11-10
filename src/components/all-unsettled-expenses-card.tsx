@@ -415,7 +415,7 @@ export function AllUnsettledExpensesCard({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
+                        {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{item.parentNames[item.paidBy]}</Badge>}
                       </TableCell>
                        <TableCell>
                          <div className="flex items-center space-x-2">
@@ -629,7 +629,7 @@ export function AllUnsettledExpensesCard({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">Initial Payer</span>
-                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'outline'}>{item.parentNames[item.paidBy]}</Badge>}
+                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{item.parentNames[item.paidBy]}</Badge>}
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                      <span className="text-muted-foreground">Status</span>
