@@ -23,7 +23,6 @@ import { ReportingPage } from './reporting-page';
 import { DashboardProvider } from './dashboard-provider';
 import { MedicalSplitCard } from './medical-split-card';
 import { useAppContext } from '@/context/app-context';
-import { ImportExpensesDialog } from './import-expenses-dialog';
 import { AccountSettingsCard } from './account-settings-card';
 import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -42,6 +41,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { ImportExpensesDialog } from './import-expenses-dialog';
 
 interface DashboardProps {
     activeTab: string;
@@ -344,21 +344,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     currentDate={currentDate}
                     parentNames={currentMonthData.parentNames}
                     appData={appData}
-                  >
-                      <ImportExpensesDialog
-                        onImport={addImportedExpenses}
-                        parentNames={currentMonthData.parentNames}
-                        appData={appData}
-                      />
-                      <ExportButton
-                          expenses={expenses}
-                          childSupport={currentMonthData.childSupport}
-                          currentDate={currentDate}
-                          parentNames={currentMonthData.parentNames}
-                          expenseSplit={currentMonthData.expenseSplit}
-                          medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
-                      />
-                  </ExpensesCard>
+                  />
                 </TabsContent>
                 <TabsContent value="unsettled" className="mt-6">
                     <AllUnsettledExpensesCard 

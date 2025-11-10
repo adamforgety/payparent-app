@@ -52,7 +52,6 @@ interface ExpensesCardProps {
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
-  children: ReactNode;
   currentDate: Date;
   parentNames: ParentNames;
   appData: AppData;
@@ -86,7 +85,6 @@ export function ExpensesCard({
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
-  children,
   currentDate,
   parentNames,
   appData,
