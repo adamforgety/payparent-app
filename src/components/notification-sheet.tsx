@@ -10,7 +10,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { useFirebase } from '@/firebase';
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState, useEffect } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { format, parseISO } from 'date-fns';
 import { ScrollArea } from './ui/scroll-area';
@@ -47,10 +47,19 @@ export function NotificationSheet({ children, onGoToUnsettled }: NotificationShe
     setIsOpen(false); // Close the sheet
     onGoToUnsettled(monthId);
   };
+  
+  // This allows the sheet to be used as a dropdown item trigger
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(true);
+  };
+
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>{children}</SheetTrigger>
+       <SheetTrigger asChild onClick={handleTriggerClick}>
+        {children}
+      </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">

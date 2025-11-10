@@ -22,6 +22,7 @@ import { NotificationSheet } from './notification-sheet';
 import { useAppContext } from '@/context/app-context';
 import type { Expense, UserDoc } from '@/lib/types';
 import { useMemo } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PageHeaderProps {
   totalExpenses: number;
@@ -35,6 +36,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
   const { user } = useFirebase();
   const { appData } = useAppContext();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   const handleSignOut = () => {
     signOut(auth).then(() => {
@@ -67,28 +69,32 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
           <Logo />
         </Button>
         <div className="flex items-center gap-2">
-           <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="rounded-full" onClick={onShowGettingStarted}>
-                  <HelpCircle className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Getting Started Guide</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {!isMobile && (
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" className="rounded-full" onClick={onShowGettingStarted}>
+                      <HelpCircle className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Getting Started Guide</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
-          {user && (
-            <NotificationSheet onGoToUnsettled={onGoToUnsettled}>
-              <Button variant="outline" size="icon" className="rounded-full relative">
-                <Bell className="h-5 w-5" />
-                {hasNotifications && (
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
-                )}
-              </Button>
-            </NotificationSheet>
+              {user && (
+                <NotificationSheet onGoToUnsettled={onGoToUnsettled}>
+                  <Button variant="outline" size="icon" className="rounded-full relative">
+                    <Bell className="h-5 w-5" />
+                    {hasNotifications && (
+                      <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
+                    )}
+                  </Button>
+                </NotificationSheet>
+              )}
+            </>
           )}
 
           {user && (
@@ -108,6 +114,24 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
                   <p className='text-xs text-muted-foreground font-normal'>{user.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {isMobile && (
+                  <>
+                     <NotificationSheet onGoToUnsettled={onGoToUnsettled}>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <Bell className="mr-2 h-4 w-4" />
+                            <span>Notifications</span>
+                             {hasNotifications && (
+                                <span className="ml-auto block h-2 w-2 rounded-full bg-destructive" />
+                            )}
+                        </DropdownMenuItem>
+                    </NotificationSheet>
+                    <DropdownMenuItem onClick={onShowGettingStarted}>
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      <span>Getting Started</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
