@@ -203,12 +203,25 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        // Only add to total amount if it's not a reimbursement or credit
         if (item.category !== 'Reimbursement' && item.category !== 'Credit') {
           acc.totalInitialAmount += item.amount;
         }
-        acc.totalP1Share += getParentShare(item, 'Parent 1');
-        acc.totalP2Share += getParentShare(item, 'Parent 2');
+        
+        let p1Share = getParentShare(item, 'Parent 1');
+        let p2Share = getParentShare(item, 'Parent 2');
+
+        if (item.category === 'Reimbursement' || item.category === 'Credit') {
+          if (item.paidBy === 'Parent 1') {
+            // Parent 1 paid, so they get a credit. Their "share" is negative.
+            p1Share -= item.amount;
+          } else if (item.paidBy === 'Parent 2') {
+            // Parent 2 paid, so they get a credit.
+            p2Share -= item.amount;
+          }
+        }
+        
+        acc.totalP1Share += p1Share;
+        acc.totalP2Share += p2Share;
         
         return acc;
       },
@@ -661,3 +674,4 @@ export function ExpensesCard({
 type StatusFilter = 'all' | 'settled' | 'unsettled';
 
     
+
