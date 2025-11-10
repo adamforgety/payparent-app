@@ -32,12 +32,23 @@ export function ExportButton({
   const getParentShare = (item: Expense | (typeof childSupportItem), parent: Parent): number => {
     if (item.category === 'Child Support') {
       const csItem = item as typeof childSupportItem;
-      return csItem.paidBy === parent ? csItem.amount : 0;
+      // This is tricky. If P1 pays, P2 "receives" the benefit. P1's share of the "cost" is the full amount.
+      // This seems inconsistent with how expenses work. Let's align it.
+      // If Parent 1 pays, their contribution is `amount`, Parent 2's is 0.
+      if (csItem.paidBy === parent) {
+        return csItem.amount; // The amount they contributed.
+      }
+      return 0;
     }
 
     const expense = item as Expense;
     if (expense.category === 'Reimbursement' || expense.category === 'Credit') {
-      return expense.paidBy === parent ? 0 : expense.amount;
+      // If the parent is the one who paid, they are *owed* this amount, so their share of the "cost" is negative.
+      if (expense.paidBy === parent) {
+        return -expense.amount;
+      }
+      // The other parent owes the full amount.
+      return expense.amount;
     }
 
     const split =
