@@ -324,7 +324,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
       case 'expenses':
         return (
           <div className="mt-6">
-             <Tabs value={expensesSubTab} onValueChange={setExpensesSubTab} className="w-full">
+             <Tabs defaultValue="monthly" value={expensesSubTab} onValueChange={setExpensesSubTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="monthly" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Monthly Ledger</TabsTrigger>
                   <TabsTrigger value="unsettled" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">All Unsettled</TabsTrigger>
@@ -599,3 +599,5 @@ export function Dashboard({ activeTab, setActiveTab, onShowGettingStarted }: Das
 
   return <DashboardUI appData={appData} initialDate={new Date()} activeTab={activeTab} setActiveTab={setActiveTab} onShowGettingStarted={onShowGettingStarted} />;
 }
+
+    
