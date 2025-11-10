@@ -2,7 +2,7 @@
 
 'use client';
 
-import { format, isAfter, startOfMonth, parse, isBefore, startOfDay } from 'date-fns';
+import { format, isAfter, startOfMonth, parse, isBefore, startOfDay, getYear, getMonth } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, Edit, Search, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -33,8 +33,7 @@ interface AllUnsettledExpensesCardProps {
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
   currentDate: Date;
-  initialYearFilter?: string | null;
-  initialMonthFilter?: string | null;
+  isAllMonthsView: boolean;
 }
 
 type UnsettledItem = {
@@ -68,13 +67,10 @@ export function AllUnsettledExpensesCard({
   onUpdateChildSupport,
   onDeleteExpense,
   currentDate,
-  initialYearFilter,
-  initialMonthFilter,
+  isAllMonthsView,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
   const { batchUpdateMonths } = useAppContext();
-  const [yearFilter, setYearFilter] = useState<string>(initialYearFilter || 'all');
-  const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
 
@@ -85,37 +81,6 @@ export function AllUnsettledExpensesCard({
     const firstMonthId = Object.keys(appData.months)[0];
     return appData.months[firstMonthId].parentNames;
   }, [appData.months]);
-
-  useEffect(() => {
-    if (initialYearFilter) setYearFilter(initialYearFilter);
-    if (initialMonthFilter) setMonthFilter(initialMonthFilter);
-  }, [initialYearFilter, initialMonthFilter]);
-
-  const { availableYears, availableMonths } = useMemo(() => {
-    if (!appData?.months) return { availableYears: [], availableMonths: [] };
-
-    const years = new Set<string>();
-    Object.keys(appData.months).forEach(monthId => years.add(monthId.substring(0, 4)));
-    const sortedYears = Array.from(years).sort().reverse();
-
-    const months = Object.keys(appData.months)
-      .filter(monthId => yearFilter !== 'all' && monthId.startsWith(yearFilter))
-      .sort()
-      .reverse()
-      .map(monthId => ({
-        value: monthId,
-        label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM'),
-      }));
-      
-    return { availableYears: sortedYears, availableMonths: months };
-  }, [appData.months, yearFilter]);
-
-  useEffect(() => {
-    if (yearFilter === 'all') {
-      setMonthFilter('all');
-    }
-  }, [yearFilter]);
-
 
   const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
     let items: UnsettledItem[] = [];
@@ -186,11 +151,13 @@ export function AllUnsettledExpensesCard({
   const filteredAndSortedItems = useMemo(() => {
     let items = [...allUnsettledItems];
 
-    if (yearFilter !== 'all') {
-      items = items.filter(item => item.monthId.startsWith(yearFilter));
-    }
-    if (monthFilter !== 'all') {
+    const yearFilter = String(getYear(currentDate));
+    const monthFilter = format(currentDate, 'yyyy-MM');
+
+    if (!isAllMonthsView) {
       items = items.filter(item => item.monthId === monthFilter);
+    } else {
+      items = items.filter(item => item.monthId.startsWith(yearFilter));
     }
     
     const lowercasedFilter = searchTerm.toLowerCase();
@@ -242,7 +209,7 @@ export function AllUnsettledExpensesCard({
 
 
     return items;
-  }, [allUnsettledItems, yearFilter, monthFilter, searchTerm, sortConfig]);
+  }, [allUnsettledItems, currentDate, isAllMonthsView, searchTerm, sortConfig]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -356,17 +323,6 @@ export function AllUnsettledExpensesCard({
               </div>
             </div>
              <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
-                 <Button 
-                    variant="outline"
-                    onClick={() => {
-                        setYearFilter('all');
-                        setMonthFilter('all');
-                    }}
-                    disabled={yearFilter === 'all' && monthFilter === 'all'}
-                    className="w-full sm:w-auto"
-                >
-                    Show All
-                </Button>
                 <Button 
                     onClick={handleMarkVisibleSettled} 
                     disabled={filteredAndSortedItems.length === 0}
@@ -377,35 +333,6 @@ export function AllUnsettledExpensesCard({
             </div>
         </div>
         <div className="no-print flex flex-col sm:flex-row sm:items-center gap-4 mt-4">
-            <div className="flex flex-wrap items-center gap-2">
-                <Select value={yearFilter} onValueChange={setYearFilter}>
-                    <SelectTrigger className="w-full sm:w-[120px]">
-                    <SelectValue placeholder="Select Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {availableYears.map(year => (
-                        <SelectItem key={year} value={year}>
-                        {year}
-                        </SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-
-                <Select value={monthFilter} onValueChange={setMonthFilter} disabled={availableMonths.length === 0 || yearFilter === 'all'}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by month" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="all">All Months</SelectItem>
-                    {availableMonths.map(month => (
-                        <SelectItem key={month.value} value={month.value}>
-                        {month.label}
-                        </SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-            </div>
             <div className="relative flex-grow">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -711,7 +638,7 @@ export function AllUnsettledExpensesCard({
                                     </span>
                                     </div>
                                     <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{item.parentNames['Parent 2']}'s Share</span>
+                                    <span className="text-muted-foreground">{parentNames['Parent 2']}'s Share</span>
                                     <span className={cn("font-semibold", p2Color)}>
                                          {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
                                     </span>
@@ -733,5 +660,3 @@ export function AllUnsettledExpensesCard({
     </Card>
   );
 }
-
-    

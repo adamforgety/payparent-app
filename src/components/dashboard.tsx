@@ -51,8 +51,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   const { updateAppData, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, batchUpdateMonths } = useAppContext();
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
-  const [unsettledYearFilter, setUnsettledYearFilter] = useState<string | null>(String(getYear(initialDate)));
-  const [unsettledMonthFilter, setUnsettledMonthFilter] = useState<string | null>(format(initialDate, 'yyyy-MM'));
+  const [isAllMonthsView, setIsAllMonthsView] = useState(false);
   const { toast } = useToast();
   const [isDateDropdownOpen, setDateDropdownOpen] = useState(false);
   const yearRef = useRef<HTMLDivElement>(null);
@@ -135,7 +134,20 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
     setCurrentDate((prevDate) =>
       direction === 'next' ? addMonths(prevDate, 1) : subMonths(prevDate, 1)
     );
+     if (isAllMonthsView) {
+      setIsAllMonthsView(false);
+    }
   };
+
+  const handleSetYear = (year: string) => {
+    setCurrentDate(setYear(currentDate, parseInt(year)));
+    setIsAllMonthsView(true);
+  }
+
+  const handleSetMonth = (monthIndex: string) => {
+    setCurrentDate(setDateFnsMonth(currentDate, parseInt(monthIndex)));
+    setIsAllMonthsView(false);
+  }
   
   const updateSettingsForCurrentAndFutureMonths = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
       if (!appData || !currentMonthData) return;
@@ -173,11 +185,12 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   };
 
   const handleGoToUnsettled = (monthIdToGo: string) => {
-    const year = monthIdToGo.substring(0, 4);
+    const year = parseInt(monthIdToGo.substring(0, 4));
+    const month = parseInt(monthIdToGo.substring(5, 7)) - 1;
+    setCurrentDate(setDateFnsMonth(setYear(new Date(), year), month));
+    setIsAllMonthsView(false);
     setActiveTab('expenses');
     setExpensesSubTab('unsettled');
-    setUnsettledYearFilter(year);
-    setUnsettledMonthFilter(monthIdToGo);
   };
 
   const handleDeleteExpense = (expenseId: string, expenseMonthId: string) => {
@@ -263,7 +276,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             <DropdownMenu onOpenChange={setDateDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4">
-                  {format(currentDate, 'MMMM yyyy')}
+                  {isAllMonthsView ? `All Months ${getYear(currentDate)}` : format(currentDate, 'MMMM yyyy')}
                   <ChevronDown className="ml-2 h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -279,7 +292,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                             <DropdownMenuItem
                               key={year}
                               ref={isSelected ? yearRef : null}
-                              onSelect={() => setCurrentDate(setYear(currentDate, parseInt(year)))}
+                              onSelect={() => handleSetYear(year)}
                               className={isSelected ? 'font-bold bg-secondary' : ''}
                             >
                               {year}
@@ -294,12 +307,12 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <ScrollArea className="h-48">
                       <DropdownMenuGroup>
                         {availableMonthsForYear.map(month => {
-                           const isSelected = getMonth(currentDate) === parseInt(month.value);
+                           const isSelected = !isAllMonthsView && getMonth(currentDate) === parseInt(month.value);
                           return (
                             <DropdownMenuItem
                               key={month.value}
                               ref={isSelected ? monthRef : null}
-                              onSelect={() => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month.value)))}
+                              onSelect={() => handleSetMonth(month.value)}
                               className={isSelected ? 'font-bold bg-secondary' : ''}
                             >
                               {month.label}
@@ -379,7 +392,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
-                            onGoToExpenses={() => handleGoToUnsettled(monthId)}
+                            onGoToExpenses={handleGoToUnsettled}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -408,7 +421,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                             parentNames={currentMonthData.parentNames}
                             appData={appData}
                             currentMonthId={monthId}
-                            onGoToExpenses={() => handleGoToUnsettled(monthId)}
+                            onGoToExpenses={handleGoToUnsettled}
                         />
                       </div>
                       <div className="lg:col-span-2">
@@ -476,8 +489,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                             onUpdateChildSupport={updateChildSupportForSingleMonth}
                             onDeleteExpense={handleDeleteExpense}
                             currentDate={currentDate}
-                            initialYearFilter={unsettledYearFilter}
-                            initialMonthFilter={unsettledMonthFilter}
+                            isAllMonthsView={isAllMonthsView}
                         />
                     </TabsContent>
                  </Tabs>
@@ -571,5 +583,3 @@ export function Dashboard({ activeTab, setActiveTab, onShowGettingStarted }: Das
 
   return <DashboardUI appData={appData} initialDate={new Date()} activeTab={activeTab} setActiveTab={setActiveTab} onShowGettingStarted={onShowGettingStarted} />;
 }
-    
-    
