@@ -14,7 +14,7 @@
  * Key Security Decisions:
  * - A user must be authenticated to access any data.
  * - Any authenticated user can read any other user's profile to verify existence before linking. This does not expose sub-collections.
- * - A user can write to another user's document ONLY to establish or break a `coParentId` and `dataOwnerId` link.
+ * - A user can write to another user's profile ONLY to establish or break a `coParentId` and `dataOwnerId` link.
  * - All other data writes (`appData`, etc.) are only allowed on the document specified by the user's `dataOwnerId`.
  *
  */
@@ -54,6 +54,15 @@ service cloud.firestore {
       allow write: if isOwner(userId) ||
                       (request.resource.data.keys().hasAny(['coParentId', 'dataOwnerId'])) ||
                       isAuthorizedToAccessData(userId);
+
+      /**
+       * @description Rules for the notifications sub-collection.
+       * - A user can read and write notifications within their own document.
+       * @path /users/{userId}/notifications/{notificationId}
+       */
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }
