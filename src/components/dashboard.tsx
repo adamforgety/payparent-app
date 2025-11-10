@@ -42,6 +42,7 @@ import {
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { ImportExpensesDialog } from './import-expenses-dialog';
+import { AddExpenseChooser } from './add-expense-chooser';
 
 interface DashboardProps {
     activeTab: string;
@@ -540,15 +541,11 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <span>Expenses</span>
                 </button>
                 <div className="flex justify-center">
-                    <AddExpenseDialog
-                        onAddExpense={addExpense}
+                    <AddExpenseChooser
                         parentNames={currentMonthData.parentNames}
                         currentDate={currentDate}
-                    >
-                        <button className="bottom-nav-add-button">
-                          <Plus className="h-6 w-6" />
-                        </button>
-                    </AddExpenseDialog>
+                        appData={appData}
+                    />
                 </div>
                 <button className={cn('bottom-nav-item', activeTab === 'reporting' && 'active')} onClick={() => handleTabChange('reporting')}>
                     <ReportingIcon className="h-5 w-5"/>

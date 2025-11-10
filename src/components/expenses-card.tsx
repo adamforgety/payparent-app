@@ -335,16 +335,6 @@ export function ExpensesCard({
                     disabled={localItems.length === 0}
                 />
             </div>
-            <ImportExpensesDialog
-                onImport={addImportedExpenses}
-                parentNames={parentNames}
-                appData={appData}
-            >
-              <Button variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Import
-              </Button>
-            </ImportExpensesDialog>
              <ExportButton
                 expenses={expenses}
                 childSupport={childSupport}

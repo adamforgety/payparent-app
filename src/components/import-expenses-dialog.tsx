@@ -60,8 +60,8 @@ interface ImportExpensesDialogProps {
   onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => { [monthId: string]: number };
   parentNames: ParentNames;
   appData: AppData;
-  children?: ReactNode;
-  onOpenChange?: (open: boolean) => void;
+  children: ReactNode;
+  onOpenChange: (open: boolean) => void;
 }
 
 type ParsedExpense = Omit<Expense, 'id' | 'year' | 'month'>;
@@ -173,12 +173,13 @@ const ResizingTextarea = (props: React.ComponentProps<typeof Textarea>) => {
 
 
 export function ImportExpensesDialog({ onImport, parentNames, appData, children, onOpenChange }: ImportExpensesDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
   const [successfulImports, setSuccessfulImports] = useState<ParsedExpense[]>([]);
   const [failedImports, setFailedImports] = useState<FailedImport[]>([]);
   const [duplicateImports, setDuplicateImports] = useState<DuplicateImport[]>([]);
   const { toast } = useToast();
+
+  const isOpen = !!children;
 
   const allExistingExpenses = useMemo(() => {
     if (!appData) return [];
@@ -197,11 +198,8 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, children,
     setDuplicateImports([]);
   };
 
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (onOpenChange && open) {
-        onOpenChange(false); // Close the chooser when this opens
-    }
+  const handleOpenChangeInternal = (open: boolean) => {
+    onOpenChange(open);
     if (!open) {
       resetState();
     }
@@ -415,10 +413,10 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, children,
         title: `Added ${successfulImports.length} expenses`,
         description: summaryParts.join(', '),
       });
-      handleOpenChange(false);
+      handleOpenChangeInternal(false);
     } else {
         toast({ title: 'No expenses to import' });
-        handleOpenChange(false);
+        handleOpenChangeInternal(false);
     }
   };
 
@@ -510,14 +508,9 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, children,
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChangeInternal}>
       <DialogTrigger asChild>
-        {children ?? (
-            <Button variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Import
-            </Button>
-        )}
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
