@@ -56,6 +56,7 @@ import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { cn } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
 
 interface ReportingPageProps {
   appData: AppData | null;
@@ -100,6 +101,17 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
   'Other',
 ];
 
+interface ReportData {
+    availableYears: string[];
+    availableMonths: { value: string; label: string; }[];
+    periodData: { name: string; amount: number; }[];
+    totalPeriodExpenses: number;
+    allTransactions: Transaction[];
+    parentNamesForPeriod: ParentNames;
+    reportTitle: string;
+    reportDescription: string;
+}
+
 export function ReportingPage({ appData }: ReportingPageProps) {
   const [selectedYear, setSelectedYear] = useState<string>(
     String(getYear(new Date()))
@@ -110,142 +122,144 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
   const [settledOnly, setSettledOnly] = useState(true);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [isCalculating, setIsCalculating] = useState(true);
 
-  const {
-    availableYears,
-    availableMonths,
-    periodData,
-    totalPeriodExpenses,
-    allTransactions,
-    parentNamesForPeriod,
-    reportTitle,
-    reportDescription,
-  } = useMemo(() => {
-    const reportTitleForMonth = (month: string) => month === 'all' ? 'Annual Report' : 'Monthly Report';
-    const reportDescriptionForPeriod = (year: string, month: string) => 
-      `An overview of all expenses for ${month === 'all' ? `the year ${year}` : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
+  useEffect(() => {
+    setIsCalculating(true);
+    
+    const calculationTimeout = setTimeout(() => {
+      const reportTitleForMonth = (month: string) => month === 'all' ? 'Annual Report' : 'Monthly Report';
+      const reportDescriptionForPeriod = (year: string, month: string) => 
+        `An overview of all expenses for ${month === 'all' ? `the year ${year}` : format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
 
-    if (!appData?.months || Object.keys(appData.months).length === 0) {
-      const year = String(getYear(new Date()));
-      return {
-        availableYears: [year],
-        availableMonths: [],
-        periodData: [],
-        totalPeriodExpenses: 0,
-        allTransactions: [],
-        parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
+      if (!appData?.months || Object.keys(appData.months).length === 0) {
+        const year = String(getYear(new Date()));
+        setReportData({
+          availableYears: [year],
+          availableMonths: [],
+          periodData: [],
+          totalPeriodExpenses: 0,
+          allTransactions: [],
+          parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
+          reportTitle: reportTitleForMonth(selectedMonth),
+          reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
+        });
+        setIsCalculating(false);
+        return;
+      }
+      
+      const today = startOfMonth(new Date());
+
+      const allMonthKeys = Object.keys(appData.months)
+        .filter(monthId => !isAfter(parse(monthId, 'yyyy-MM', new Date()), today))
+        .sort()
+        .reverse();
+
+      const years = new Set<string>();
+      allMonthKeys.forEach(monthId => years.add(monthId.substring(0, 4)));
+      const sortedYears = Array.from(years);
+
+      const monthsForSelectedYear = allMonthKeys
+        .filter(monthId => monthId.startsWith(selectedYear))
+        .map(monthId => ({
+          value: monthId,
+          label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM'),
+        }));
+
+      let filteredMonthKeys = allMonthKeys.filter(monthId => monthId.startsWith(selectedYear));
+      if (selectedMonth !== 'all') {
+          filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
+      }
+      
+      let allTransactionsForPeriod: Transaction[] = [];
+      let latestParentNames: ParentNames | null = null;
+      
+      filteredMonthKeys.forEach(monthId => {
+          const monthData = appData.months[monthId];
+          if (monthData) {
+              if (monthData.parentNames && !latestParentNames) {
+                latestParentNames = monthData.parentNames;
+              }
+              monthData.expenses.forEach(expense => {
+                  allTransactionsForPeriod.push({
+                      ...expense,
+                      parentNames: monthData.parentNames,
+                      expenseSplit: monthData.expenseSplit,
+                      medicalExpenseSplit: monthData.medicalExpenseSplit,
+                  });
+              });
+
+              const monthDate = parse(monthId, 'yyyy-MM', new Date());
+              const isFutureMonth = isAfter(monthDate, today);
+
+              if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
+                  allTransactionsForPeriod.push({
+                      ...monthData.childSupport,
+                      id: `cs-${monthId}`,
+                      date: monthDate.toISOString(),
+                      description: 'Child Support',
+                      category: 'Child Support',
+                      parentNames: monthData.parentNames,
+                      year: monthData.year,
+                      month: monthData.month
+                  });
+              }
+          }
+      });
+
+      let transactionsForReport = settledOnly
+        ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
+        : allTransactionsForPeriod;
+      
+      const aggregated: { [key: string]: number } = {};
+      ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
+
+      let total = 0;
+      
+      const transactionsForSummary = transactionsForReport.filter(t => selectedCategories.includes(t.category));
+
+      transactionsForSummary.forEach((transaction) => {
+          if (aggregated[transaction.category] !== undefined) {
+              aggregated[transaction.category]! += transaction.amount;
+          }
+          total += transaction.amount;
+      });
+
+      const chartData = Object.entries(aggregated)
+        .map(([name, amount]) => ({
+          name,
+          amount,
+        }))
+        .filter((item) => item.amount > 0)
+        .sort((a, b) => b.amount - a.amount);
+        
+      transactionsForReport.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setReportData({
+        availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
+        availableMonths: monthsForSelectedYear,
+        periodData: chartData,
+        totalPeriodExpenses: total,
+        allTransactions: transactionsForReport,
+        parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
         reportTitle: reportTitleForMonth(selectedMonth),
         reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
-      };
-    }
-    
-    const today = startOfMonth(new Date());
+      });
 
-    const allMonthKeys = Object.keys(appData.months)
-      .filter(monthId => !isAfter(parse(monthId, 'yyyy-MM', new Date()), today))
-      .sort()
-      .reverse();
+      setIsCalculating(false);
 
-    const years = new Set<string>();
-    allMonthKeys.forEach(monthId => years.add(monthId.substring(0, 4)));
-    const sortedYears = Array.from(years);
+    }, 100); // Small delay to allow UI to update
 
-    const monthsForSelectedYear = allMonthKeys
-      .filter(monthId => monthId.startsWith(selectedYear))
-      .map(monthId => ({
-        value: monthId,
-        label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM'),
-      }));
+    return () => clearTimeout(calculationTimeout);
 
-    let filteredMonthKeys = allMonthKeys.filter(monthId => monthId.startsWith(selectedYear));
-    if (selectedMonth !== 'all') {
-        filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
-    }
-    
-    let allTransactionsForPeriod: Transaction[] = [];
-    let latestParentNames: ParentNames | null = null;
-    
-    filteredMonthKeys.forEach(monthId => {
-        const monthData = appData.months[monthId];
-        if (monthData) {
-            if (monthData.parentNames && !latestParentNames) {
-              latestParentNames = monthData.parentNames;
-            }
-            monthData.expenses.forEach(expense => {
-                allTransactionsForPeriod.push({
-                    ...expense,
-                    parentNames: monthData.parentNames,
-                    expenseSplit: monthData.expenseSplit,
-                    medicalExpenseSplit: monthData.medicalExpenseSplit,
-                });
-            });
-
-            const monthDate = parse(monthId, 'yyyy-MM', new Date());
-            const isFutureMonth = isAfter(monthDate, today);
-
-            if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
-                allTransactionsForPeriod.push({
-                    ...monthData.childSupport,
-                    id: `cs-${monthId}`,
-                    date: monthDate.toISOString(),
-                    description: 'Child Support',
-                    category: 'Child Support',
-                    parentNames: monthData.parentNames,
-                    year: monthData.year,
-                    month: monthData.month
-                });
-            }
-        }
-    });
-
-    // Filter by status if the "settled only" toggle is on
-    let transactionsForReport = settledOnly
-      ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
-      : allTransactionsForPeriod;
-
-    
-    const aggregated: { [key: string]: number } = {};
-    ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
-
-    let total = 0;
-    
-    const transactionsForSummary = transactionsForReport.filter(t => selectedCategories.includes(t.category));
-
-    transactionsForSummary.forEach((transaction) => {
-        if (aggregated[transaction.category] !== undefined) {
-            aggregated[transaction.category]! += transaction.amount;
-        }
-        total += transaction.amount;
-    });
-
-    const chartData = Object.entries(aggregated)
-      .map(([name, amount]) => ({
-        name,
-        amount,
-      }))
-      .filter((item) => item.amount > 0)
-      .sort((a, b) => b.amount - a.amount);
-      
-    transactionsForReport.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    return {
-      availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
-      availableMonths: monthsForSelectedYear,
-      periodData: chartData,
-      totalPeriodExpenses: total,
-      allTransactions: transactionsForReport, // Use filtered transactions for the report
-      parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
-      reportTitle: reportTitleForMonth(selectedMonth),
-      reportDescription: reportDescriptionForPeriod(selectedYear, selectedMonth),
-    };
   }, [appData, selectedYear, selectedMonth, selectedCategories, settledOnly]);
   
   useEffect(() => {
-    // If the selected month is no longer available in the new year's list, reset to 'all'
-    if (selectedMonth !== 'all' && !availableMonths.some(m => m.value === selectedMonth)) {
+    if(reportData?.availableMonths && selectedMonth !== 'all' && !reportData.availableMonths.some(m => m.value === selectedMonth)) {
       setSelectedMonth('all');
     }
-  }, [selectedYear, availableMonths, selectedMonth]);
+  }, [selectedYear, reportData?.availableMonths, selectedMonth]);
   
   const getParentShare = (transaction: Transaction, parent: Parent): number => {
       if (transaction.category === 'Child Support') {
@@ -262,11 +276,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   };
 
   const filteredTransactions = useMemo(() => {
+    if (!reportData) return [];
     const lowercasedFilter = searchTerm.toLowerCase();
     if (!lowercasedFilter) {
-      return allTransactions;
+      return reportData.allTransactions;
     }
-    return allTransactions.filter(transaction => {
+    return reportData.allTransactions.filter(transaction => {
       let paidByName = '';
       if (transaction.paidBy && transaction.paidBy !== 'None') {
         paidByName = transaction.parentNames[transaction.paidBy]?.toLowerCase() || '';
@@ -284,7 +299,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
              parent1Share.toFixed(2).includes(lowercasedFilter) ||
              parent2Share.toFixed(2).includes(lowercasedFilter);
     });
-  }, [allTransactions, searchTerm]);
+  }, [reportData, searchTerm]);
 
   const sortedTransactions = useMemo(() => {
     let sortableItems = [...filteredTransactions];
@@ -358,20 +373,21 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
 
   const chartConfig = useMemo(() => {
+    if (!reportData) return {};
     const config: any = {
       amount: {
         label: "Amount",
         color: "hsl(var(--primary))",
       },
     };
-    periodData.forEach((item, index) => {
+    reportData.periodData.forEach((item, index) => {
       config[item.name] = {
         label: item.name,
         color: `hsl(var(--chart-${(index % 5) + 1}))`,
       };
     });
     return config;
-  }, [periodData]);
+  }, [reportData]);
 
   const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
     <TableHead className={className}>
@@ -391,6 +407,51 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       );
     }
   };
+
+  if (isCalculating || !reportData) {
+    return (
+        <div className="mt-6">
+            <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="summary">Summary</TabsTrigger>
+                    <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                </TabsList>
+            </Tabs>
+            <Card className="mt-6">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-lg" />
+                            <div>
+                                <Skeleton className="h-6 w-48" />
+                                <Skeleton className="h-4 w-64 mt-2" />
+                            </div>
+                        </div>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                            <Skeleton className="h-10 w-32" />
+                            <Skeleton className="h-10 w-40" />
+                            <Skeleton className="h-10 w-32" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        <Skeleton className="h-64 w-full" />
+                        <Skeleton className="h-40 w-full" />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
+
+  const {
+      availableYears,
+      availableMonths,
+      periodData,
+      totalPeriodExpenses,
+      parentNamesForPeriod,
+  } = reportData;
 
   return (
     <div className="mt-6">
