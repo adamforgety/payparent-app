@@ -429,7 +429,6 @@ export function ExpensesCard({
                         <TableCell>
                           <Badge
                             variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                            className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                           >
                             {item.category}
                           </Badge>
@@ -639,7 +638,6 @@ export function ExpensesCard({
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
                                       variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                      className={cn(item.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                                     >
                                       {item.category}
                                     </Badge>

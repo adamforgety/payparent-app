@@ -633,7 +633,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             <TableCell>
                               <Badge
                                 variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'outline' : 'secondary'}
-                                className={cn(transaction.category === 'Reimbursement' && 'border-primary bg-background text-primary')}
                               >
                                 {transaction.category}
                               </Badge>
@@ -825,7 +824,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 <TableCell className="font-medium">
                                     <Badge
                                     variant={item.name === 'Child Support' ? 'default' : item.name === 'Reimbursement' ? 'outline' : 'secondary'}
-                                    className={cn(item.name === 'Reimbursement' && 'border-primary bg-background text-primary')}
                                     >
                                     {item.name}
                                     </Badge>
