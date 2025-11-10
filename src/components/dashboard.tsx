@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { addMonths, format, subMonths, getYear, getMonth, isAfter, parse, isEqual, isSameMonth, setYear, setMonth as setDateFnsMonth } from 'date-fns';
 import { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon, ChevronDown } from 'lucide-react';
 
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
@@ -30,13 +31,15 @@ import { SummaryDetailsCard } from './summary-details-card';
 import { CoParentLinkCard } from './co-parent-link-card';
 import { GettingStartedPage } from './getting-started-page';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { ExportButton } from './export-button';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from './ui/scroll-area';
 
 interface DashboardProps {
     activeTab: string;
@@ -224,57 +227,89 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-4 mb-4 no-print">
-            <div className="flex items-center gap-2 h-10">
-              <Select
-                value={String(getYear(currentDate))}
-                onValueChange={(year) => setCurrentDate(setYear(currentDate, parseInt(year)))}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(getMonth(currentDate))}
-                onValueChange={(month) => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month)))}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableMonthsForYear.map(month => (
-                    <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-center gap-2 mb-8 no-print">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDateChange('prev')}
+              className="h-10 w-10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4">
+                  {format(currentDate, 'MMMM yyyy')}
+                  <ChevronDown className="ml-2 h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <DropdownMenuLabel>Year</DropdownMenuLabel>
+                    <ScrollArea className="h-48">
+                      <DropdownMenuGroup>
+                        {availableYears.map(year => (
+                          <DropdownMenuItem
+                            key={year}
+                            onSelect={() => setCurrentDate(setYear(currentDate, parseInt(year)))}
+                            className={getYear(currentDate) === parseInt(year) ? 'font-bold bg-secondary' : ''}
+                          >
+                            {year}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    </ScrollArea>
+                  </div>
+                  <div>
+                    <DropdownMenuLabel>Month</DropdownMenuLabel>
+                    <ScrollArea className="h-48">
+                      <DropdownMenuGroup>
+                        {availableMonthsForYear.map(month => (
+                          <DropdownMenuItem
+                            key={month.value}
+                            onSelect={() => setCurrentDate(setDateFnsMonth(currentDate, parseInt(month.value)))}
+                            className={getMonth(currentDate) === parseInt(month.value) ? 'font-bold bg-secondary' : ''}
+                          >
+                            {month.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    </ScrollArea>
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setCurrentDate(new Date())}
-                      disabled={isSameMonth(currentDate, new Date())}
-                    >
-                      <CalendarDays className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Go to Current Month</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <div className="w-full text-center text-xl font-semibold text-primary">
-                {format(currentDate, 'MMMM yyyy')}
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentDate(new Date())}
+                    disabled={isSameMonth(currentDate, new Date())}
+                    className="h-10 w-10"
+                  >
+                    <CalendarDays className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Go to Current Month</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDateChange('next')}
+              className="h-10 w-10"
+            >
+              <ArrowRight className="h-5 w-5" />
+            </Button>
           </div>
+
 
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4 no-print h-auto bg-transparent p-0">
@@ -506,3 +541,4 @@ export function Dashboard({ activeTab, setActiveTab, onShowGettingStarted }: Das
 }
 
     
+
