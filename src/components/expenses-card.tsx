@@ -326,23 +326,35 @@ export function ExpensesCard({
             </CardDescription>
             </div>
         </div>
-        <div className="no-print flex w-full flex-wrap items-center justify-end gap-2">
-             <Button
-                variant="outline"
-                onClick={() => setIsImportOpen(true)}
-                aria-label="Import Expenses"
-            >
-                <Upload className="h-4 w-4 mr-2" />
-                Import
-            </Button>
-             <ImportExpensesDialog
-                open={isImportOpen}
-                onOpenChange={setIsImportOpen}
-                onImport={addImportedExpenses}
-                parentNames={parentNames}
-                appData={appData}
-            />
-            <div className="flex items-center space-x-2">
+        <div className="no-print flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-end">
+            <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-end">
+                <Button
+                    variant="outline"
+                    onClick={() => setIsImportOpen(true)}
+                    aria-label="Import Expenses"
+                    className="flex-1 md:flex-none"
+                >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import
+                </Button>
+                <ImportExpensesDialog
+                    open={isImportOpen}
+                    onOpenChange={setIsImportOpen}
+                    onImport={addImportedExpenses}
+                    parentNames={parentNames}
+                    appData={appData}
+                />
+                <ExportButton
+                    expenses={expenses}
+                    childSupport={childSupport}
+                    currentDate={currentDate}
+                    parentNames={parentNames}
+                    expenseSplit={expenseSplit}
+                    medicalExpenseSplit={medicalExpenseSplit}
+                    className="flex-1 md:flex-none"
+                />
+            </div>
+             <div className="flex items-center justify-center space-x-2 rounded-md border p-2 md:border-none md:p-0">
                 <Label htmlFor="settle-all-switch" className="text-sm">Settle All</Label>
                 <Switch
                     id="settle-all-switch"
@@ -351,14 +363,6 @@ export function ExpensesCard({
                     disabled={localItems.length === 0}
                 />
             </div>
-             <ExportButton
-                expenses={expenses}
-                childSupport={childSupport}
-                currentDate={currentDate}
-                parentNames={parentNames}
-                expenseSplit={expenseSplit}
-                medicalExpenseSplit={medicalExpenseSplit}
-            />
         </div>
       </CardHeader>
       <CardContent>
