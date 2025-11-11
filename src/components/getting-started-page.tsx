@@ -126,7 +126,7 @@ export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
                   <div className="text-center space-y-4 p-4 min-h-[280px]">
                     <div className="flex justify-center">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <step.icon className="h-6 w-6 text-primary" />
+                            <step.icon className="h-6 w-6" />
                         </div>
                     </div>
                     <h3 className="text-lg font-semibold">{step.title}</h3>
