@@ -50,8 +50,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if request.auth != null;
 
-      // Allow write for linking/unlinking OR if the user is authorized to write to this data document.
-      allow write: if isOwner(userId) ||
+      // Do not allow new users to be created.
+      allow create: if false;
+      
+      // Allow updates for linking/unlinking OR if the user is authorized to write to this data document.
+      allow update: if isOwner(userId) ||
                       (request.resource.data.keys().hasAny(['coParentId', 'dataOwnerId'])) ||
                       isAuthorizedToAccessData(userId);
 
