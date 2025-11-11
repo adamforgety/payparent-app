@@ -123,18 +123,16 @@ export async function saveUserData(firestore: Firestore, userId: string, appData
   
   const payload = { appData };
 
-  try {
-    // Use set with merge to update just the appData field on the owner's document.
-    await setDoc(targetDocRef, payload, { merge: true });
-  } catch (error) {
-     errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: targetDocRef.path,
-        operation: 'update',
-        requestResourceData: payload,
-      })
-    );
-    throw error;
-  }
+  // Use set with merge to update just the appData field on the owner's document.
+  // DO NOT await this call. Chain a .catch() to handle errors asynchronously.
+  setDoc(targetDocRef, payload, { merge: true }).catch((serverError) => {
+    // On failure, construct and emit a detailed permission error.
+    const permissionError = new FirestorePermissionError({
+      path: targetDocRef.path,
+      operation: 'update', // or 'write'
+      requestResourceData: payload,
+    });
+    // Use the global error emitter instead of console.error
+    errorEmitter.emit('permission-error', permissionError);
+  });
 }
