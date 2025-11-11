@@ -170,6 +170,25 @@ export function SummaryDetailsCard({
     return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
   };
 
+  const { title, description } = useMemo(() => {
+    if (Math.abs(totalNetBalance) < 0.01) {
+      return {
+        title: 'All Balances Are Settled',
+        description: 'A summary of your financial contributions.'
+      };
+    }
+    if (totalNetBalance > 0) {
+      return {
+        title: `${otherParentName} Owes You`,
+        description: `A summary of what ${otherParentName} owes.`
+      };
+    }
+    return {
+      title: `You Owe ${otherParentName}`,
+      description: `A summary of what you owe ${otherParentName}.`
+    };
+  }, [totalNetBalance, otherParentName]);
+
 
   return (
     <Card className="h-full">
@@ -179,8 +198,8 @@ export function SummaryDetailsCard({
             <Info className="h-5 w-5 text-primary" />
           </span>
           <div>
-            <CardTitle>Balance Details</CardTitle>
-            <CardDescription>A breakdown of your outstanding balance.</CardDescription>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
           </div>
         </div>
       </CardHeader>
