@@ -423,7 +423,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
           onGoToUnsettled={handleGoToUnsettled}
           onGoHome={handleGoHome}
         />
-        <main className="container mx-auto p-4 md:p-8 pb-24 md:pb-8">
+        <main className="container mx-auto p-4 md:p-8 pb-28 md:pb-8">
           <div className="mb-8 hidden print-only">
             <div className="print-header flex items-center justify-between">
               <Logo />
