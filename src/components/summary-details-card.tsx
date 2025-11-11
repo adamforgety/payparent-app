@@ -213,7 +213,7 @@ export function SummaryDetailsCard({
         
         {previousBalances.length > 0 && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-base text-foreground">Prior Balance</h3>
+            <h3 className="font-semibold text-base text-foreground">Prior Month's Balance</h3>
              <ul className="space-y-4 text-lg border-l-2 border-border pl-4 ml-2">
                 <li className="w-full items-center justify-between">
                     <div className="flex items-center gap-3">
