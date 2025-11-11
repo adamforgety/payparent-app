@@ -185,53 +185,63 @@ export function SummaryDetailsCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <ul className="space-y-4 text-lg">
-          <li className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {renderBalanceIcon(currentMonthCredit)}
-              <span className="text-base">{otherParentName} Owes You (This Month)</span>
-            </div>
-            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-            <span className={cn("font-semibold text-lg", currentMonthCredit > 0 ? "text-green-600" : "text-muted-foreground")}>
-              +${currentMonthCredit.toFixed(2)}
-            </span>
-          </li>
-          <li className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {renderBalanceIcon(-currentMonthDebit)}
-              <span className="text-base">You Owe {otherParentName} (This Month)</span>
-            </div>
-            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-            <span className={cn("font-semibold text-lg", currentMonthDebit > 0 ? "text-destructive" : "text-muted-foreground")}>
-              -${currentMonthDebit.toFixed(2)}
-            </span>
-          </li>
-          {previousBalances.length > 0 && (
-             <li className="w-full items-center justify-between">
-                <div className="flex items-center gap-3">
-                    {renderBalanceIcon(previousMonthsTotalBalance)}
-                    <div className="flex flex-1 items-center justify-between text-base font-normal">
-                        <span className="text-base">Prior Balance</span>
-                        <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                        <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                        {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
-                        </span>
-                    </div>
-                </div>
-                <div className="pt-2 space-y-1 pl-8">
-                    {previousBalances.map(({ monthId, balance }) => (
-                      <div key={monthId} className="flex items-center justify-between text-sm">
-                        <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
-                        <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                        <p className={cn('font-medium', balance < 0 ? 'text-destructive' : 'text-green-600')}>
-                          {balance < 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${balance.toFixed(2)}`}
-                        </p>
-                      </div>
-                    ))}
-                </div>
+        <div className="space-y-4">
+          <h3 className="font-semibold text-base text-foreground">This Month's Balance</h3>
+          <ul className="space-y-4 text-lg border-l-2 border-border pl-4 ml-2">
+            <li className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {renderBalanceIcon(currentMonthCredit)}
+                <span className="text-base">{otherParentName} Owes You</span>
+              </div>
+              <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+              <span className={cn("font-semibold text-lg", currentMonthCredit > 0 ? "text-green-600" : "text-muted-foreground")}>
+                +${currentMonthCredit.toFixed(2)}
+              </span>
             </li>
-          )}
-        </ul>
+            <li className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {renderBalanceIcon(-currentMonthDebit)}
+                <span className="text-base">You Owe {otherParentName}</span>
+              </div>
+              <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+              <span className={cn("font-semibold text-lg", currentMonthDebit > 0 ? "text-destructive" : "text-muted-foreground")}>
+                -${currentMonthDebit.toFixed(2)}
+              </span>
+            </li>
+          </ul>
+        </div>
+        
+        {previousBalances.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-base text-foreground">Prior Balance</h3>
+             <ul className="space-y-4 text-lg border-l-2 border-border pl-4 ml-2">
+                <li className="w-full items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        {renderBalanceIcon(previousMonthsTotalBalance)}
+                        <div className="flex flex-1 items-center justify-between text-base font-normal">
+                            <span className="text-base">Total from Past Months</span>
+                            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                            <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
+                            {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="pt-2 space-y-1 pl-8">
+                        {previousBalances.map(({ monthId, balance }) => (
+                          <div key={monthId} className="flex items-center justify-between text-sm">
+                            <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
+                            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                            <p className={cn('font-medium', balance < 0 ? 'text-destructive' : 'text-green-600')}>
+                              {balance < 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${balance.toFixed(2)}`}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                </li>
+              </ul>
+          </div>
+        )}
+
         <Separator />
         <div className="flex items-center justify-between">
           <span className="font-semibold text-lg">Total Net Balance</span>
