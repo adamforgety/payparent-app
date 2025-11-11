@@ -171,23 +171,21 @@ export function SummaryDetailsCard({
   };
 
   const { title, description } = useMemo(() => {
-    if (Math.abs(totalNetBalance) < 0.01) {
-      return {
-        title: 'All Balances Are Settled',
-        description: 'A summary of your financial contributions.'
-      };
-    }
-    if (totalNetBalance > 0) {
-      return {
-        title: `${otherParentName} Owes You`,
-        description: `A summary of what ${otherParentName} owes.`
-      };
-    }
     return {
-      title: `You Owe ${otherParentName}`,
-      description: `A summary of what you owe ${otherParentName}.`
+        title: 'Balance Details',
+        description: 'A summary of your financial contributions.'
     };
-  }, [totalNetBalance, otherParentName]);
+  }, []);
+
+  const priorBalanceTitle = useMemo(() => {
+    if (Math.abs(previousMonthsTotalBalance) < 0.01) {
+      return "Past Balances Settled";
+    }
+    if (previousMonthsTotalBalance > 0) {
+      return `${otherParentName} Owes You`;
+    }
+    return `You Owe ${otherParentName}`;
+  }, [previousMonthsTotalBalance, otherParentName]);
 
 
   return (
@@ -238,10 +236,10 @@ export function SummaryDetailsCard({
                     <div className="flex items-center gap-3">
                         {renderBalanceIcon(previousMonthsTotalBalance)}
                         <div className="flex flex-1 items-center justify-between text-base font-normal">
-                            <span className="text-base">Total from Past Months</span>
+                            <span className="text-base">{priorBalanceTitle}</span>
                             <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                            <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : 'text-green-600')}>
-                            {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
+                            <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : previousMonthsTotalBalance > 0 ? 'text-green-600' : 'text-muted-foreground')}>
+                              {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
                             </span>
                         </div>
                     </div>
