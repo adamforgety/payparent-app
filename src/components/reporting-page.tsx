@@ -123,7 +123,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
-  const [settledOnly, setSettledOnly] = useState(true);
   
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [transactionsData, setTransactionsData] = useState<TransactionsData | null>(null);
@@ -210,9 +209,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           }
       });
 
-      let transactionsForReport = settledOnly
-        ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
-        : allTransactionsForPeriod;
+      let transactionsForReport = allTransactionsForPeriod.filter(t => t.status === 'Settled');
       
       const aggregated: { [key: string]: number } = {};
       ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
@@ -252,7 +249,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
     return () => clearTimeout(calculationTimeout);
 
-  }, [appData, selectedYear, selectedMonth, selectedCategories, settledOnly]);
+  }, [appData, selectedYear, selectedMonth, selectedCategories]);
   
   useEffect(() => {
     if (activeSubTab !== 'transactions' || !summaryData) return;
@@ -304,16 +301,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
             }
         });
         
-        const transactionsForReport = settledOnly
-            ? allTransactionsForPeriod.filter(t => t.status === 'Settled')
-            : allTransactionsForPeriod;
+        const transactionsForReport = allTransactionsForPeriod.filter(t => t.status === 'Settled');
 
         setTransactionsData({ allTransactions: transactionsForReport });
         setIsTransactionsLoading(false);
     }, 100);
 
     return () => clearTimeout(calculationTimeout);
-  }, [activeSubTab, transactionsData, appData, selectedYear, selectedMonth, settledOnly, summaryData]);
+  }, [activeSubTab, transactionsData, appData, selectedYear, selectedMonth, summaryData]);
 
 
   useEffect(() => {
@@ -572,14 +567,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                        id="settled-only-filter"
-                        checked={settledOnly}
-                        onCheckedChange={setSettledOnly}
-                    />
-                    <Label htmlFor="settled-only-filter">Settled Only</Label>
-                 </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -595,7 +582,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         Category
                       </SortableHeader>
                       <SortableHeader sortKey="paidBy">Initial Payer</SortableHeader>
-                      <TableHead className="w-[120px]">Status</TableHead>
                       <SortableHeader sortKey="amount" className="text-right">
                         Initial Amount
                       </SortableHeader>
@@ -651,11 +637,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                   </Badge>
                                 )}
                             </TableCell>
-                            <TableCell>
-                              <span className={cn('font-medium', transaction.status === 'Settled' ? 'text-green-600' : 'text-destructive')}>
-                                {transaction.status}
-                              </span>
-                            </TableCell>
                             <TableCell className="text-right font-semibold">
                               ${transaction.amount.toFixed(2)}
                             </TableCell>
@@ -670,7 +651,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center">
+                        <TableCell colSpan={7} className="h-24 text-center">
                           {searchTerm
                             ? `No transactions found for "${searchTerm}".`
                             : 'No transactions in this period.'}
@@ -681,7 +662,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   {sortedTransactions.length > 0 && (
                     <TableFooter>
                       <TableRow className="bg-secondary/50 font-bold">
-                        <TableCell colSpan={5}>Grand Totals</TableCell>
+                        <TableCell colSpan={4}>Grand Totals</TableCell>
                         <TableCell className="text-right">
                           ${totalAmount.toFixed(2)}
                         </TableCell>
