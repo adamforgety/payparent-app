@@ -208,11 +208,13 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
       {
         Date: format(new Date(), 'yyyy-MM-dd'),
         Description: 'Sample: School Books',
-        Amount: 75.5,
+        Amount: 75.50,
       },
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    // Explicitly set the cell type for the Amount column
+    worksheet['C2'] = { t: 'n', v: 75.50 };
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenses');
     XLSX.writeFile(workbook, 'Expense_Import_Template.xlsx');

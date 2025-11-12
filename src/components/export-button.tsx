@@ -17,6 +17,7 @@ interface ExportButtonProps {
   parentNames: ParentNames;
   expenseSplit: ExpenseSplit;
   medicalExpenseSplit: MedicalExpenseSplit;
+  className?: string;
   asChild?: boolean;
 }
 
@@ -27,28 +28,17 @@ export function ExportButton({
   parentNames,
   expenseSplit,
   medicalExpenseSplit,
+  className,
   asChild = false,
 }: ExportButtonProps) {
   const getParentShare = (item: Expense | (typeof childSupportItem), parent: Parent): number => {
     if (item.category === 'Child Support') {
-      const csItem = item as typeof childSupportItem;
-      // This is tricky. If P1 pays, P2 "receives" the benefit. P1's share of the "cost" is the full amount.
-      // This seems inconsistent with how expenses work. Let's align it.
-      // If Parent 1 pays, their contribution is `amount`, Parent 2's is 0.
-      if (csItem.paidBy === parent) {
-        return csItem.amount; // The amount they contributed.
-      }
-      return 0;
+      return 0; // Child support is a direct transfer, not a shared cost.
     }
 
     const expense = item as Expense;
     if (expense.category === 'Reimbursement') {
-      // If the parent is the one who paid, they are *owed* this amount, so their share of the "cost" is negative.
-      if (expense.paidBy === parent) {
-        return -expense.amount;
-      }
-      // The other parent owes the full amount.
-      return expense.amount;
+      return expense.paidBy === parent ? 0 : expense.amount;
     }
 
     const split =
@@ -90,8 +80,8 @@ export function ExportButton({
         Category: item.category,
         'Initial Payer': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
         'Initial Amount': item.amount,
-        [`${parentNames['Parent 1']}'s Share`]: p1Share.toFixed(2),
-        [`${parentNames['Parent 2']}'s Share`]: p2Share.toFixed(2),
+        [`${parentNames['Parent 1']}'s Share`]: p1Share,
+        [`${parentNames['Parent 2']}'s Share`]: p2Share,
         Status: item.status,
       };
     });
@@ -122,6 +112,7 @@ export function ExportButton({
         onClick={handleExport}
         disabled={isDisabled}
         aria-label="Export to Excel"
+        className={className}
       >
         <Sheet className="h-4 w-4 mr-2" />
         Export
