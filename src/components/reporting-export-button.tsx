@@ -54,8 +54,8 @@ export function ReportingExportButton({
           Category: item.category,
           'Initial Payer': item.paidBy === 'None' ? 'None' : parentNames[item.paidBy as Parent],
           'Initial Amount': item.amount,
-          [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
-          [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
+          [`${parentNames['Parent 1']}'s Share`]: parent1Share,
+          [`${parentNames['Parent 2']}'s Share`]: parent2Share,
         };
       });
 
