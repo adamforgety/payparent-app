@@ -122,7 +122,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(ALL_CATEGORIES);
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'ascending' });
   
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [transactionsData, setTransactionsData] = useState<TransactionsData | null>(null);
@@ -378,19 +378,26 @@ export function ReportingPage({ appData }: ReportingPageProps) {
             bValue = b[sortConfig.key as keyof Transaction];
         }
 
-        if (typeof aValue === 'number' && typeof bValue === 'number') {
-          if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-          if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        } else if (sortConfig.key === 'date') {
+        if (sortConfig.key === 'date') {
           const dateA = new Date(aValue).getTime();
           const dateB = new Date(bValue).getTime();
           if (dateA < dateB) return sortConfig.direction === 'ascending' ? -1 : 1;
-          if (dateA > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+          if (dateA > dateB) return sortConfig.direction === 'ascending' ? 1 : -1;
+          return 0;
+        }
+
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+          return 0;
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
             return sortConfig.direction === 'ascending'
                 ? aValue.localeCompare(bValue)
                 : bValue.localeCompare(aValue);
         }
+
         return 0;
       });
     }
@@ -427,27 +434,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     return <ArrowUpDown className="ml-2 h-4 w-4" />; // Or a dedicated down arrow
   };
 
-
-  const chartConfig = useMemo(() => {
-    if (!summaryData) return {};
-    const config: any = {
-      amount: {
-        label: "Amount",
-        color: "hsl(var(--primary))",
-      },
-    };
-    summaryData.periodData.forEach((item, index) => {
-      config[item.name] = {
-        label: item.name,
-        color: `hsl(var(--chart-${(index % 5) + 1}))`,
-      };
-    });
-    return config;
-  }, [summaryData]);
-
   const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
     <th className={cn("h-12 px-4 align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0", className)}>
-      <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
+      <Button variant="ghost" onClick={() => requestSort(sortKey)} className={cn("px-2 py-1 h-auto -ml-2", className?.includes('text-right') && "justify-end w-full")}>
         {children}
         {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3" />}
       </Button>
@@ -672,13 +661,13 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         </div>
                       </div>
                       <div className="bg-muted/50 px-4 py-3 text-sm">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                             <div className="text-muted-foreground">{summaryData.parentNamesForPeriod['Parent 1']}'s Share</div>
-                            <div className={cn("font-semibold text-right", parent1Share < 0 ? 'text-destructive' : 'text-green-600')}>
+                            <div className={cn("font-semibold text-right", isP1Reimbursed ? 'text-destructive' : '')}>
                                 {isP1Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent1Share.toFixed(2)}`}
                             </div>
                             <div className="text-muted-foreground">{summaryData.parentNamesForPeriod['Parent 2']}'s Share</div>
-                            <div className={cn("font-semibold text-right", parent2Share < 0 ? 'text-destructive' : 'text-green-600')}>
+                            <div className={cn("font-semibold text-right", isP2Reimbursed ? 'text-destructive' : '')}>
                                 {isP2Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent2Share.toFixed(2)}`}
                             </div>
                         </div>
@@ -796,7 +785,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <div className="space-y-8">
                     <div>
                         <ChartContainer
-                        config={chartConfig}
+                        config={{
+                            amount: {
+                                label: "Amount",
+                                color: "hsl(var(--primary))",
+                            },
+                        }}
                         className="h-[250px] w-full"
                         >
                         <BarChart data={summaryData.periodData} accessibilityLayer>
