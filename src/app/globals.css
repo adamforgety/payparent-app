@@ -150,7 +150,8 @@ body > svg:last-of-type {
   }
 
   .bottom-nav-item {
-    @apply flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors rounded-lg w-full h-full;
+    @apply flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors rounded-lg w-full h-full;
+    color: hsl(var(--muted-foreground));
   }
   
   .bottom-nav-item.active {
