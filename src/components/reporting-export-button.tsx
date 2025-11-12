@@ -41,7 +41,9 @@ export function ReportingExportButton({
 
 
   const handleExport = () => {
-    const dataToExport = transactions
+    const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const dataToExport = sortedTransactions
       .map((item) => {
         const parent1Share = getParentShare(item, 'Parent 1');
         const parent2Share = getParentShare(item, 'Parent 2');
@@ -54,7 +56,6 @@ export function ReportingExportButton({
           'Initial Amount': item.amount,
           [`${parentNames['Parent 1']}'s Share`]: parent1Share.toFixed(2),
           [`${parentNames['Parent 2']}'s Share`]: parent2Share.toFixed(2),
-          Status: item.status,
         };
       });
 
