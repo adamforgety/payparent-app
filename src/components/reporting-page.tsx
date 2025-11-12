@@ -509,7 +509,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     </span>
                     <div>
                       <CardTitle>All Transactions Report</CardTitle>
-                      <CardDescription>A complete log of all recorded financial items.</CardDescription>
+                      <CardDescription>A complete log of all settled financial items.</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -582,21 +582,21 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         Category
                       </SortableHeader>
                       <SortableHeader sortKey="paidBy">Initial Payer</SortableHeader>
-                      <SortableHeader sortKey="amount" className="text-right">
-                        Initial Amount
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="parent1Paid"
-                        className="text-right"
-                      >
-                        {summaryData.parentNamesForPeriod['Parent 1']}'s Share
-                      </SortableHeader>
-                      <SortableHeader
-                        sortKey="parent2Paid"
-                        className="text-right"
-                      >
-                        {summaryData.parentNamesForPeriod['Parent 2']}'s Share
-                      </SortableHeader>
+                      <TableHead className="text-right">
+                          <SortableHeader sortKey="amount" className="justify-end">
+                            Initial Amount
+                          </SortableHeader>
+                      </TableHead>
+                      <TableHead className="text-right">
+                          <SortableHeader sortKey="parent1Paid" className="justify-end">
+                            {summaryData.parentNamesForPeriod['Parent 1']}'s Share
+                          </SortableHeader>
+                      </TableHead>
+                      <TableHead className="text-right">
+                          <SortableHeader sortKey="parent2Paid" className="justify-end">
+                            {summaryData.parentNamesForPeriod['Parent 2']}'s Share
+                          </SortableHeader>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -654,7 +654,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         <TableCell colSpan={7} className="h-24 text-center">
                           {searchTerm
                             ? `No transactions found for "${searchTerm}".`
-                            : 'No transactions in this period.'}
+                            : 'No settled transactions in this period.'}
                         </TableCell>
                       </TableRow>
                     )}
