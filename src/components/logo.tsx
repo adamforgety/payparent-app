@@ -10,7 +10,7 @@ export function Logo({ className }: { className?: string }) {
         <Image src="/icons/pwa-icon.svg" alt="PayParent Logo" width={28} height={28} />
       </div>
       <h1 className="text-xl font-bold font-logo">
-        <span className="text-primary">Pay</span><span className="text-accent-foreground">Parent</span>
+        <span className="text-primary">Pay</span><span className="text-secondary-foreground">Parent</span>
       </h1>
     </div>
   );
