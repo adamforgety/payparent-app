@@ -446,12 +446,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   }, [summaryData]);
 
   const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
-    <TableHead className={className}>
+    <th className={cn("h-12 px-4 align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0", className)}>
       <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
         {children}
         {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3" />}
       </Button>
-    </TableHead>
+    </th>
   );
   
   const handleCategoryFilterChange = (category: string, checked: boolean) => {
@@ -570,27 +570,18 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="rounded-md border overflow-x-auto hidden md:block">
                 <Table className="min-w-[1000px]">
                   <TableHeader>
                     <TableRow>
                       <SortableHeader sortKey="date">Date</SortableHeader>
-                      <SortableHeader sortKey="description">
-                        Description
-                      </SortableHeader>
-                      <SortableHeader sortKey="category">
-                        Category
-                      </SortableHeader>
+                      <SortableHeader sortKey="description">Description</SortableHeader>
+                      <SortableHeader sortKey="category">Category</SortableHeader>
                       <SortableHeader sortKey="paidBy">Initial Payer</SortableHeader>
-                      <SortableHeader sortKey="amount" className="text-right justify-end">
-                        Initial Amount
-                      </SortableHeader>
-                      <SortableHeader sortKey="parent1Paid" className="text-right justify-end">
-                        {summaryData.parentNamesForPeriod['Parent 1']}'s Share
-                      </SortableHeader>
-                      <SortableHeader sortKey="parent2Paid" className="text-right justify-end">
-                        {summaryData.parentNamesForPeriod['Parent 2']}'s Share
-                      </SortableHeader>
+                      <SortableHeader sortKey="amount" className="text-right">Initial Amount</SortableHeader>
+                      <SortableHeader sortKey="parent1Paid" className="text-right">{summaryData.parentNamesForPeriod['Parent 1']}'s Share</SortableHeader>
+                      <SortableHeader sortKey="parent2Paid" className="text-right">{summaryData.parentNamesForPeriod['Parent 2']}'s Share</SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -604,36 +595,21 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
                         return (
                           <TableRow key={transaction.id}>
+                            <TableCell>{format(new Date(transaction.date), 'MMM d, yyyy')}</TableCell>
+                            <TableCell className="font-medium">{transaction.description}</TableCell>
                             <TableCell>
-                              {format(new Date(transaction.date), 'MMM d, yyyy')}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {transaction.description}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
-                              >
+                              <Badge variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>
                                 {transaction.category}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {transaction.paidBy &&
-                                transaction.paidBy !== 'None' && (
-                                  <Badge
-                                    variant={
-                                      transaction.paidBy === 'Parent 1'
-                                        ? 'secondary'
-                                        : 'info'
-                                    }
-                                  >
+                              {transaction.paidBy && transaction.paidBy !== 'None' && (
+                                  <Badge variant={transaction.paidBy === 'Parent 1' ? 'secondary' : 'info'}>
                                     {transaction.parentNames[transaction.paidBy]}
                                   </Badge>
                                 )}
                             </TableCell>
-                            <TableCell className="text-right font-semibold">
-                              ${transaction.amount.toFixed(2)}
-                            </TableCell>
+                            <TableCell className="text-right font-semibold">${transaction.amount.toFixed(2)}</TableCell>
                             <TableCell className="text-right">
                               {isP1Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent1Share.toFixed(2)}`}
                             </TableCell>
@@ -646,9 +622,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={7} className="h-24 text-center">
-                          {searchTerm
-                            ? `No transactions found for "${searchTerm}".`
-                            : 'No settled transactions in this period.'}
+                          {searchTerm ? `No transactions found for "${searchTerm}".` : 'No settled transactions in this period.'}
                         </TableCell>
                       </TableRow>
                     )}
@@ -657,19 +631,86 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     <TableFooter>
                       <TableRow className="bg-secondary/50 font-bold">
                         <TableCell colSpan={4}>Grand Totals</TableCell>
-                        <TableCell className="text-right">
-                          ${totalAmount.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${totalParent1Share.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${totalParent2Share.toFixed(2)}
-                        </TableCell>
+                        <TableCell className="text-right">${totalAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${totalParent1Share.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${totalParent2Share.toFixed(2)}</TableCell>
                       </TableRow>
                     </TableFooter>
                   )}
                 </Table>
+              </div>
+              {/* Mobile Cards */}
+              <div className="space-y-4 md:hidden">
+                {sortedTransactions.length > 0 ? (
+                  sortedTransactions.map((transaction) => {
+                    const parent1Share = getParentShare(transaction, 'Parent 1');
+                    const parent2Share = getParentShare(transaction, 'Parent 2');
+                    const isP1Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 1';
+                    const isP2Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 2';
+                    return (
+                    <Card key={transaction.id} className="overflow-hidden">
+                      <div className="p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold">{transaction.description}</p>
+                            <p className="text-sm text-muted-foreground">{format(new Date(transaction.date), 'MMM d, yyyy')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <Badge variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>
+                            {transaction.category}
+                          </Badge>
+                          <p className="font-bold text-lg text-right">${transaction.amount.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Initial Payer</span>
+                          {transaction.paidBy && transaction.paidBy !== 'None' && (
+                            <Badge variant={transaction.paidBy === 'Parent 1' ? 'secondary' : 'info'}>
+                              {transaction.parentNames[transaction.paidBy]}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="bg-muted/50 px-4 py-3 text-sm">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="text-muted-foreground">{summaryData.parentNamesForPeriod['Parent 1']}'s Share</div>
+                            <div className={cn("font-semibold text-right", parent1Share < 0 ? 'text-destructive' : 'text-green-600')}>
+                                {isP1Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent1Share.toFixed(2)}`}
+                            </div>
+                            <div className="text-muted-foreground">{summaryData.parentNamesForPeriod['Parent 2']}'s Share</div>
+                            <div className={cn("font-semibold text-right", parent2Share < 0 ? 'text-destructive' : 'text-green-600')}>
+                                {isP2Reimbursed ? `($${transaction.amount.toFixed(2)})` : `$${parent2Share.toFixed(2)}`}
+                            </div>
+                        </div>
+                      </div>
+                    </Card>
+                    );
+                  })
+                ) : (
+                  <div className="h-32 text-center flex flex-col justify-center items-center">
+                    <p className="text-muted-foreground">
+                      {searchTerm ? `No results for "${searchTerm}".` : 'No settled transactions in this period.'}
+                    </p>
+                  </div>
+                )}
+                 {sortedTransactions.length > 0 && (
+                     <Card className="bg-secondary/50 font-bold">
+                        <CardContent className="p-4 space-y-2">
+                             <div className="flex justify-between">
+                                <span>Total Initial Amount</span>
+                                <span>${totalAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>{summaryData.parentNamesForPeriod['Parent 1']}'s Total Share</span>
+                                <span>${totalParent1Share.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>{summaryData.parentNamesForPeriod['Parent 2']}'s Total Share</span>
+                                <span>${totalParent2Share.toFixed(2)}</span>
+                            </div>
+                        </CardContent>
+                     </Card>
+                 )}
               </div>
             </CardContent>
           </Card>
