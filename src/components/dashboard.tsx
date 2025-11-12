@@ -447,7 +447,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             </Button>
             <DropdownMenu onOpenChange={setDateDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4">
+                <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4 w-52 justify-center">
                   {isAllMonthsView ? `All Months ${getYear(currentDate)}` : format(currentDate, 'MMMM yyyy')}
                   <ChevronDown className="ml-2 h-5 w-5" />
                 </Button>
