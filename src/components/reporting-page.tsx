@@ -582,21 +582,15 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         Category
                       </SortableHeader>
                       <SortableHeader sortKey="paidBy">Initial Payer</SortableHeader>
-                      <TableHead className="text-right">
-                          <SortableHeader sortKey="amount" className="justify-end">
-                            Initial Amount
-                          </SortableHeader>
-                      </TableHead>
-                      <TableHead className="text-right">
-                          <SortableHeader sortKey="parent1Paid" className="justify-end">
-                            {summaryData.parentNamesForPeriod['Parent 1']}'s Share
-                          </SortableHeader>
-                      </TableHead>
-                      <TableHead className="text-right">
-                          <SortableHeader sortKey="parent2Paid" className="justify-end">
-                            {summaryData.parentNamesForPeriod['Parent 2']}'s Share
-                          </SortableHeader>
-                      </TableHead>
+                      <SortableHeader sortKey="amount" className="text-right justify-end">
+                        Initial Amount
+                      </SortableHeader>
+                      <SortableHeader sortKey="parent1Paid" className="text-right justify-end">
+                        {summaryData.parentNamesForPeriod['Parent 1']}'s Share
+                      </SortableHeader>
+                      <SortableHeader sortKey="parent2Paid" className="text-right justify-end">
+                        {summaryData.parentNamesForPeriod['Parent 2']}'s Share
+                      </SortableHeader>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
