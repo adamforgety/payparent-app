@@ -15,7 +15,7 @@ function AppContent() {
   const { isNewUser, isLoading: isAppContextLoading } = useAppContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showGettingStarted, setShowGettingStarted] = useState(isNewUser);
+  const [showGettingStarted, setShowGettingStarted] = useState(false);
 
   useEffect(() => {
     // Redirect to login only after we are sure the user is not logged in and not loading.
@@ -26,6 +26,8 @@ function AppContent() {
 
   useEffect(() => {
     // Show the getting started page if the context marks the user as new.
+    // This needs to be in a useEffect to avoid issues with server-side rendering
+    // and state initialization based on props that might not be ready.
     setShowGettingStarted(isNewUser);
   }, [isNewUser]);
 
