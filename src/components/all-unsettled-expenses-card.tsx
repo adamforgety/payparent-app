@@ -2,7 +2,7 @@
 
 'use client';
 
-import { format, isAfter, startOfMonth, parse, isBefore, startOfDay, getYear, getMonth } from 'date-fns';
+import { format, isAfter, startOfMonth, parse, getYear } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, Edit, Search, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -26,6 +26,7 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { Input } from './ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -53,6 +54,15 @@ type UnsettledItem = {
   originalExpense?: Expense;
   originalChildSupport?: ChildSupport;
   status: PaymentStatus;
+};
+
+type GroupedUnsettledItems = {
+    [monthId: string]: {
+        items: UnsettledItem[];
+        totalAmount: number;
+        totalP1Share: number;
+        totalP2Share: number;
+    }
 };
 
 type SortKey = 'date' | 'description' | 'category' | 'paidBy' | 'amount';
@@ -87,8 +97,26 @@ export function AllUnsettledExpensesCard({
     const firstMonthId = Object.keys(appData.months)[0];
     return appData.months[firstMonthId].parentNames;
   }, [appData.months]);
-
-  const allUnsettledItems = useMemo<UnsettledItem[]>(() => {
+  
+  const getParentShare = (item: UnsettledItem, parent: Parent): number => {
+    if (item.type === 'child_support') {
+      return item.paidBy === parent ? item.amount : 0;
+    }
+  
+    const expense = item as Expense;
+    if (expense.category === 'Reimbursement') {
+      // The parent who paid gets 0 share of the cost, the other parent gets 100%
+      return expense.paidBy === parent ? 0 : expense.amount;
+    }
+  
+    const split = expense.category === 'Medical' || expense.category === 'Child Care'
+      ? item.medicalExpenseSplit
+      : item.expenseSplit;
+  
+    return expense.amount * (split[parent] / 100);
+  };
+  
+  const filteredAndSortedItems = useMemo(() => {
     let items: UnsettledItem[] = [];
     if (!appData?.months) return items;
     
@@ -133,30 +161,7 @@ export function AllUnsettledExpensesCard({
         });
       }
     }
-    return items;
-  }, [appData.months]);
-
-  const getParentShare = (item: UnsettledItem, parent: Parent): number => {
-    if (item.type === 'child_support') {
-      return item.paidBy === parent ? item.amount : 0;
-    }
-  
-    const expense = item as Expense;
-    if (expense.category === 'Reimbursement') {
-      // The parent who paid gets 0 share of the cost, the other parent gets 100%
-      return expense.paidBy === parent ? 0 : expense.amount;
-    }
-  
-    const split = expense.category === 'Medical' || expense.category === 'Child Care'
-      ? item.medicalExpenseSplit
-      : item.expenseSplit;
-  
-    return expense.amount * (split[parent] / 100);
-  };
-
-  const filteredAndSortedItems = useMemo(() => {
-    let items = [...allUnsettledItems];
-
+    
     const yearFilter = String(getYear(currentDate));
     const monthFilter = format(currentDate, 'yyyy-MM');
 
@@ -213,9 +218,28 @@ export function AllUnsettledExpensesCard({
       });
     }
 
-
     return items;
-  }, [allUnsettledItems, currentDate, showAllMonths, searchTerm, sortConfig]);
+  }, [appData, currentDate, showAllMonths, searchTerm, sortConfig]);
+
+  const groupedItems = useMemo<GroupedUnsettledItems>(() => {
+    return filteredAndSortedItems.reduce((acc, item) => {
+      const { monthId } = item;
+      if (!acc[monthId]) {
+        acc[monthId] = { items: [], totalAmount: 0, totalP1Share: 0, totalP2Share: 0 };
+      }
+      acc[monthId].items.push(item);
+      if (item.category !== 'Reimbursement') {
+        acc[monthId].totalAmount += item.amount;
+      }
+      acc[monthId].totalP1Share += getParentShare(item, 'Parent 1');
+      acc[monthId].totalP2Share += getParentShare(item, 'Parent 2');
+      return acc;
+    }, {} as GroupedUnsettledItems);
+  }, [filteredAndSortedItems]);
+
+  const sortedGroupKeys = useMemo(() => {
+    return Object.keys(groupedItems).sort((a, b) => b.localeCompare(a));
+  }, [groupedItems]);
   
   const handleStatusToggle = (item: UnsettledItem) => {
     const newStatus: PaymentStatus = 'Settled';
@@ -250,7 +274,6 @@ export function AllUnsettledExpensesCard({
       if (!appData.months[monthId]) return;
 
       if (!monthUpdates[monthId]) {
-        // Create a mutable copy of the month's data if it's the first time we're updating it
         monthUpdates[monthId] = {
           expenses: [...appData.months[monthId].expenses],
           childSupport: { ...appData.months[monthId].childSupport },
@@ -281,37 +304,17 @@ export function AllUnsettledExpensesCard({
     });
   };
 
-  const totals = useMemo(() => {
-    return filteredAndSortedItems.reduce(
-      (acc, item) => {
-        // Only add to total amount if it's not a reimbursement
-        if (item.category !== 'Reimbursement') {
-          acc.totalAmount += item.amount;
-        }
-        acc.totalP1Share += getParentShare(item, 'Parent 1');
-        acc.totalP2Share += getParentShare(item, 'Parent 2');
+  const grandTotals = useMemo(() => {
+    return Object.values(groupedItems).reduce(
+      (acc, monthGroup) => {
+        acc.totalAmount += monthGroup.totalAmount;
+        acc.totalP1Share += monthGroup.totalP1Share;
+        acc.totalP2Share += monthGroup.totalP2Share;
         return acc;
       },
       { totalAmount: 0, totalP1Share: 0, totalP2Share: 0 }
     );
-  }, [filteredAndSortedItems]);
-
-  const requestSort = (key: SortKey) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const SortableHeader = ({ sortKey, children, className }: { sortKey: SortKey, children: React.ReactNode, className?: string }) => (
-    <TableHead className={className}>
-      <Button variant="ghost" onClick={() => requestSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
-        {children}
-        {sortConfig?.key === sortKey ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : <ArrowUpDown className="ml-2 h-3 w-3 opacity-50" />}
-      </Button>
-    </TableHead>
-  );
+  }, [groupedItems]);
 
   return (
     <Card>
@@ -360,314 +363,144 @@ export function AllUnsettledExpensesCard({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortableHeader sortKey="description">Description</SortableHeader>
-                <SortableHeader sortKey="category" className="w-[140px]">Category</SortableHeader>
-                <SortableHeader sortKey="paidBy" className="w-[140px]">Initial Payer</SortableHeader>
-                <TableHead className="w-[150px]">Status</TableHead>
-                <SortableHeader sortKey="amount" className="text-right w-[120px]">Initial Amount</SortableHeader>
-                <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
-                <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>
-                <TableHead className="w-[50px] no-print text-center">Receipt</TableHead>
-                <TableHead className="w-[80px] no-print text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAndSortedItems.length > 0 ? (
-                filteredAndSortedItems.map((item) => {
-                    const p1Share = getParentShare(item, 'Parent 1');
-                    const p2Share = getParentShare(item, 'Parent 2');
-                    const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
-                    const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
+        {sortedGroupKeys.length > 0 ? (
+          <>
+            <Accordion type="multiple" defaultValue={sortedGroupKeys}>
+              {sortedGroupKeys.map((monthId) => {
+                const monthGroup = groupedItems[monthId];
+                if (!monthGroup) return null;
+                const p1Balance = monthGroup.totalP1Share;
+                const p2Balance = monthGroup.totalP2Share;
 
-                    let p1Color, p2Color;
-
-                     if (item.type === 'child_support') {
-                        if (item.paidBy === 'Parent 1') { // Parent 1 is paying
-                            p1Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
-                            p2Color = 'text-green-600';
-                        } else { // Parent 2 is paying
-                            p1Color = 'text-green-600';
-                            p2Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
-                        }
-                    } else {
-                        // Regular Expense Logic
-                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
-                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
-                    }
-
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.description}
-                        <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
-                        >
-                          {item.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{item.parentNames[item.paidBy]}</Badge>}
-                      </TableCell>
-                       <TableCell>
-                         <div className="flex items-center space-x-2">
-                           <Switch
-                             id={`status-switch-all-${item.id}`}
-                             checked={false} // Always off for unsettled items
-                             onCheckedChange={() => handleStatusToggle(item)}
-                           />
-                           <Label htmlFor={`status-switch-all-${item.id}`} className="w-16 text-destructive">Unsettled</Label>
-                         </div>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        ${item.amount.toFixed(2)}
-                      </TableCell>
-                      <TableCell className={cn("text-right", p1Color)}>
-                         {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
-                      </TableCell>
-                      <TableCell className={cn("text-right", p2Color)}>
-                         {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
-                      </TableCell>
-                      <TableCell className="no-print text-center">
-                        {item.type === 'expense' && item.receiptUrl && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  asChild
-                                >
-                                  <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                    <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                  </a>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>View Receipt</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </TableCell>
-                      <TableCell className="no-print text-right">
-                        <div className="flex justify-end gap-1 h-8 w-full">
-                          {item.type === 'expense' && item.originalExpense && (
-                            <>
-                              <EditExpenseDialog
-                                expense={item.originalExpense}
-                                onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)}
-                                parentNames={item.parentNames}
-                                monthId={item.monthId}
-                              />
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => onDeleteExpense(item.id, item.monthId)}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Delete</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={11} className="h-24 text-center">
-                     {searchTerm ? `No results for "${searchTerm}".` : `No unsettled items for the selected period.`}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-             {filteredAndSortedItems.length > 0 && (
-                 <TableFooter>
-                    <TableRow className="bg-secondary/50 font-bold">
-                        <TableCell colSpan={3}>Totals</TableCell>
-                        <TableCell>
-                           {filteredAndSortedItems.length > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              {filteredAndSortedItems.length} items remaining
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            ${totals.totalAmount.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            ${totals.totalP1Share.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            ${totals.totalP2Share.toFixed(2)}
-                        </TableCell>
-                        <TableCell colSpan={2}></TableCell>
-                    </TableRow>
-                 </TableFooter>
-            )}
-          </Table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="space-y-4 md:hidden">
-            {filteredAndSortedItems.length > 0 && (
-                <Card className="bg-secondary/50">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Totals for Filtered Items</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2 text-sm">
-                            <h4 className="font-medium">{parentNames['Parent 1']}</h4>
-                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Share</span>
-                                <span className="font-semibold">${totals.totalP1Share.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                            <h4 className="font-medium">{parentNames['Parent 2']}</h4>
-                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Share</span>
-                                <span className="font-semibold">${totals.totalP2Share.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-             )}
-            {filteredAndSortedItems.length > 0 ? (
-                filteredAndSortedItems.map((item) => {
-                    const p1Share = getParentShare(item, 'Parent 1');
-                    const p2Share = getParentShare(item, 'Parent 2');
-                    const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
-                    const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
-                    
-                    let p1Color, p2Color;
-
-                    if (item.type === 'child_support') {
-                        if (item.paidBy === 'Parent 1') { // Parent 1 is paying
-                            p1Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
-                            p2Color = 'text-green-600';
-                        } else { // Parent 2 is paying
-                            p1Color = 'text-green-600';
-                            p2Color = item.status === 'Unsettled' ? 'text-destructive' : 'text-green-600';
-                        }
-                    } else {
-                        // Regular Expense Logic
-                        p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
-                        p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : (item.status === 'Settled' ? 'text-green-600' : 'text-destructive');
-                    }
-
-                    return (
-                        <Card key={item.id} className="overflow-hidden">
-                            <div className="p-4 space-y-3">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold">{item.description}</p>
-                                        <p className="text-sm text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</p>
-                                    </div>
-                                    <div className="flex items-center gap-1 -mr-2">
-                                        {item.type === 'expense' && item.receiptUrl && (
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                                        <a href={item.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                                            <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                                        </a>
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>View Receipt</TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        )}
-                                        {item.type === 'expense' && item.originalExpense && (
-                                            <>
-                                            <EditExpenseDialog
-                                                expense={item.originalExpense}
-                                                onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)}
-                                                parentNames={item.parentNames}
-                                                monthId={item.monthId}
-                                            />
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDeleteExpense(item.id, item.monthId)}>
-                                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Delete</TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between text-sm">
-                                    <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
-                                    >
-                                      {item.category}
-                                    </Badge>
-                                    <p className="font-bold text-lg">${item.amount.toFixed(2)}</p>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Initial Payer</span>
-                                    {item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{item.parentNames[item.paidBy]}</Badge>}
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                     <span className="text-muted-foreground">Status</span>
-                                    <div className="flex items-center space-x-2">
-                                       <Switch
-                                         id={`status-switch-all-mobile-${item.id}`}
-                                         checked={false} // Always off for unsettled items
-                                         onCheckedChange={() => handleStatusToggle(item)}
-                                       />
-                                       <Label htmlFor={`status-switch-all-mobile-${item.id}`} className="w-16 text-destructive">Unsettled</Label>
-                                     </div>
+                return (
+                    <AccordionItem value={monthId} key={monthId}>
+                        <AccordionTrigger className="hover:no-underline">
+                            <div className="flex w-full items-center justify-between pr-4">
+                                <span className="font-semibold text-lg">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</span>
+                                <div className="text-right text-sm">
+                                    <p className="font-medium text-muted-foreground">{monthGroup.items.length} items</p>
                                 </div>
                             </div>
-                            <div className="bg-muted/50 px-4 py-3 text-sm space-y-2">
-                                <p className="font-medium text-xs text-muted-foreground">Share Details</p>
-                                    <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{item.parentNames['Parent 1']}'s Share</span>
-                                    <span className={cn("font-semibold", p1Color)}>
-                                         {isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}
-                                    </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                    <span className="text-muted-foreground">{parentNames['Parent 2']}'s Share</span>
-                                    <span className={cn("font-semibold", p2Color)}>
-                                         {isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}
-                                    </span>
-                                    </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           <div className="overflow-x-auto rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="w-[140px]">Category</TableHead>
+                                            <TableHead className="w-[140px]">Initial Payer</TableHead>
+                                            <TableHead className="w-[150px]">Status</TableHead>
+                                            <TableHead className="text-right w-[120px]">Initial Amount</TableHead>
+                                            <TableHead className="text-right w-[120px]">{parentNames['Parent 1']}'s Share</TableHead>
+                                            <TableHead className="text-right w-[120px]">{parentNames['Parent 2']}'s Share</TableHead>
+                                            <TableHead className="w-[50px] text-center">Receipt</TableHead>
+                                            <TableHead className="w-[80px] text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {monthGroup.items.map((item) => {
+                                            const p1Share = getParentShare(item, 'Parent 1');
+                                            const p2Share = getParentShare(item, 'Parent 2');
+                                            const isP1Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 1';
+                                            const isP2Reimbursed = item.category === 'Reimbursement' && item.paidBy === 'Parent 2';
+
+                                            let p1Color, p2Color;
+                                            if (item.type === 'child_support') {
+                                                if (item.paidBy === 'Parent 1') { p1Color = 'text-destructive'; p2Color = 'text-green-600'; } 
+                                                else { p1Color = 'text-green-600'; p2Color = 'text-destructive'; }
+                                            } else {
+                                                p1Color = item.paidBy === 'Parent 1' ? 'text-green-600' : 'text-destructive';
+                                                p2Color = item.paidBy === 'Parent 2' ? 'text-green-600' : 'text-destructive';
+                                            }
+
+                                            return (
+                                            <TableRow key={item.id}>
+                                                <TableCell className="font-medium">
+                                                    {item.description}
+                                                    <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
+                                                </TableCell>
+                                                <TableCell><Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>{item.category}</Badge></TableCell>
+                                                <TableCell>{item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{item.parentNames[item.paidBy]}</Badge>}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Switch id={`status-switch-all-${item.id}`} checked={false} onCheckedChange={() => handleStatusToggle(item)} />
+                                                        <Label htmlFor={`status-switch-all-${item.id}`} className="w-16 text-destructive">Unsettled</Label>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right font-semibold">${item.amount.toFixed(2)}</TableCell>
+                                                <TableCell className={cn("text-right", p1Color)}>{isP1Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p1Share.toFixed(2)}`}</TableCell>
+                                                <TableCell className={cn("text-right", p2Color)}>{isP2Reimbursed ? `($${item.amount.toFixed(2)})` : `$${p2Share.toFixed(2)}`}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {item.type === 'expense' && item.receiptUrl && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" asChild><a href={item.receiptUrl} target="_blank" rel="noopener noreferrer"><Paperclip className="h-4 w-4 text-muted-foreground" /></a></Button></TooltipTrigger>
+                                                            <TooltipContent>View Receipt</TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1 h-8 w-full">
+                                                    {item.type === 'expense' && item.originalExpense && (
+                                                        <>
+                                                        <EditExpenseDialog expense={item.originalExpense} onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)} parentNames={item.parentNames} monthId={item.monthId}/>
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDeleteExpense(item.id, item.monthId)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button></TooltipTrigger>
+                                                                <TooltipContent>Delete</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                        </>
+                                                    )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                    <TableFooter>
+                                        <TableRow className="bg-secondary/50 font-bold">
+                                            <TableCell colSpan={4}>Month Totals</TableCell>
+                                            <TableCell className="text-right">${monthGroup.totalAmount.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">${p1Balance.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">${p2Balance.toFixed(2)}</TableCell>
+                                            <TableCell colSpan={2}></TableCell>
+                                        </TableRow>
+                                    </TableFooter>
+                                </Table>
                             </div>
-                        </Card>
-                    );
-                })
-            ) : (
-                <div className="h-32 text-center flex flex-col justify-center items-center">
-                    <p className="text-muted-foreground">
-                        {searchTerm ? `No results for "${searchTerm}".` : `No unsettled items for the selected period.`}
-                    </p>
+                        </AccordionContent>
+                    </AccordionItem>
+                );
+              })}
+            </Accordion>
+            <div className="mt-6 rounded-lg border bg-background p-4">
+                <h3 className="font-semibold text-lg mb-2">Grand Totals</h3>
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Total Initial Amount</span>
+                        <span className="font-semibold">${grandTotals.totalAmount.toFixed(2)}</span>
+                    </div>
+                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">{parentNames['Parent 1']}'s Total Share</span>
+                        <span className="font-semibold">${grandTotals.totalP1Share.toFixed(2)}</span>
+                    </div>
+                     <div className="flex justify-between">
+                        <span className="text-muted-foreground">{parentNames['Parent 2']}'s Total Share</span>
+                        <span className="font-semibold">${grandTotals.totalP2Share.toFixed(2)}</span>
+                    </div>
                 </div>
-            )}
-        </div>
-
+            </div>
+          </>
+        ) : (
+            <div className="h-32 text-center flex flex-col justify-center items-center">
+                <p className="text-muted-foreground">
+                    {searchTerm ? `No results for "${searchTerm}".` : `No unsettled items for the selected period.`}
+                </p>
+            </div>
+        )}
       </CardContent>
     </Card>
   );
