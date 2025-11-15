@@ -47,12 +47,23 @@ const ACCEPTED_FILE_TYPES = [
 const importSchema = z.object({
   file: z
     .any()
-    .refine((files) => files?.length === 1, 'An Excel file is required.')
     .refine(
-      (files) => ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
+      (files) => {
+        if (typeof window === 'undefined') return true; // SSR validation passes
+        return files instanceof FileList && files?.length === 1;
+      },
+      'An Excel file is required.'
+    )
+    .refine(
+      (files) => {
+        if (typeof window === 'undefined') return true; // SSR validation passes
+        if (!files || !(files instanceof FileList) || files.length === 0) return true;
+        return ACCEPTED_FILE_TYPES.includes(files[0].type);
+      },
       '.xlsx and .xls files are accepted.'
     ),
 });
+
 
 type FormValues = z.infer<typeof importSchema>;
 
@@ -555,14 +566,15 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
                   <FormField
                     control={form.control}
                     name="file"
-                    render={({ field }) => (
+                    render={({ field: { onChange, value, ...rest } }) => (
                       <FormItem>
                         <FormLabel>Excel File</FormLabel>
                         <FormControl>
                           <Input
                             type="file"
                             accept={ACCEPTED_FILE_TYPES.join(',')}
-                            onChange={(e) => field.onChange(e.target.files)}
+                            onChange={(e) => onChange(e.target.files)}
+                            {...rest}
                           />
                         </FormControl>
                         <FormMessage />

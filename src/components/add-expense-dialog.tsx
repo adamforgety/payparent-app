@@ -63,14 +63,23 @@ const expenseSchema = z.object({
   ),
   receipt: z
     .any()
+    .optional()
     .refine(
-      (files) => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE,
+      (files) => {
+        if (typeof window === 'undefined') return true; // SSR validation passes
+        if (!files || !(files instanceof FileList) || files.length === 0) return true; // No file is valid
+        return files[0].size <= MAX_FILE_SIZE;
+      },
       'Max file size is 4MB.'
     )
     .refine(
-      (files) => !files || files.length === 0 || ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
+      (files) => {
+        if (typeof window === 'undefined') return true; // SSR validation passes
+        if (!files || !(files instanceof FileList) || files.length === 0) return true; // No file is valid
+        return ACCEPTED_FILE_TYPES.includes(files[0].type);
+      },
       'Only .jpg, .jpeg, .png, .webp and .pdf files are accepted.'
-    ).optional(),
+    ),
 });
 
 type FormValues = z.infer<typeof expenseSchema>;
