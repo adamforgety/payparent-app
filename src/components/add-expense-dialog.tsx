@@ -50,7 +50,7 @@ import { Alert, AlertDescription } from './ui/alert';
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
 
-const expenseSchema = z.object({
+const createExpenseSchema = () => z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.coerce.number().positive('Amount must be a positive number'),
   date: z.date({ required_error: 'A date is required.' }),
@@ -82,7 +82,7 @@ const expenseSchema = z.object({
     ),
 });
 
-type FormValues = z.infer<typeof expenseSchema>;
+type FormValues = z.infer<ReturnType<typeof createExpenseSchema>>;
 
 interface AddExpenseDialogProps {
   onAddExpense: (expense: Omit<Expense, 'id' | 'year' | 'month'>) => void;
@@ -95,6 +95,7 @@ interface AddExpenseDialogProps {
 export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open, onOpenChange }: AddExpenseDialogProps) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
+  const expenseSchema = createExpenseSchema();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
@@ -338,3 +339,5 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
     </Dialog>
   );
 }
+
+    
