@@ -130,9 +130,9 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
 
     if (values.receipt && values.receipt.length > 0) {
       const file = values.receipt[0];
-      const reader = new FileReader();
       
       receiptData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
         reader.onload = (e) => {
           if (e.target?.result) {
             resolve({ receiptUrl: e.target.result as string, receiptFilename: file.name });
@@ -339,5 +339,3 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
     </Dialog>
   );
 }
-
-    
