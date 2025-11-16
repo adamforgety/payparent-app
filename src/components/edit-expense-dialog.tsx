@@ -143,19 +143,28 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
       receiptData = { receiptUrl: null, receiptFilename: null };
     } else if (values.receipt && values.receipt.length > 0) {
       const file = values.receipt[0];
-
-      receiptData = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            resolve({ receiptUrl: e.target.result as string, receiptFilename: file.name });
-          } else {
-            reject(new Error("Could not read file"));
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      try {
+        receiptData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              resolve({ receiptUrl: e.target.result as string, receiptFilename: file.name });
+            } else {
+              reject(new Error("Could not read file"));
+            }
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } catch (error) {
+        console.error("Error reading file:", error);
+        toast({
+          variant: "destructive",
+          title: "File Read Error",
+          description: "There was a problem processing the new receipt file.",
+        });
+        return; // Stop submission if file reading fails
+      }
     } else {
       // If no new receipt, and not removing, keep the old one
       receiptData = { 
