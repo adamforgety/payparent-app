@@ -65,7 +65,7 @@ const createExpenseSchema = () => z.object({
     .optional()
     .refine(
       (files) => {
-        if (typeof window === 'undefined') return true;
+        if (typeof window === 'undefined') return true; 
         if (!files || !(files instanceof FileList) || files.length === 0) return true;
         return files[0].size <= MAX_FILE_SIZE;
       },
@@ -153,7 +153,7 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
               reject(new Error("Could not read file"));
             }
           };
-          reader.onerror = reject;
+          reader.onerror = (error) => reject(error);
           reader.readAsDataURL(file);
         });
       } catch (error) {
@@ -336,16 +336,12 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
               {hasExistingReceipt && !removeReceipt ? (
                 <div className="flex items-center justify-between rounded-md border p-2">
                   <div className='flex items-center gap-2'>
-                     <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                        <a href={expense.receiptUrl!} target="_blank" rel="noopener noreferrer">
-                            <Paperclip className="h-4 w-4" />
-                        </a>
-                    </Button>
-                    <a href={expense.receiptUrl!} target="_blank" rel="noopener noreferrer" className="text-sm underline">
-                      {expense.receiptFilename || 'View Receipt'}
-                    </a>
+                     <Paperclip className="h-4 w-4" />
+                    <span className="text-sm truncate">
+                      {expense.receiptFilename || 'Attached Receipt'}
+                    </span>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemoveReceipt}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRemoveReceipt} aria-label="Remove receipt">
                     <X className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
