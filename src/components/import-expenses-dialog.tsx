@@ -44,7 +44,7 @@ const ACCEPTED_FILE_TYPES = [
   'application/vnd.ms-excel', // .xls
 ];
 
-const importSchema = z.object({
+const createImportSchema = () => z.object({
   file: z
     .any()
     .refine(
@@ -61,7 +61,7 @@ const importSchema = z.object({
 });
 
 
-type FormValues = z.infer<typeof importSchema>;
+type FormValues = z.infer<ReturnType<typeof createImportSchema>>;
 
 interface ImportExpensesDialogProps {
   onImport: (expenses: Omit<Expense, 'id' | 'year' | 'month'>[]) => { [monthId: string]: number };
@@ -185,6 +185,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
   const [failedImports, setFailedImports] = useState<FailedImport[]>([]);
   const [duplicateImports, setDuplicateImports] = useState<DuplicateImport[]>([]);
   const { toast } = useToast();
+  const importSchema = createImportSchema();
 
   const allExistingExpenses = useMemo(() => {
     if (!appData) return [];
@@ -837,3 +838,5 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
     </Dialog>
   );
 }
+
+    
