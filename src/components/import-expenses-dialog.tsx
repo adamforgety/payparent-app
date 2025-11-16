@@ -838,5 +838,3 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
     </Dialog>
   );
 }
-
-    

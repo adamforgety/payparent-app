@@ -65,16 +65,16 @@ const createExpenseSchema = () => z.object({
     .optional()
     .refine(
       (files) => {
-        if (typeof window === 'undefined') return true; // SSR validation passes
-        if (!files || !(files instanceof FileList) || files.length === 0) return true; // No file is valid
+        if (typeof window === 'undefined') return true;
+        if (!files || !(files instanceof FileList) || files.length === 0) return true;
         return files[0].size <= MAX_FILE_SIZE;
       },
       'Max file size is 4MB.'
     )
     .refine(
       (files) => {
-        if (typeof window === 'undefined') return true; // SSR validation passes
-        if (!files || !(files instanceof FileList) || files.length === 0) return true; // No file is valid
+        if (typeof window === 'undefined') return true;
+        if (!files || !(files instanceof FileList) || files.length === 0) return true;
         return ACCEPTED_FILE_TYPES.includes(files[0].type);
       },
       'Only .jpg, .jpeg, .png, .webp and .pdf files are accepted.'
@@ -357,5 +357,3 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
     </Dialog>
   );
 }
-
-    
