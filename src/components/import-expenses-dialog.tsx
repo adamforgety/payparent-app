@@ -48,16 +48,12 @@ const importSchema = z.object({
   file: z
     .any()
     .refine(
-      (files) => {
-        if (typeof window === 'undefined') return true; // SSR validation passes
-        return files instanceof FileList && files?.length === 1;
-      },
+      (files) => typeof window === 'undefined' || (files instanceof FileList && files?.length === 1),
       'An Excel file is required.'
     )
     .refine(
       (files) => {
-        if (typeof window === 'undefined') return true; // SSR validation passes
-        if (!files || !(files instanceof FileList) || files.length === 0) return true;
+        if (typeof window === 'undefined' || !files || !(files instanceof FileList) || files.length === 0) return true;
         return ACCEPTED_FILE_TYPES.includes(files[0].type);
       },
       '.xlsx and .xls files are accepted.'
@@ -333,9 +329,7 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { raw: false, });
 
-        const successes: ParsedExpense[] = [];
         const failures: FailedImport[] = [];
-        const duplicates: DuplicateImport[] = [];
         const seenInFile = new Set<string>();
 
         jsonData.forEach((row, index) => {
@@ -384,9 +378,9 @@ export function ImportExpensesDialog({ onImport, parentNames, appData, open, onO
             }
           });
           
-        setSuccessfulImports(successes);
         setFailedImports(failures);
-        setDuplicateImports(duplicates);
+        setSuccessfulImports([]);
+        setDuplicateImports([]);
         setStep('preview');
 
       } catch (error) {
