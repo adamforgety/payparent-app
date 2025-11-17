@@ -193,6 +193,10 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
       });
       return;
     }
+    if (value === 'dashboard') {
+        const isDataOwner = user?.uid === dataOwnerId;
+        setDashboardSubTab(isDataOwner ? 'parent-1' : 'parent-2');
+    }
     setActiveTab(value);
   };
 
@@ -223,6 +227,8 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   };
 
   const handleGoHome = () => {
+    const isDataOwner = user?.uid === dataOwnerId;
+    setDashboardSubTab(isDataOwner ? 'parent-1' : 'parent-2');
     setActiveTab('dashboard');
     setCurrentDate(new Date());
   };
