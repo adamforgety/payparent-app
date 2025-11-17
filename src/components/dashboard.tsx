@@ -43,6 +43,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { ImportExpensesDialog } from './import-expenses-dialog';
 import { AddExpenseChooser } from './add-expense-chooser';
+import { useFirebase } from '@/firebase';
 
 interface DashboardProps {
     activeTab: string;
@@ -51,9 +52,15 @@ interface DashboardProps {
 }
 
 function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGettingStarted }: { appData: AppData, initialDate: Date } & DashboardProps) {
-  const { updateAppData, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, batchUpdateMonths } = useAppContext();
+  const { updateAppData, addExpense, addImportedExpenses, deleteExpense, updateExpense: contextUpdateExpense, batchUpdateMonths, dataOwnerId } = useAppContext();
+  const { user } = useFirebase();
+
   const [currentDate, setCurrentDate] = useState(initialDate);
-  const [dashboardSubTab, setDashboardSubTab] = useState('parent-1');
+  
+  // Determine default sub-tab based on user's role
+  const isDataOwner = user?.uid === dataOwnerId;
+  const [dashboardSubTab, setDashboardSubTab] = useState(isDataOwner ? 'parent-1' : 'parent-2');
+
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
   const [settingsSubTab, setSettingsSubTab] = useState('app');
   const [isAllMonthsView, setIsAllMonthsView] = useState(false);

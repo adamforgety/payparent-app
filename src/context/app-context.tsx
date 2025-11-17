@@ -33,6 +33,7 @@ interface AppContextType {
   updateChildSupport: (updatedChildSupport: ChildSupport, monthId: string) => void;
   coParentData: UserDoc | null;
   isNewUser: boolean;
+  dataOwnerId: string | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -392,8 +393,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       updateChildSupport,
       coParentData,
       isNewUser,
+      dataOwnerId,
     }),
-    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser, deleteExpense, updateExpense]
+    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser, dataOwnerId, deleteExpense, updateExpense]
   );
 
   return (

@@ -26,8 +26,6 @@ function AppContent() {
 
   useEffect(() => {
     // Show the getting started page if the context marks the user as new.
-    // This needs to be in a useEffect to avoid issues with server-side rendering
-    // and state initialization based on props that might not be ready.
     setShowGettingStarted(isNewUser);
   }, [isNewUser]);
 
