@@ -183,29 +183,29 @@ export function CustomSplitCard({
         <Accordion type="multiple" defaultValue={(localSplits || []).map(s => s.id)} className="w-full">
           {(localSplits || []).map((split) => (
             <AccordionItem value={split.id} key={split.id}>
-              <AccordionTrigger>
-                <div className='flex justify-between items-center w-full pr-4'>
+               <div className="flex justify-between items-center w-full group">
+                <AccordionTrigger className="flex-grow pr-2">
                     <Input
                         value={split.name}
                         onChange={(e) => handleNameChange(split.id, e.target.value)}
                         onBlur={handleNameBlur}
                         onClick={(e) => e.stopPropagation()}
-                        className="text-base font-semibold border-none focus-visible:ring-1 focus-visible:ring-ring p-1 h-auto"
+                        className="text-base font-semibold border-none focus-visible:ring-1 focus-visible:ring-ring p-1 h-auto bg-transparent"
                     />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveSplit(split.id);
-                      }}
-                      disabled={localSplits.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                </div>
-              </AccordionTrigger>
+                </AccordionTrigger>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveSplit(split.id);
+                    }}
+                    disabled={localSplits.length <= 1}
+                >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
               <AccordionContent className="pt-2">
                 <div className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
