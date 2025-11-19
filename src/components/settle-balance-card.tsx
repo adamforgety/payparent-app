@@ -37,7 +37,7 @@ interface SettleBalanceCardProps {
 
 const calculateShare = (
   expenses: Expense[],
-  customSplits: CustomSplit[],
+  customSplits: CustomSplit[] | undefined,
   p: Parent
 ): number => {
   let totalShare = 0;
@@ -46,7 +46,7 @@ const calculateShare = (
       // The parent who paid gets 0% of the share, the other parent gets 100%
       totalShare += expense.paidBy === p ? 0 : expense.amount;
     } else {
-      const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
+      const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
       const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5; // Default to 50% if no split found
       totalShare += expense.amount * parentSplitPercent;
     }
