@@ -129,7 +129,7 @@ export function ExpensesCard({
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 
-    const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
+    const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
     const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
 
     return expense.amount * parentSplitPercent;
@@ -692,3 +692,5 @@ export function ExpensesCard({
 }
 
 type StatusFilter = 'all' | 'settled' | 'unsettled';
+
+    
