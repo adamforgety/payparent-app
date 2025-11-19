@@ -315,18 +315,18 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   }, [selectedYear, summaryData?.availableMonths, selectedMonth]);
   
   const getParentShare = (transaction: Transaction, parent: Parent): number => {
-      if (transaction.category === 'Child Support') {
-          return transaction.paidBy === parent ? transaction.amount : 0;
-      }
-  
-      const expense = transaction as EnrichedExpense;
-      if (expense.category === 'Reimbursement') {
-          return expense.paidBy === parent ? 0 : expense.amount;
-      }
+    if (transaction.category === 'Child Support') {
+      return transaction.paidBy === parent ? transaction.amount : 0;
+    }
 
-      const applicableSplit = expense.customSplits.find(s => s.categories.includes(expense.category));
-      const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-      return expense.amount * parentSplitPercent;
+    const expense = transaction as EnrichedExpense;
+    if (expense.category === 'Reimbursement') {
+      return expense.paidBy === parent ? 0 : expense.amount;
+    }
+
+    const applicableSplit = expense.customSplits?.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
+    return expense.amount * parentSplitPercent;
   };
 
   const filteredTransactions = useMemo(() => {

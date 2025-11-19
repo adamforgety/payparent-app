@@ -32,7 +32,7 @@ export function ReportingExportButton({
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 
-    const applicableSplit = expense.customSplits.find(s => s.categories.includes(expense.category));
+    const applicableSplit = expense.customSplits?.find(s => s.categories.includes(expense.category));
     const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
 
     return expense.amount * parentSplitPercent;
