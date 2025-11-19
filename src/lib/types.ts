@@ -6,7 +6,6 @@ export type ExpenseCategory =
   | 'Activities'
   | 'Clothing'
   | 'Food'
-  | 'Child Support'
   | 'Reimbursement'
   | 'Other';
 
@@ -43,9 +42,12 @@ export interface ExpenseSplit {
   'Parent 1': number;
   'Parent 2': number;
 }
-export interface MedicalExpenseSplit {
-  'Parent 1': number;
-  'Parent 2': number;
+
+export interface CustomSplit {
+  id: string;
+  name: string;
+  split: ExpenseSplit;
+  categories: ExpenseCategory[];
 }
 
 
@@ -54,10 +56,9 @@ export interface MonthData {
   year: number;
   month: number; // 1-12
   childSupport: ChildSupport;
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
   parentNames: ParentNames;
   expenses: Expense[];
+  customSplits: CustomSplit[];
 }
 
 export interface AppData {

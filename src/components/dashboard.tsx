@@ -9,11 +9,10 @@ import { ArrowLeft, ArrowRight, Plus, CalendarDays, BarChart as BarChartIcon, Ch
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ChildSupportCard } from '@/components/child-support-card';
 import { ExpensesCard } from '@/components/expenses-card';
-import { ParentSplitCard } from '@/components/parent-split-card';
 import { PageHeader } from '@/components/page-header';
 import { SettleBalanceCard } from '@/components/settle-balance-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppData, ChildSupport, Expense, MonthData, ParentNames, ExpenseSplit, MedicalExpenseSplit } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, MonthData, ParentNames, CustomSplit } from '@/lib/types';
 import { Logo } from './logo';
 import { useToast } from '@/hooks/use-toast';
 import { ParentNamesCard } from './parent-names-card';
@@ -21,7 +20,6 @@ import { Button } from './ui/button';
 import { Skeleton } from './ui/skeleton';
 import { ReportingPage } from './reporting-page';
 import { DashboardProvider } from './dashboard-provider';
-import { MedicalSplitCard } from './medical-split-card';
 import { useAppContext } from '@/context/app-context';
 import { AccountSettingsCard } from './account-settings-card';
 import { AllUnsettledExpensesCard } from './all-unsettled-expenses-card';
@@ -44,6 +42,8 @@ import { cn } from '@/lib/utils';
 import { ImportExpensesDialog } from './import-expenses-dialog';
 import { AddExpenseChooser } from './add-expense-chooser';
 import { useFirebase } from '@/firebase';
+import { CustomSplitCard } from './custom-split-card';
+import { initialData } from '@/lib/data';
 
 interface DashboardProps {
     activeTab: string;
@@ -92,10 +92,9 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
         childSupport: childSupportSettings,
-        expenseSplit: mostRecentMonthData.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
-        medicalExpenseSplit: mostRecentMonthData.medicalExpenseSplit || { 'Parent 1': 48, 'Parent 2': 52 },
         parentNames: mostRecentMonthData.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
         expenses: [],
+        customSplits: mostRecentMonthData.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
       };
       
       updateAppData({ months: { ...appData.months, [monthId]: newMonthData } });
@@ -174,9 +173,8 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                   ...updatedMonths[key],
                   ...dataToUpdate,
                   ...(dataToUpdate.childSupport && { childSupport: { ...updatedMonths[key].childSupport, ...dataToUpdate.childSupport } }),
-                  ...(dataToUpdate.expenseSplit && { expenseSplit: { ...updatedMonths[key].expenseSplit, ...dataToUpdate.expenseSplit } }),
-                  ...(dataToUpdate.medicalExpenseSplit && { medicalExpenseSplit: { ...updatedMonths[key].medicalExpenseSplit, ...dataToUpdate.medicalExpenseSplit } }),
                   ...(dataToUpdate.parentNames && { parentNames: { ...updatedMonths[key].parentNames, ...dataToUpdate.parentNames } }),
+                  ...(dataToUpdate.customSplits && { customSplits: dataToUpdate.customSplits }),
               };
           }
       }
@@ -283,8 +281,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <SettleBalanceCard
                         parent="Parent 1"
                         expenses={expenses}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        customSplits={currentMonthData.customSplits}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
@@ -296,8 +293,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <SummaryDetailsCard
                         parent="Parent 1"
                         expenses={expenses}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        customSplits={currentMonthData.customSplits}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
@@ -312,8 +308,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <SettleBalanceCard
                         parent="Parent 2"
                         expenses={expenses}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        customSplits={currentMonthData.customSplits}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
@@ -325,8 +320,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <SummaryDetailsCard
                         parent="Parent 2"
                         expenses={expenses}
-                        expenseSplit={currentMonthData.expenseSplit}
-                        medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                        customSplits={currentMonthData.customSplits}
                         childSupport={currentMonthData.childSupport}
                         parentNames={currentMonthData.parentNames}
                         appData={appData}
@@ -350,8 +344,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                   <ExpensesCard
                     expenses={expenses}
                     childSupport={currentMonthData.childSupport}
-                    expenseSplit={currentMonthData.expenseSplit}
-                    medicalExpenseSplit={currentMonthData.medicalExpenseSplit}
+                    customSplits={currentMonthData.customSplits}
                     onDelete={(expenseId) => handleDeleteExpense(expenseId, monthId)}
                     onUpdateExpense={handleUpdateExpense}
                     onUpdateChildSupport={(cs) => updateChildSupportForSingleMonth(cs, monthId)}
@@ -398,14 +391,9 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
                     parentNames={currentMonthData.parentNames}
                   />
-                  <ParentSplitCard
-                    expenseSplit={currentMonthData.expenseSplit}
-                    onUpdate={(expenseSplit: ExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ expenseSplit })}
-                    parentNames={currentMonthData.parentNames}
-                  />
-                  <MedicalSplitCard
-                    expenseSplit={currentMonthData.medicalExpenseSplit}
-                    onUpdate={(medicalExpenseSplit: MedicalExpenseSplit) => updateSettingsForCurrentAndFutureMonths({ medicalExpenseSplit })}
+                  <CustomSplitCard
+                    customSplits={currentMonthData.customSplits}
+                    onUpdate={(customSplits: CustomSplit[]) => updateSettingsForCurrentAndFutureMonths({ customSplits })}
                     parentNames={currentMonthData.parentNames}
                   />
                 </div>

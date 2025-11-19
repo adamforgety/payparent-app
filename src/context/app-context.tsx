@@ -10,7 +10,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import type { AppData, ChildSupport, Expense, UserDoc, MonthData } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, UserDoc, MonthData, CustomSplit } from '@/lib/types';
 import { useFirebase } from '@/firebase';
 import { saveUserData } from '@/lib/data-service';
 import { Loader2, Users } from 'lucide-react';
@@ -209,19 +209,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
         childSupport: childSupportSettings,
-        expenseSplit: mostRecentMonthData?.expenseSplit || {
-          'Parent 1': 50,
-          'Parent 2': 50,
-        },
-        medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {
-          'Parent 1': 50,
-          'Parent 2': 50,
-        },
         parentNames: mostRecentMonthData?.parentNames || {
           'Parent 1': 'Parent 1',
           'Parent 2': 'Parent 2',
         },
         expenses: [],
+        customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
       };
     }
 
@@ -272,19 +265,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           year: getYear(expenseDate),
           month: getMonth(expenseDate) + 1,
           childSupport: childSupportSettings,
-          expenseSplit: mostRecentMonthData?.expenseSplit || {
-            'Parent 1': 50,
-            'Parent 2': 50,
-          },
-          medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {
-            'Parent 1': 50,
-            'Parent 2': 50,
-          },
           parentNames: mostRecentMonthData?.parentNames || {
             'Parent 1': 'Parent 1',
             'Parent 2': 'Parent 2',
           },
           expenses: [],
+          customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
         };
       }
 
@@ -348,17 +334,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           year: getYear(newDate),
           month: getMonth(newDate) + 1,
           childSupport: childSupportSettings,
-          expenseSplit:
-            mostRecentMonthData?.expenseSplit || { 'Parent 1': 50, 'Parent 2': 50 },
-          medicalExpenseSplit: mostRecentMonthData?.medicalExpenseSplit || {
-            'Parent 1': 50,
-            'Parent 2': 50,
-          },
           parentNames: mostRecentMonthData?.parentNames || {
             'Parent 1': 'Parent 1',
             'Parent 2': 'Parent 2',
           },
           expenses: [],
+          customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
         };
       }
       

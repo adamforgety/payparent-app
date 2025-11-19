@@ -224,14 +224,6 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
                         <SelectItem value="Reimbursement">Reimbursement</SelectItem>
                       </SelectContent>
                     </Select>
-                    {(selectedCategory === 'Medical' || selectedCategory === 'Child Care') && (
-                        <Alert className="mt-2">
-                            <Info className="h-4 w-4" />
-                            <AlertDescription>
-                                This cost will be divided based on the <strong className="text-foreground">Medical & Child Care Split</strong> percentage in Settings.
-                            </AlertDescription>
-                        </Alert>
-                    )}
                     {selectedCategory === 'Reimbursement' && (
                         <Alert className="mt-2">
                             <Info className="h-4 w-4" />

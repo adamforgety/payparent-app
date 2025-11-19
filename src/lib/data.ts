@@ -16,19 +16,25 @@ export const initialData: AppData = {
         paidBy: 'None',
         status: 'Unsettled',
       },
-      expenseSplit: {
-        'Parent 1': 50,
-        'Parent 2': 50,
-      },
-      medicalExpenseSplit: {
-        'Parent 1': 50,
-        'Parent 2': 50,
-      },
       parentNames: {
         'Parent 1': 'Parent 1',
         'Parent 2': 'Parent 2',
       },
       expenses: [],
+      customSplits: [
+        {
+          id: 'default-split',
+          name: 'Default',
+          split: { 'Parent 1': 50, 'Parent 2': 50 },
+          categories: ['Education', 'Activities', 'Clothing', 'Food', 'Other'],
+        },
+        {
+          id: 'medical-childcare-split',
+          name: 'Medical & Child Care',
+          split: { 'Parent 1': 50, 'Parent 2': 50 },
+          categories: ['Medical', 'Child Care'],
+        },
+      ],
     },
   },
 };
