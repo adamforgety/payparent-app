@@ -59,7 +59,7 @@ export function CustomSplitCard({
 
   const assignedCategories = useMemo(() => {
     const categories = new Set<ExpenseCategory>();
-    localSplits.forEach(s => {
+    (localSplits || []).forEach(s => {
       s.categories.forEach(cat => categories.add(cat));
     });
     return categories;
@@ -72,11 +72,11 @@ export function CustomSplitCard({
       split: { 'Parent 1': 50, 'Parent 2': 50 },
       categories: [],
     };
-    onUpdate([...localSplits, newSplit]);
+    onUpdate([...(localSplits || []), newSplit]);
   };
 
   const handleRemoveSplit = (id: string) => {
-    onUpdate(localSplits.filter((split) => split.id !== id));
+    onUpdate((localSplits || []).filter((split) => split.id !== id));
   };
 
   const handleSplitChange = (
@@ -88,7 +88,7 @@ export function CustomSplitCard({
     const numericValue = parseInt(value, 10);
     const otherParent: Parent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
-    const updatedSplits = localSplits.map((s) => {
+    const updatedSplits = (localSplits || []).map((s) => {
       if (s.id === id) {
         if (value === '' || (numericValue >= 0 && numericValue <= 100)) {
           const otherValue = value === '' ? '' : String(100 - numericValue);
@@ -108,7 +108,7 @@ export function CustomSplitCard({
   };
 
   const handleSplitBlur = (id: string, parent: Parent) => {
-    const split = localSplits.find(s => s.id === id);
+    const split = (localSplits || []).find(s => s.id === id);
     if (!split) return;
 
     const value = parseInt(String(split.split[parent]), 10);
@@ -117,7 +117,7 @@ export function CustomSplitCard({
     const otherParent: Parent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
     const otherPercentage = 100 - newPercentage;
 
-    const updatedSplits = localSplits.map((s) => {
+    const updatedSplits = (localSplits || []).map((s) => {
         if(s.id === id) {
             return {
                 ...s,
@@ -134,7 +134,7 @@ export function CustomSplitCard({
   };
   
   const handleNameChange = (id: string, newName: string) => {
-    const updatedSplits = localSplits.map((s) =>
+    const updatedSplits = (localSplits || []).map((s) =>
       s.id === id ? { ...s, name: newName } : s
     );
     setLocalSplits(updatedSplits);
@@ -149,7 +149,7 @@ export function CustomSplitCard({
     category: ExpenseCategory,
     checked: boolean
   ) => {
-    const updatedSplits = localSplits.map((s) => {
+    const updatedSplits = (localSplits || []).map((s) => {
       if (s.id === id) {
         const newCategories = checked
           ? [...s.categories, category]
@@ -185,31 +185,26 @@ export function CustomSplitCard({
         <Accordion type="multiple" defaultValue={(localSplits || []).map(s => s.id)} className="w-full">
           {(localSplits || []).map((split) => (
             <AccordionItem value={split.id} key={split.id}>
-               <div className="flex justify-between items-center w-full group">
-                <AccordionTrigger className="flex-grow pr-2">
-                    <Input
+              <AccordionTrigger>
+                <div className="flex w-full items-center justify-between">
+                  <span className="font-semibold text-base">{split.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({split.split['Parent 1']}% / {split.split['Parent 2']}%)
+                  </span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                     <Label htmlFor={`split-name-${split.id}`}>Split Name</Label>
+                     <Input
+                        id={`split-name-${split.id}`}
                         value={split.name}
                         onChange={(e) => handleNameChange(split.id, e.target.value)}
                         onBlur={handleNameBlur}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-base font-semibold border-none focus-visible:ring-1 focus-visible:ring-ring p-1 h-auto bg-transparent"
                     />
-                </AccordionTrigger>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveSplit(split.id);
-                    }}
-                    disabled={localSplits.length <= 1}
-                >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-              <AccordionContent className="pt-2">
-                <div className="space-y-4">
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor={`split-${split.id}-p1`}>
@@ -270,6 +265,18 @@ export function CustomSplitCard({
                       })}
                     </div>
                   </div>
+                   <Separator />
+                   <div className="flex justify-end">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveSplit(split.id)}
+                        disabled={(localSplits || []).length <= 1}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Split
+                      </Button>
+                   </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -279,7 +286,7 @@ export function CustomSplitCard({
       <CardFooter>
         <Button variant="outline" onClick={handleAddNewSplit}>
           <Plus className="mr-2 h-4 w-4" />
-          Add New Split
+          Add New Split Rule
         </Button>
       </CardFooter>
     </Card>
