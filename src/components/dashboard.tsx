@@ -392,7 +392,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     parentNames={currentMonthData.parentNames}
                   />
                   <CustomSplitCard
-                    customSplits={currentMonthData.customSplits}
+                    customSplits={currentMonthData.customSplits || []}
                     onUpdate={(customSplits: CustomSplit[]) => updateSettingsForCurrentAndFutureMonths({ customSplits })}
                     parentNames={currentMonthData.parentNames}
                   />

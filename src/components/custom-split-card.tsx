@@ -57,10 +57,10 @@ export function CustomSplitCard({
   onUpdate,
   parentNames,
 }: CustomSplitCardProps) {
-  const [localSplits, setLocalSplits] = useState<CustomSplit[]>(customSplits);
+  const [localSplits, setLocalSplits] = useState<CustomSplit[]>(customSplits || []);
 
   useEffect(() => {
-    setLocalSplits(customSplits);
+    setLocalSplits(customSplits || []);
   }, [customSplits]);
 
   const handleAddNewSplit = () => {
@@ -180,8 +180,8 @@ export function CustomSplitCard({
         </div>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" defaultValue={localSplits.map(s => s.id)} className="w-full">
-          {localSplits.map((split) => (
+        <Accordion type="multiple" defaultValue={(localSplits || []).map(s => s.id)} className="w-full">
+          {(localSplits || []).map((split) => (
             <AccordionItem value={split.id} key={split.id}>
               <AccordionTrigger>
                 <div className='flex justify-between items-center w-full pr-4'>
