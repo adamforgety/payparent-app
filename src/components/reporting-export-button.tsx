@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent } from '@/lib/types';
+import type { ChildSupport, Expense, CustomSplit, ParentNames, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 import type { Transaction } from './reporting-page';
 
@@ -27,16 +27,15 @@ export function ReportingExportButton({
         return transaction.paidBy === parent ? transaction.amount : 0;
     }
 
-    const expense = transaction as (Expense & { expenseSplit: ExpenseSplit, medicalExpenseSplit: MedicalExpenseSplit });
+    const expense = transaction as (Expense & { customSplits: CustomSplit[] });
     if (expense.category === 'Reimbursement') {
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 
-    const split = expense.category === 'Medical' || expense.category === 'Child Care'
-        ? expense.medicalExpenseSplit
-        : expense.expenseSplit;
+    const applicableSplit = expense.customSplits.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
 
-    return expense.amount * (split[parent] / 100);
+    return expense.amount * parentSplitPercent;
   };
 
 

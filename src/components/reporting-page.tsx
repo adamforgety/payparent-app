@@ -15,7 +15,7 @@ import {
   Tooltip,
 } from 'recharts';
 
-import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, ExpenseSplit, ChildSupport, MedicalExpenseSplit } from '@/lib/types';
+import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, CustomSplit, ChildSupport } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -64,8 +64,7 @@ interface ReportingPageProps {
 
 type EnrichedExpense = Expense & { 
   parentNames: ParentNames;
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
+  customSplits: CustomSplit[];
 };
 
 type EnrichedChildSupport = ChildSupport & {
@@ -186,8 +185,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   allTransactionsForPeriod.push({
                       ...expense,
                       parentNames: monthData.parentNames,
-                      expenseSplit: monthData.expenseSplit,
-                      medicalExpenseSplit: monthData.medicalExpenseSplit,
+                      customSplits: monthData.customSplits,
                   });
               });
 
@@ -280,8 +278,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     allTransactionsForPeriod.push({
                         ...expense,
                         parentNames: monthData.parentNames,
-                        expenseSplit: monthData.expenseSplit,
-                        medicalExpenseSplit: monthData.medicalExpenseSplit,
+                        customSplits: monthData.customSplits,
                     });
                 });
                 const monthDate = parse(monthId, 'yyyy-MM', new Date());
@@ -327,8 +324,9 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           return expense.paidBy === parent ? 0 : expense.amount;
       }
 
-      const split = expense.category === 'Medical' || expense.category === 'Child Care' ? expense.medicalExpenseSplit : expense.expenseSplit;
-      return expense.amount * (split[parent] / 100);
+      const applicableSplit = expense.customSplits.find(s => s.categories.includes(expense.category));
+      const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
+      return expense.amount * parentSplitPercent;
   };
 
   const filteredTransactions = useMemo(() => {

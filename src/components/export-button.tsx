@@ -5,7 +5,7 @@ import { format, startOfMonth } from 'date-fns';
 import { Sheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import type { ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, ParentNames, Parent } from '@/lib/types';
+import type { ChildSupport, Expense, CustomSplit, ParentNames, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { DropdownMenuItem } from './ui/dropdown-menu';
@@ -15,8 +15,7 @@ interface ExportButtonProps {
   childSupport: ChildSupport;
   currentDate: Date;
   parentNames: ParentNames;
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
+  customSplits: CustomSplit[];
   className?: string;
   asChild?: boolean;
 }
@@ -26,8 +25,7 @@ export function ExportButton({
   childSupport,
   currentDate,
   parentNames,
-  expenseSplit,
-  medicalExpenseSplit,
+  customSplits,
   className,
   asChild = false,
 }: ExportButtonProps) {
@@ -41,12 +39,10 @@ export function ExportButton({
       return expense.paidBy === parent ? 0 : expense.amount;
     }
 
-    const split =
-      expense.category === 'Medical' || expense.category === 'Child Care'
-        ? medicalExpenseSplit
-        : expenseSplit;
+    const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
 
-    return expense.amount * (split[parent] / 100);
+    return expense.amount * parentSplitPercent;
   };
   
   const childSupportItem =

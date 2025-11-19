@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Scale } from 'lucide-react';
@@ -14,10 +15,9 @@ import { Separator } from '@/components/ui/separator';
 import type {
   ChildSupport,
   Expense,
-  ExpenseSplit,
+  CustomSplit,
   Parent,
   ParentNames,
-  MedicalExpenseSplit,
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -33,8 +33,7 @@ import {
 interface SummaryCardProps {
   parent: Parent;
   expenses: Expense[];
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
+  customSplits: CustomSplit[];
   childSupport: ChildSupport;
   parentNames: ParentNames;
   appData: AppData;
@@ -43,20 +42,15 @@ interface SummaryCardProps {
 
 const calculateShare = (
   expenses: Expense[],
-  split: ExpenseSplit,
-  medicalSplit: MedicalExpenseSplit,
+  customSplits: CustomSplit[],
   p: Parent
 ): number => {
   let totalShare = 0;
 
   for (const expense of expenses) {
-    if (expense.category === 'Medical' || expense.category === 'Child Care') {
-      const medicalParentSplitPercent = medicalSplit[p] / 100;
-      totalShare += expense.amount * medicalParentSplitPercent;
-    } else {
-      const parentSplitPercent = split[p] / 100;
-      totalShare += expense.amount * parentSplitPercent;
-    }
+    const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5; // Default to 50%
+    totalShare += expense.amount * parentSplitPercent;
   }
   return totalShare;
 };
@@ -69,8 +63,7 @@ type PreviousBalance = {
 export function SummaryCard({
   parent,
   expenses,
-  expenseSplit,
-  medicalExpenseSplit,
+  customSplits,
   childSupport,
   parentNames,
   appData,
@@ -103,8 +96,7 @@ export function SummaryCard({
 
         const parentExpenseShare = calculateShare(
           unsettledExpenses,
-          monthData.expenseSplit,
-          monthData.medicalExpenseSplit,
+          monthData.customSplits,
           parent
         );
         const expenseBalance = unsettledPaidByParent - parentExpenseShare;
@@ -146,8 +138,7 @@ export function SummaryCard({
 
   const parentExpenseShare = calculateShare(
     unsettledExpenses,
-    expenseSplit,
-    medicalExpenseSplit,
+    customSplits,
     parent
   );
 

@@ -30,7 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { Expense, PaymentStatus, ParentNames, ChildSupport, ExpenseSplit, Parent, MedicalExpenseSplit, AppData } from '@/lib/types';
+import type { Expense, PaymentStatus, ParentNames, ChildSupport, CustomSplit, Parent, AppData } from '@/lib/types';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { EditExpenseDialog } from './edit-expense-dialog';
@@ -47,8 +47,7 @@ import { ImportExpensesDialog } from './import-expenses-dialog';
 interface ExpensesCardProps {
   expenses: Expense[];
   childSupport: ChildSupport;
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
+  customSplits: CustomSplit[];
   onDelete: (expenseId: string) => void;
   onUpdateExpense: (expense: Expense, originalMonthId: string) => void;
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
@@ -80,8 +79,7 @@ type SortConfig = {
 export function ExpensesCard({
   expenses,
   childSupport,
-  expenseSplit,
-  medicalExpenseSplit,
+  customSplits,
   onDelete,
   onUpdateExpense,
   onUpdateChildSupport,
@@ -131,11 +129,10 @@ export function ExpensesCard({
         return expense.paidBy === parent ? 0 : expense.amount;
     }
 
-    const split = expense.category === 'Medical' || expense.category === 'Child Care'
-        ? medicalExpenseSplit
-        : expenseSplit;
+    const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
 
-    return expense.amount * (split[parent] / 100);
+    return expense.amount * parentSplitPercent;
 };
 
   const filteredAndSortedItems = useMemo(() => {
@@ -227,7 +224,7 @@ export function ExpensesCard({
       },
       { totalInitialAmount: 0, totalP1Share: 0, totalP2Share: 0 }
     );
-  }, [filteredAndSortedItems, expenseSplit, medicalExpenseSplit]);
+  }, [filteredAndSortedItems, customSplits]);
   
   const allItemsSettled = useMemo(() => {
     if (localItems.length === 0) return false; // No items, switch should be off.
@@ -349,8 +346,7 @@ export function ExpensesCard({
                     childSupport={childSupport}
                     currentDate={currentDate}
                     parentNames={parentNames}
-                    expenseSplit={expenseSplit}
-                    medicalExpenseSplit={medicalExpenseSplit}
+                    customSplits={customSplits}
                     className="flex-1 md:flex-none"
                 />
             </div>

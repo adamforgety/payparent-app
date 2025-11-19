@@ -15,10 +15,9 @@ import {
 import type {
   ChildSupport,
   Expense,
-  ExpenseSplit,
+  CustomSplit,
   Parent,
   ParentNames,
-  MedicalExpenseSplit,
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -28,8 +27,7 @@ import { Button } from './ui/button';
 interface SettleBalanceCardProps {
   parent: Parent;
   expenses: Expense[];
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
+  customSplits: CustomSplit[];
   childSupport: ChildSupport;
   parentNames: ParentNames;
   appData: AppData;
@@ -39,8 +37,7 @@ interface SettleBalanceCardProps {
 
 const calculateShare = (
   expenses: Expense[],
-  split: ExpenseSplit,
-  medicalSplit: MedicalExpenseSplit,
+  customSplits: CustomSplit[],
   p: Parent
 ): number => {
   let totalShare = 0;
@@ -48,11 +45,9 @@ const calculateShare = (
     if (expense.category === 'Reimbursement') {
       // The parent who paid gets 0% of the share, the other parent gets 100%
       totalShare += expense.paidBy === p ? 0 : expense.amount;
-    } else if (expense.category === 'Medical' || expense.category === 'Child Care') {
-      const medicalParentSplitPercent = medicalSplit[p] / 100;
-      totalShare += expense.amount * medicalParentSplitPercent;
     } else {
-      const parentSplitPercent = split[p] / 100;
+      const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
+      const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5; // Default to 50% if no split found
       totalShare += expense.amount * parentSplitPercent;
     }
   }
@@ -62,8 +57,7 @@ const calculateShare = (
 export function SettleBalanceCard({
   parent,
   expenses,
-  expenseSplit,
-  medicalExpenseSplit,
+  customSplits,
   childSupport,
   parentNames,
   appData,
@@ -93,8 +87,7 @@ export function SettleBalanceCard({
 
         const parentExpenseShare = calculateShare(
           unsettledExpenses,
-          monthData.expenseSplit,
-          monthData.medicalExpenseSplit,
+          monthData.customSplits,
           parent
         );
         const expenseBalance = paidByParent - parentExpenseShare;
@@ -124,8 +117,7 @@ export function SettleBalanceCard({
 
   const parentExpenseShare = calculateShare(
     unsettledExpenses,
-    expenseSplit,
-    medicalExpenseSplit,
+    customSplits,
     parent
   );
 

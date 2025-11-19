@@ -6,7 +6,7 @@ import { format, isAfter, startOfMonth, parse, getYear } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, Edit, Search, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
-import type { AppData, ChildSupport, Expense, ExpenseSplit, MedicalExpenseSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
+import type { AppData, ChildSupport, Expense, CustomSplit, Parent, ParentNames, PaymentStatus } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from './ui/table';
@@ -49,8 +49,7 @@ type UnsettledItem = {
   receiptUrl?: string | null;
   receiptFilename?: string | null;
   parentNames: ParentNames;
-  expenseSplit: ExpenseSplit;
-  medicalExpenseSplit: MedicalExpenseSplit;
+  customSplits: CustomSplit[];
   originalExpense?: Expense;
   originalChildSupport?: ChildSupport;
   status: PaymentStatus;
@@ -109,11 +108,10 @@ export function AllUnsettledExpensesCard({
       return expense.paidBy === parent ? 0 : expense.amount;
     }
   
-    const split = expense.category === 'Medical' || expense.category === 'Child Care'
-      ? item.medicalExpenseSplit
-      : item.expenseSplit;
+    const applicableSplit = item.customSplits.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
   
-    return expense.amount * (split[parent] / 100);
+    return expense.amount * parentSplitPercent;
   };
   
   const filteredAndSortedItems = useMemo(() => {
@@ -138,8 +136,7 @@ export function AllUnsettledExpensesCard({
             type: 'expense',
             originalExpense: exp,
             parentNames: monthData.parentNames,
-            expenseSplit: monthData.expenseSplit,
-            medicalExpenseSplit: monthData.medicalExpenseSplit,
+            customSplits: monthData.customSplits,
           });
         });
 
@@ -154,8 +151,7 @@ export function AllUnsettledExpensesCard({
           category: 'Child Support',
           type: 'child_support',
           parentNames: monthData.parentNames,
-          expenseSplit: monthData.expenseSplit, 
-          medicalExpenseSplit: monthData.medicalExpenseSplit,
+          customSplits: monthData.customSplits, 
           originalChildSupport: monthData.childSupport,
           status: 'Unsettled',
         });
