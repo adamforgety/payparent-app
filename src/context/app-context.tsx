@@ -49,11 +49,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
   const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
+  const [isAppVisible, setIsAppVisible] = useState(true);
+
+  // Effect to handle page visibility
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsAppVisible(document.visibilityState === 'visible');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Set the initial state
+    handleVisibilityChange();
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Effect to listen to the current user's document to determine their data owner and co-parent.
   useEffect(() => {
-    if (isUserLoading || !firestore || !user) {
-      // If the user is not authenticated or firebase is not ready, reset state.
+    if (isUserLoading || !firestore || !user || !isAppVisible) {
+      // If the user is not authenticated, firebase is not ready, or app is hidden, reset state.
       if (!isUserLoading && !user) {
         setIsLoading(false);
         setAppData(null);
@@ -99,13 +116,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     });
 
     return () => unsubscribeUser();
-  }, [user, firestore, isUserLoading]);
+  }, [user, firestore, isUserLoading, isAppVisible]);
 
   // Effect to listen to the actual appData from the data owner's document.
   useEffect(() => {
-      if (!firestore || !dataOwnerId) {
+      if (!firestore || !dataOwnerId || !isAppVisible) {
         if (!isNewUser) {
-          setIsLoading(true); // Still loading if we expect a data owner but don't have the ID yet
+          // If the app is not visible, don't set loading to true, just pause updates.
+          if(isAppVisible) setIsLoading(true); 
         }
         return;
       }
@@ -127,7 +145,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       });
 
       return () => unsubscribeAppData();
-  }, [firestore, dataOwnerId, isNewUser]);
+  }, [firestore, dataOwnerId, isNewUser, isAppVisible]);
 
 
   const updateAppData = useCallback(
