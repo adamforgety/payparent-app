@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, type ChangeEvent } from 'react';
-import { Plus, Trash2, PieChart, Settings2 } from 'lucide-react';
+import { useState, useEffect, type ChangeEvent, useMemo } from 'react';
+import { Plus, Trash2, PieChart } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -20,11 +20,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import type {
   CustomSplit,
@@ -33,7 +28,6 @@ import type {
   ExpenseCategory,
   ExpenseSplit,
 } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 
 const ALL_CATEGORIES: ExpenseCategory[] = [
@@ -62,6 +56,14 @@ export function CustomSplitCard({
   useEffect(() => {
     setLocalSplits(customSplits || []);
   }, [customSplits]);
+
+  const assignedCategories = useMemo(() => {
+    const categories = new Set<ExpenseCategory>();
+    localSplits.forEach(s => {
+      s.categories.forEach(cat => categories.add(cat));
+    });
+    return categories;
+  }, [localSplits]);
 
   const handleAddNewSplit = () => {
     const newSplit: CustomSplit = {
@@ -241,26 +243,31 @@ export function CustomSplitCard({
                       Select which categories this split applies to.
                     </p>
                     <div className="grid grid-cols-2 gap-2">
-                      {ALL_CATEGORIES.map((category) => (
-                        <div
-                          key={category}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            id={`check-${split.id}-${category}`}
-                            checked={split.categories.includes(category)}
-                            onCheckedChange={(checked) =>
-                              handleCategoryChange(split.id, category, !!checked)
-                            }
-                          />
-                          <label
-                            htmlFor={`check-${split.id}-${category}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      {ALL_CATEGORIES.map((category) => {
+                        const isChecked = split.categories.includes(category);
+                        const isDisabled = assignedCategories.has(category) && !isChecked;
+                        return (
+                          <div
+                            key={category}
+                            className="flex items-center space-x-2"
                           >
-                            {category}
-                          </label>
-                        </div>
-                      ))}
+                            <Checkbox
+                              id={`check-${split.id}-${category}`}
+                              checked={isChecked}
+                              disabled={isDisabled}
+                              onCheckedChange={(checked) =>
+                                handleCategoryChange(split.id, category, !!checked)
+                              }
+                            />
+                            <label
+                              htmlFor={`check-${split.id}-${category}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {category}
+                            </label>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
