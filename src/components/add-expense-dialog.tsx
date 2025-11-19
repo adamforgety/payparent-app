@@ -141,15 +141,18 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
               reject(new Error("Could not read file"));
             }
           };
-          reader.onerror = reject;
+          reader.onerror = (error) => {
+            console.error("FileReader error:", error);
+            reject(new Error("Error reading file."));
+          };
           reader.readAsDataURL(file);
         });
       } catch (error) {
-        console.error("Error reading file:", error);
+        console.error("Error processing receipt:", error);
         toast({
           variant: "destructive",
           title: "File Read Error",
-          description: "There was a problem processing the receipt file.",
+          description: "There was a problem processing the receipt file. Please try again.",
         });
         return; // Stop submission if file reading fails
       }
@@ -341,3 +344,5 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
     </Dialog>
   );
 }
+
+    

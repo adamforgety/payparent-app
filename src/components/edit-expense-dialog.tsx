@@ -153,11 +153,14 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
               reject(new Error("Could not read file"));
             }
           };
-          reader.onerror = (error) => reject(error);
+          reader.onerror = (error) => {
+            console.error("FileReader error:", error);
+            reject(new Error("Error reading file."));
+          };
           reader.readAsDataURL(file);
         });
       } catch (error) {
-        console.error("Error reading file:", error);
+        console.error("Error processing receipt:", error);
         toast({
           variant: "destructive",
           title: "File Read Error",
@@ -362,3 +365,5 @@ export function EditExpenseDialog({ expense, onUpdateExpense, parentNames, month
     </Dialog>
   );
 }
+
+    
