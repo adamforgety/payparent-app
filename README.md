@@ -1,4 +1,4 @@
-# PayParent: Child Support & Expense PayParent
+# PayParent: PayPaPa
 
 PayParent is a epenseskingrentssskingime, real-time finaparapplication designed for co-parents. It simplifies the process of managing shared child-related epenses, tracking child support payments, and settling balances, all while keeping both parents perfectly in sync.
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { Landmark } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import {
   Card,
@@ -36,6 +36,7 @@ export function ChildSupportCard({
   const [inputValue, setInputValue] = useState<string>(
     childSupport.amount > 0 ? String(childSupport.amount) : ''
   );
+  const initialValueOnFocus = useRef<string>(inputValue);
 
   useEffect(() => {
     // Sync local state if prop changes from parent
@@ -46,10 +47,20 @@ export function ChildSupportCard({
     setInputValue(e.target.value);
   };
   
+  const handleAmountFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    initialValueOnFocus.current = e.target.value;
+  };
+  
   const handleAmountBlur = () => {
+    // Only update if the value has actually changed since focus
+    if (inputValue === initialValueOnFocus.current) {
+        return;
+    }
+
     const amount = Number(inputValue);
     const finalAmount = isNaN(amount) || inputValue === '' ? 0 : amount;
     
+    // Also check against the original prop value to be extra safe
     if (childSupport.amount !== finalAmount) {
       onUpdate({ ...childSupport, amount: finalAmount });
     }
@@ -84,6 +95,7 @@ export function ChildSupportCard({
             placeholder="e.g., 500"
             value={inputValue}
             onChange={handleAmountChange}
+            onFocus={handleAmountFocus}
             onBlur={handleAmountBlur}
           />
         </div>
