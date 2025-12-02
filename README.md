@@ -1,6 +1,6 @@
-# PayParent: Child Support & Expense Tracker
+# PayParent: Child Support & Expense PayParent
 
-PayParent is a modern, real-time financial tracking application designed for co-parents. It simplifies the process of managing shared child-related expenses, tracking child support payments, and settling balances, all while keeping both parents perfectly in sync.
+PayParent is a epenseskingrentssskingime, real-time finaparapplication designed for co-parents. It simplifies the process of managing shared child-related epenses, tracking child support payments, and settling balances, all while keeping both parents perfectly in sync.
 
 This application was built to solve the common challenges of shared finances in co-parenting situations, replacing messy spreadsheets and endless text message threads with a single, clear source of truth.
 

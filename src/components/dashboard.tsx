@@ -75,7 +75,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
     if (appData && !appData.months[monthId]) {
       const monthKeys = Object.keys(appData.months).sort();
       const mostRecentMonthId = monthKeys[monthKeys.length - 1];
-      const mostRecentMonthData = appData.months[mostRecentMonthId] || appData.months[Object.keys(appData.months)[0]];
+      const mostRecentMonthData = appData.months[mostRecentMonthId] || initialData.months[Object.keys(initialData.months)[0]];
 
       if (!mostRecentMonthData) return;
       
@@ -92,9 +92,9 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
         childSupport: childSupportSettings,
-        parentNames: mostRecentMonthData.parentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
+        parentNames: mostRecentMonthData.parentNames,
         expenses: [],
-        customSplits: mostRecentMonthData.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
+        customSplits: mostRecentMonthData.customSplits,
       };
       
       updateAppData({ months: { ...appData.months, [monthId]: newMonthData } });

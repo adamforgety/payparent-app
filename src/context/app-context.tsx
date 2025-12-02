@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, {
@@ -227,10 +228,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
         childSupport: childSupportSettings,
-        parentNames: mostRecentMonthData?.parentNames || {
-          'Parent 1': 'Parent 1',
-          'Parent 2': 'Parent 2',
-        },
+        parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
         expenses: [],
         customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
       };
@@ -283,10 +281,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           year: getYear(expenseDate),
           month: getMonth(expenseDate) + 1,
           childSupport: childSupportSettings,
-          parentNames: mostRecentMonthData?.parentNames || {
-            'Parent 1': 'Parent 1',
-            'Parent 2': 'Parent 2',
-          },
+          parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
           expenses: [],
           customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
         };
@@ -352,10 +347,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
           year: getYear(newDate),
           month: getMonth(newDate) + 1,
           childSupport: childSupportSettings,
-          parentNames: mostRecentMonthData?.parentNames || {
-            'Parent 1': 'Parent 1',
-            'Parent 2': 'Parent 2',
-          },
+          parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
           expenses: [],
           customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
         };
