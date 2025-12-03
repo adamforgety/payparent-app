@@ -27,6 +27,7 @@ import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { Input } from './ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { AllUnsettledExportButton } from './all-unsettled-export-button';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -327,7 +328,7 @@ export function AllUnsettledExpensesCard({
                 </CardDescription>
               </div>
             </div>
-             <div className="no-print flex w-full flex-wrap items-center justify-end gap-4">
+             <div className="no-print flex w-full flex-col sm:flex-row flex-wrap items-center justify-end gap-2">
                 <div className="flex items-center space-x-2">
                     <Switch
                         id="show-all-months-switch"
@@ -336,6 +337,11 @@ export function AllUnsettledExpensesCard({
                     />
                     <Label htmlFor="show-all-months-switch">Show All Months</Label>
                 </div>
+                 <AllUnsettledExportButton 
+                    items={filteredAndSortedItems}
+                    periodLabel={showAllMonths ? `all-${getYear(currentDate)}` : format(currentDate, 'yyyy-MM')}
+                    parentNames={parentNames}
+                 />
                 <Button 
                     onClick={handleMarkVisibleSettled} 
                     disabled={filteredAndSortedItems.length === 0}
