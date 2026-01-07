@@ -130,6 +130,21 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
 
+  const localGetParentShare = (transaction: Transaction, parent: Parent): number => {
+    if (transaction.category === 'Child Support') {
+      return transaction.paidBy === parent ? transaction.amount : 0;
+    }
+
+    const expense = transaction as EnrichedExpense;
+    if (expense.category === 'Reimbursement') {
+      return expense.paidBy === parent ? 0 : expense.amount;
+    }
+
+    const applicableSplit = expense.customSplits?.find(s => s.categories.includes(expense.category));
+    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
+    return expense.amount * parentSplitPercent;
+  };
+
   useEffect(() => {
     setIsSummaryLoading(true);
     setTransactionsData(null); // Invalidate transaction data when filters change
@@ -208,11 +223,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
           }
       });
 
-      let transactionsForReport = allTransactionsForPeriod.filter(t => t.status === 'Settled');
-      
-      if (selectedParent !== 'all') {
-        transactionsForReport = transactionsForReport.filter(t => t.paidBy === selectedParent);
-      }
+      const transactionsForReport = allTransactionsForPeriod.filter(t => t.status === 'Settled');
       
       const aggregated: { [key: string]: number } = {};
       ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
@@ -222,10 +233,16 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       const transactionsForSummary = transactionsForReport.filter(t => selectedCategories.includes(t.category));
 
       transactionsForSummary.forEach((transaction) => {
-          if (aggregated[transaction.category] !== undefined) {
-              aggregated[transaction.category]! += transaction.amount;
+        if (aggregated[transaction.category] !== undefined) {
+          if (selectedParent === 'all') {
+            aggregated[transaction.category]! += transaction.amount;
+            total += transaction.amount;
+          } else {
+            const share = localGetParentShare(transaction, selectedParent);
+            aggregated[transaction.category]! += share;
+            total += share;
           }
-          total += transaction.amount;
+        }
       });
 
       const chartData = Object.entries(aggregated)
@@ -754,12 +771,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         </Select>
                          <Select value={selectedParent} onValueChange={(value: Parent | 'all') => setSelectedParent(value)}>
                             <SelectTrigger className="w-full sm:w-[10rem]">
-                                <SelectValue placeholder="Filter by payer" />
+                                <SelectValue placeholder="Filter by parent's share" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Parents</SelectItem>
-                                <SelectItem value="Parent 1">{summaryData.parentNamesForPeriod['Parent 1']}</SelectItem>
-                                <SelectItem value="Parent 2">{summaryData.parentNamesForPeriod['Parent 2']}</SelectItem>
+                                <SelectItem value="all">All Expenses</SelectItem>
+                                <SelectItem value="Parent 1">{summaryData.parentNamesForPeriod['Parent 1']}'s Share</SelectItem>
+                                <SelectItem value="Parent 2">{summaryData.parentNamesForPeriod['Parent 2']}'s Share</SelectItem>
                             </SelectContent>
                         </Select>
                         <DropdownMenu>
