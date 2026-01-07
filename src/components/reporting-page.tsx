@@ -61,6 +61,8 @@ import { Skeleton } from './ui/skeleton';
 interface ReportingPageProps {
   appData: AppData | null;
   currentDate: Date;
+  isAllMonthsView: boolean;
+  setIsAllMonthsView: (value: boolean) => void;
 }
 
 type EnrichedExpense = Expense & { 
@@ -110,19 +112,20 @@ interface TransactionsData {
     allTransactions: Transaction[];
 }
 
-export function ReportingPage({ appData, currentDate }: ReportingPageProps) {
+export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllMonthsView }: ReportingPageProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(ALL_CATEGORIES);
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'ascending' });
   const [selectedParent, setSelectedParent] = useState<Parent | 'all'>('all');
-  const [isAllMonthsView, setIsAllMonthsView] = useState(true);
   
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [transactionsData, setTransactionsData] = useState<TransactionsData | null>(null);
   
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [isTransactionsLoading, setIsTransactionsLoading] = useState(false);
+
+  const periodLabel = isAllMonthsView ? String(getYear(currentDate)) : format(currentDate, 'MMMM yyyy');
 
   const localGetParentShare = (transaction: Transaction, parent: Parent): number => {
     if (transaction.category === 'Child Support') {
@@ -517,8 +520,8 @@ export function ReportingPage({ appData, currentDate }: ReportingPageProps) {
                       <BarChartIcon className="h-5 w-5 text-primary" />
                     </span>
                     <div>
-                      <CardTitle>All Transactions Report</CardTitle>
-                      <CardDescription>A complete log of all settled financial items.</CardDescription>
+                      <CardTitle>Transactions Report</CardTitle>
+                      <CardDescription>A log of all settled items for {periodLabel}.</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
@@ -532,11 +535,7 @@ export function ReportingPage({ appData, currentDate }: ReportingPageProps) {
                     </div>
                     <ReportingExportButton
                       transactions={sortedTransactions}
-                      periodLabel={
-                        isAllMonthsView
-                          ? String(getYear(currentDate))
-                          : format(currentDate, 'MMMM-yyyy')
-                      }
+                      periodLabel={periodLabel.replace(/\s+/g, '-')}
                       parentNames={summaryData.parentNamesForPeriod}
                     />
                   </div>
@@ -724,7 +723,7 @@ export function ReportingPage({ appData, currentDate }: ReportingPageProps) {
                         </span>
                         <div>
                         <CardTitle>Expense Summary</CardTitle>
-                        <CardDescription>A summary of contributions by category for the selected period.</CardDescription>
+                        <CardDescription>A summary of contributions by category for {periodLabel}.</CardDescription>
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">

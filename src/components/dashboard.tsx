@@ -56,6 +56,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
   const { user } = useFirebase();
 
   const [currentDate, setCurrentDate] = useState(initialDate);
+  const [isAllMonthsView, setIsAllMonthsView] = useState(true);
   
   // Determine default sub-tab based on user's role
   const isDataOwner = user?.uid === dataOwnerId;
@@ -193,6 +194,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
     setCurrentDate(setDateFnsMonth(setYear(new Date(), year), month));
     setActiveTab('expenses');
     setExpensesSubTab('unsettled');
+    setIsAllMonthsView(false); // Switch to monthly view for the specific month
   };
 
   const handleDeleteExpense = (expenseId: string, expenseMonthId: string) => {
@@ -348,6 +350,8 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                         onUpdateChildSupport={updateChildSupportForSingleMonth}
                         onDeleteExpense={handleDeleteExpense}
                         currentDate={currentDate}
+                        isAllMonthsView={isAllMonthsView}
+                        setIsAllMonthsView={setIsAllMonthsView}
                     />
                 </TabsContent>
              </Tabs>
@@ -359,6 +363,8 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             <ReportingPage 
               appData={appData} 
               currentDate={currentDate}
+              isAllMonthsView={isAllMonthsView}
+              setIsAllMonthsView={setIsAllMonthsView}
             />
           </div>
         );

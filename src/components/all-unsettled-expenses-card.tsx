@@ -35,6 +35,8 @@ interface AllUnsettledExpensesCardProps {
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
   currentDate: Date;
+  isAllMonthsView: boolean;
+  setIsAllMonthsView: (value: boolean) => void;
 }
 
 type UnsettledItem = {
@@ -76,12 +78,13 @@ export function AllUnsettledExpensesCard({
   onUpdateChildSupport,
   onDeleteExpense,
   currentDate,
+  isAllMonthsView,
+  setIsAllMonthsView,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
   const { batchUpdateMonths } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
-  const [showAllMonths, setShowAllMonths] = useState(true);
 
   const parentNames = useMemo(() => {
     if (!appData?.months || Object.keys(appData.months).length === 0) {
@@ -158,7 +161,7 @@ export function AllUnsettledExpensesCard({
     const yearFilter = String(getYear(currentDate));
     const monthFilter = format(currentDate, 'yyyy-MM');
 
-    if (showAllMonths) {
+    if (isAllMonthsView) {
       items = items.filter(item => item.monthId.startsWith(yearFilter));
     } else {
       items = items.filter(item => item.monthId === monthFilter);
@@ -212,7 +215,7 @@ export function AllUnsettledExpensesCard({
     }
 
     return items;
-  }, [appData, currentDate, showAllMonths, searchTerm, sortConfig]);
+  }, [appData, currentDate, isAllMonthsView, searchTerm, sortConfig]);
 
   const groupedItems = useMemo<GroupedUnsettledItems>(() => {
     return filteredAndSortedItems.reduce((acc, item) => {
@@ -308,6 +311,8 @@ export function AllUnsettledExpensesCard({
       { totalAmount: 0, totalP1Share: 0, totalP2Share: 0 }
     );
   }, [groupedItems]);
+  
+  const periodLabel = isAllMonthsView ? `all of ${getYear(currentDate)}` : format(currentDate, 'MMMM yyyy');
 
   return (
     <Card>
@@ -320,7 +325,7 @@ export function AllUnsettledExpensesCard({
               <div>
                 <CardTitle>All Unsettled Items</CardTitle>
                 <CardDescription>
-                  A ledger of all outstanding expenses and payments across all months.
+                  A ledger of all outstanding items for {periodLabel}.
                 </CardDescription>
               </div>
             </div>
@@ -328,14 +333,14 @@ export function AllUnsettledExpensesCard({
                 <div className="flex items-center space-x-2">
                     <Switch
                         id="show-all-months-switch"
-                        checked={showAllMonths}
-                        onCheckedChange={setShowAllMonths}
+                        checked={isAllMonthsView}
+                        onCheckedChange={setIsAllMonthsView}
                     />
                     <Label htmlFor="show-all-months-switch">Show All Months</Label>
                 </div>
                  <AllUnsettledExportButton 
                     items={filteredAndSortedItems}
-                    periodLabel={showAllMonths ? `all-${getYear(currentDate)}` : format(currentDate, 'yyyy-MM')}
+                    periodLabel={periodLabel.replace(/\s+/g, '-')}
                     parentNames={parentNames}
                  />
                 <Button 
