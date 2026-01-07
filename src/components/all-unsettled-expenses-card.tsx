@@ -312,7 +312,7 @@ export function AllUnsettledExpensesCard({
     );
   }, [groupedItems]);
   
-  const periodLabel = isAllMonthsView ? `all of ${getYear(currentDate)}` : format(currentDate, 'MMMM yyyy');
+  const periodLabel = isAllMonthsView ? `for ${getYear(currentDate)}` : `for ${format(currentDate, 'MMMM yyyy')}`;
 
   return (
     <Card>
@@ -323,9 +323,9 @@ export function AllUnsettledExpensesCard({
                 <ReceiptText className="h-5 w-5 text-secondary-foreground" />
               </span>
               <div>
-                <CardTitle>All Unsettled Items</CardTitle>
+                <CardTitle>Unsettled Items {periodLabel}</CardTitle>
                 <CardDescription>
-                  A ledger of all outstanding items for {periodLabel}.
+                  A ledger of all outstanding items.
                 </CardDescription>
               </div>
             </div>

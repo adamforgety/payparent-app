@@ -520,8 +520,8 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
                       <BarChartIcon className="h-5 w-5 text-primary" />
                     </span>
                     <div>
-                      <CardTitle>Transactions Report</CardTitle>
-                      <CardDescription>A log of all settled items for {periodLabel}.</CardDescription>
+                      <CardTitle>Transactions Report for {periodLabel}</CardTitle>
+                      <CardDescription>A log of all settled items.</CardDescription>
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
@@ -722,8 +722,8 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
                         <BarChartIcon className="h-5 w-5 text-primary" />
                         </span>
                         <div>
-                        <CardTitle>Expense Summary</CardTitle>
-                        <CardDescription>A summary of contributions by category for {periodLabel}.</CardDescription>
+                        <CardTitle>Expense Summary for {periodLabel}</CardTitle>
+                        <CardDescription>A summary of contributions by category.</CardDescription>
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
