@@ -364,7 +364,11 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
       case 'reporting':
         return (
           <div className="mt-6">
-            <ReportingPage appData={appData} />
+            <ReportingPage 
+              appData={appData} 
+              currentDate={currentDate}
+              isAllMonthsView={isAllMonthsView}
+            />
           </div>
         );
       case 'settings':

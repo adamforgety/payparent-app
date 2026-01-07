@@ -60,6 +60,8 @@ import { Skeleton } from './ui/skeleton';
 
 interface ReportingPageProps {
   appData: AppData | null;
+  currentDate: Date;
+  isAllMonthsView: boolean;
 }
 
 type EnrichedExpense = Expense & { 
@@ -100,24 +102,16 @@ const ALL_CATEGORIES: (ExpenseCategory | 'Child Support')[] = [
 ];
 
 interface SummaryData {
-    availableYears: string[];
-    availableMonths: { value: string; label: string; }[];
     periodData: { name: string; amount: number; }[];
     totalPeriodExpenses: number;
     parentNamesForPeriod: ParentNames;
-    reportTitle: string;
-    reportDescription: string;
 }
 
 interface TransactionsData {
     allTransactions: Transaction[];
 }
 
-export function ReportingPage({ appData }: ReportingPageProps) {
-  const [selectedYear, setSelectedYear] = useState<string>(
-    String(getYear(new Date()))
-  );
-  const [selectedMonth, setSelectedMonth] = useState<string>('all'); // 'all' or 'yyyy-MM'
+export function ReportingPage({ appData, currentDate, isAllMonthsView }: ReportingPageProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(ALL_CATEGORIES);
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,41 +145,27 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
     const calculationTimeout = setTimeout(() => {
       if (!appData?.months || Object.keys(appData.months).length === 0) {
-        const year = String(getYear(new Date()));
         setSummaryData({
-          availableYears: [year],
-          availableMonths: [],
           periodData: [],
           totalPeriodExpenses: 0,
           parentNamesForPeriod: { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' } as ParentNames,
-          reportTitle: 'Annual Report',
-          reportDescription: `An overview of all expenses for the year ${year}.`,
         });
         setIsSummaryLoading(false);
         return;
       }
       
       const today = startOfMonth(new Date());
+      const selectedYear = getYear(currentDate);
 
       const allMonthKeys = Object.keys(appData.months)
         .filter(monthId => !isAfter(parse(monthId, 'yyyy-MM', new Date()), today))
         .sort()
         .reverse();
 
-      const years = new Set<string>();
-      allMonthKeys.forEach(monthId => years.add(monthId.substring(0, 4)));
-      const sortedYears = Array.from(years);
-
-      const monthsForSelectedYear = allMonthKeys
-        .filter(monthId => monthId.startsWith(selectedYear))
-        .map(monthId => ({
-          value: monthId,
-          label: format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM'),
-        }));
-
-      let filteredMonthKeys = allMonthKeys.filter(monthId => monthId.startsWith(selectedYear));
-      if (selectedMonth !== 'all') {
-          filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
+      let filteredMonthKeys = allMonthKeys.filter(monthId => monthId.startsWith(String(selectedYear)));
+      if (!isAllMonthsView) {
+          const selectedMonthId = format(currentDate, 'yyyy-MM');
+          filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonthId);
       }
       
       let allTransactionsForPeriod: Transaction[] = [];
@@ -262,17 +242,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         .filter((item) => item.amount > 0)
         .sort((a, b) => b.amount - a.amount);
         
-      const reportTitle = selectedMonth === 'all' ? 'Annual Report' : 'Monthly Report';
-      const reportDescription = `An overview of all expenses for ${selectedMonth === 'all' ? `the year ${selectedYear}` : format(parse(selectedMonth, 'yyyy-MM', new Date()), 'MMMM yyyy')}.`;
-
       setSummaryData({
-        availableYears: sortedYears.length > 0 ? sortedYears : [String(getYear(new Date()))],
-        availableMonths: monthsForSelectedYear,
         periodData: chartData,
         totalPeriodExpenses: total,
         parentNamesForPeriod: latestParentNames || { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' },
-        reportTitle,
-        reportDescription,
       });
 
       setIsSummaryLoading(false);
@@ -281,7 +254,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
     return () => clearTimeout(calculationTimeout);
 
-  }, [appData, selectedYear, selectedMonth, selectedCategories, selectedParent]);
+  }, [appData, currentDate, isAllMonthsView, selectedCategories, selectedParent]);
   
   useEffect(() => {
     if (activeSubTab !== 'transactions' || !summaryData) return;
@@ -297,11 +270,14 @@ export function ReportingPage({ appData }: ReportingPageProps) {
         }
 
         const today = startOfMonth(new Date());
+        const selectedYear = getYear(currentDate);
+
         let filteredMonthKeys = Object.keys(appData.months)
-            .filter(monthId => monthId.startsWith(selectedYear) && !isAfter(parse(monthId, 'yyyy-MM', new Date()), today));
+            .filter(monthId => monthId.startsWith(String(selectedYear)) && !isAfter(parse(monthId, 'yyyy-MM', new Date()), today));
         
-        if (selectedMonth !== 'all') {
-            filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonth);
+        if (!isAllMonthsView) {
+            const selectedMonthId = format(currentDate, 'yyyy-MM');
+            filteredMonthKeys = filteredMonthKeys.filter(monthId => monthId === selectedMonthId);
         }
 
         let allTransactionsForPeriod: Transaction[] = [];
@@ -343,15 +319,8 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     }, 100);
 
     return () => clearTimeout(calculationTimeout);
-  }, [activeSubTab, transactionsData, appData, selectedYear, selectedMonth, summaryData]);
+  }, [activeSubTab, transactionsData, appData, currentDate, isAllMonthsView, summaryData]);
 
-
-  useEffect(() => {
-    if(summaryData?.availableMonths && selectedMonth !== 'all' && !summaryData.availableMonths.some(m => m.value === selectedMonth)) {
-      setSelectedMonth('all');
-    }
-  }, [selectedYear, summaryData?.availableMonths, selectedMonth]);
-  
   const getParentShare = (transaction: Transaction, parent: Parent): number => {
     if (transaction.category === 'Child Support') {
       return transaction.paidBy === parent ? transaction.amount : 0;
@@ -553,44 +522,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger className="w-full sm:w-32">
-                        <SelectValue placeholder="Select year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {summaryData.availableYears.map((year) => (
-                          <SelectItem key={year} value={year}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={selectedMonth}
-                      onValueChange={setSelectedMonth}
-                      disabled={summaryData.availableMonths.length === 0}
-                    >
-                      <SelectTrigger className="w-full sm:w-40">
-                        <SelectValue placeholder="Select month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Months</SelectItem>
-                        {summaryData.availableMonths.map((month) => (
-                          <SelectItem key={month.value} value={month.value}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <ReportingExportButton
                       transactions={sortedTransactions}
                       periodLabel={
-                        selectedMonth === 'all'
-                          ? selectedYear
-                          : format(
-                              parse(selectedMonth, 'yyyy-MM', new Date()),
-                              'MMMM-yyyy'
-                            )
+                        isAllMonthsView
+                          ? String(getYear(currentDate))
+                          : format(currentDate, 'MMMM-yyyy')
                       }
                       parentNames={summaryData.parentNamesForPeriod}
                     />
@@ -783,35 +720,6 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-full sm:w-[8rem]">
-                            <SelectValue placeholder="Select year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {summaryData.availableYears.map((year) => (
-                            <SelectItem key={year} value={year}>
-                                {year}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <Select
-                        value={selectedMonth}
-                        onValueChange={setSelectedMonth}
-                        disabled={summaryData.availableMonths.length === 0}
-                        >
-                        <SelectTrigger className="w-full sm:w-[10rem]">
-                            <SelectValue placeholder="Select month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Months</SelectItem>
-                            {summaryData.availableMonths.map((month) => (
-                            <SelectItem key={month.value} value={month.value}>
-                                {month.label}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
                          <Select value={selectedParent} onValueChange={(value: Parent | 'all') => setSelectedParent(value)}>
                             <SelectTrigger className="w-full sm:w-[10rem]">
                                 <SelectValue placeholder="Filter by parent's share" />
@@ -948,4 +856,3 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </div>
   );
 }
-
