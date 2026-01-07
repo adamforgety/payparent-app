@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { useMemo } from 'react';
-import { parse, isBefore, startOfDay, isAfter, startOfMonth, format } from 'date-fns';
+import { parse, isBefore, startOfDay, isAfter, startOfMonth, format, getMonth } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -110,8 +111,11 @@ export function SummaryDetailsCard({
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
         const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
 
-        if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
-          if (monthData.childSupport.paidBy === parent) {
+        const monthIndex = getMonth(monthDate) + 1;
+        const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
+
+        if (monthData.childSupport.status === 'Unsettled' && monthlyPayer !== 'None' && !isFutureMonth) {
+          if (monthlyPayer === parent) {
             childSupportBalance = -monthData.childSupport.amount;
           } else {
             childSupportBalance = monthData.childSupport.amount;
@@ -141,8 +145,11 @@ export function SummaryDetailsCard({
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
   const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
-  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
-    if (childSupport.paidBy === parent) {
+  const currentMonthIndex = getMonth(currentMonthDate) + 1;
+  const currentMonthlyPayer = childSupport.monthlyPayer?.[currentMonthIndex] ?? 'None';
+
+  if (childSupport.status === 'Unsettled' && currentMonthlyPayer !== 'None' && !isCurrentMonthFuture) {
+    if (currentMonthlyPayer === parent) {
       childSupportBalance = -childSupport.amount;
     } else {
       childSupportBalance = childSupport.amount;

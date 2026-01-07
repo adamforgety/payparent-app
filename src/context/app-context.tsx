@@ -214,19 +214,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const mostRecentMonthId = monthKeys[0];
       const mostRecentMonthData = appData.months[mostRecentMonthId];
 
-      const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
-      
-      const childSupportSettings: ChildSupport = {
-        amount: mostRecentMonthData?.childSupport?.amount ?? 0,
-        paidBy: 'None', 
-        status: 'Unsettled' 
-      };
-
       targetMonthData = {
         id: targetMonthId,
         year: getYear(expenseDate),
         month: getMonth(expenseDate) + 1,
-        childSupport: childSupportSettings,
+        childSupport: {
+            ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
+            status: 'Unsettled' 
+        },
         parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
         expenses: [],
         customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
@@ -266,19 +261,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const mostRecentMonthId = monthKeys[0];
         const mostRecentMonthData = newMonths[mostRecentMonthId];
 
-        const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
-
-        const childSupportSettings: ChildSupport = {
-            amount: mostRecentMonthData?.childSupport?.amount ?? 0,
-            paidBy: 'None',
-            status: 'Unsettled'
-        };
-
         targetMonthData = {
           id: targetMonthId,
           year: getYear(expenseDate),
           month: getMonth(expenseDate) + 1,
-          childSupport: childSupportSettings,
+          childSupport: {
+            ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
+            status: 'Unsettled'
+          },
           parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
           expenses: [],
           customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
@@ -331,19 +321,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         const mostRecentMonthId = monthKeys[0];
         const mostRecentMonthData = appData.months[mostRecentMonthId];
         
-        const newMonthDate = parse(newMonthId, 'yyyy-MM', new Date());
-
-        const childSupportSettings: ChildSupport = {
-          amount: mostRecentMonthData?.childSupport?.amount ?? 0,
-          paidBy: 'None',
-          status: 'Unsettled'
-        };
-        
         targetMonthData = {
           id: newMonthId,
           year: getYear(newDate),
           month: getMonth(newDate) + 1,
-          childSupport: childSupportSettings,
+          childSupport: {
+            ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
+            status: 'Unsettled'
+          },
           parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
           expenses: [],
           customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Scale, ArrowRight } from 'lucide-react';
@@ -21,7 +22,7 @@ import type {
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { parse, isBefore, startOfDay, isAfter, startOfMonth } from 'date-fns';
+import { parse, isBefore, startOfDay, isAfter, startOfMonth, getMonth } from 'date-fns';
 import { Button } from './ui/button';
 
 interface SettleBalanceCardProps {
@@ -95,9 +96,12 @@ export function SettleBalanceCard({
         let childSupportBalance = 0;
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
         const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
+        
+        const monthIndex = getMonth(monthDate) + 1;
+        const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
 
-        if (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
-          if (monthData.childSupport.paidBy === parent) {
+        if (monthData.childSupport.status === 'Unsettled' && monthlyPayer !== 'None' && !isFutureMonth) {
+          if (monthlyPayer === parent) {
             childSupportBalance = -monthData.childSupport.amount;
           } else {
             childSupportBalance = monthData.childSupport.amount;
@@ -127,8 +131,11 @@ export function SettleBalanceCard({
   let childSupportBalance = 0;
   const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
   const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
-  if (childSupport.status === 'Unsettled' && childSupport.paidBy !== 'None' && !isCurrentMonthFuture) {
-    if (childSupport.paidBy === parent) {
+  const currentMonthIndex = getMonth(currentMonthDate) + 1;
+  const currentMonthlyPayer = childSupport.monthlyPayer?.[currentMonthIndex] ?? 'None';
+
+  if (childSupport.status === 'Unsettled' && currentMonthlyPayer !== 'None' && !isCurrentMonthFuture) {
+    if (currentMonthlyPayer === parent) {
       childSupportBalance = -childSupport.amount;
     } else {
       childSupportBalance = childSupport.amount;

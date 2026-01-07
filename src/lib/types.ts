@@ -1,4 +1,5 @@
 
+
 export type ExpenseCategory =
   | 'Medical'
   | 'Education'
@@ -34,7 +35,8 @@ export interface ParentNames {
 
 export interface ChildSupport {
   amount: number;
-  paidBy: Parent | 'None';
+  paidBy: Parent | 'None'; // Legacy/Fallback
+  monthlyPayer: { [month: number]: Parent | 'None' }; // e.g. { 1: 'Parent 1', 2: 'Parent 1', ... 12: 'None' }
   status: PaymentStatus;
 }
 

@@ -79,19 +79,14 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
 
       if (!mostRecentMonthData) return;
       
-      const newMonthDate = parse(monthId, 'yyyy-MM', new Date());
-
-      const childSupportSettings: ChildSupport = {
-        amount: mostRecentMonthData.childSupport.amount,
-        paidBy: 'None', 
-        status: 'Unsettled' 
-      };
-
       const newMonthData: MonthData = {
         id: monthId,
         year: getYear(currentDate),
         month: getMonth(currentDate) + 1,
-        childSupport: childSupportSettings,
+        childSupport: {
+            ...(mostRecentMonthData.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
+            status: 'Unsettled' 
+        },
         parentNames: mostRecentMonthData.parentNames,
         expenses: [],
         customSplits: mostRecentMonthData.customSplits,
@@ -390,6 +385,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     childSupport={currentMonthData.childSupport}
                     onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
                     parentNames={currentMonthData.parentNames}
+                    currentDate={currentDate}
                   />
                   <CustomSplitCard
                     customSplits={currentMonthData.customSplits || []}

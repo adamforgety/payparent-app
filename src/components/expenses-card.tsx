@@ -2,7 +2,7 @@
 
 'use client';
 
-import { format, startOfMonth, isAfter, isBefore, startOfDay, parse } from 'date-fns';
+import { format, startOfMonth, isAfter, isBefore, startOfDay, parse, getMonth } from 'date-fns';
 import { ReceiptText, Trash2, MoreVertical, Paperclip, Search, ArrowUpDown, Edit, CheckCircle, CircleDot, Sheet, Plus, Banknote, Upload } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState, useMemo, useEffect } from 'react';
@@ -99,15 +99,18 @@ export function ExpensesCard({
   useEffect(() => {
     const expenseItems: DisplayItem[] = expenses.map(e => ({ ...e, type: 'expense' }));
     const isFutureMonth = isAfter(startOfMonth(currentDate), startOfMonth(new Date()));
+    
+    const monthIndex = getMonth(currentDate) + 1;
+    const monthlyPayer = childSupport.monthlyPayer?.[monthIndex] ?? 'None';
 
     let allItems: DisplayItem[] = [...expenseItems];
-    if (childSupport.amount > 0 && childSupport.paidBy !== 'None' && !isFutureMonth) {
+    if (childSupport.amount > 0 && monthlyPayer !== 'None' && !isFutureMonth) {
       const childSupportItem: DisplayItem = {
         id: 'child-support',
         date: startOfMonth(currentDate).toISOString(),
         description: 'Child Support',
         amount: childSupport.amount,
-        paidBy: childSupport.paidBy,
+        paidBy: monthlyPayer,
         status: childSupport.status,
         category: 'Child Support',
         type: 'child_support',

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { format, isAfter, startOfMonth, parse, getYear } from 'date-fns';
+import { format, isAfter, startOfMonth, parse, getYear, getMonth } from 'date-fns';
 import { ReceiptText, Trash2, Paperclip, Edit, Search, ArrowUpDown } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -141,14 +141,17 @@ export function AllUnsettledExpensesCard({
           });
         });
 
-      if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && monthData.childSupport.status === 'Unsettled' && !isFutureMonth) {
+      const monthIndex = getMonth(monthDate) + 1;
+      const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
+
+      if (monthData.childSupport.amount > 0 && monthlyPayer !== 'None' && monthData.childSupport.status === 'Unsettled' && !isFutureMonth) {
         items.push({
           id: `cs-${monthId}`,
           monthId,
           date: new Date(monthData.year, monthData.month - 1, 1, 12).toISOString(),
           description: 'Child Support',
           amount: monthData.childSupport.amount,
-          paidBy: monthData.childSupport.paidBy,
+          paidBy: monthlyPayer,
           category: 'Child Support',
           type: 'child_support',
           parentNames: monthData.parentNames,
