@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { getYear, format, parse, isAfter, startOfMonth } from 'date-fns';
+import { getYear, format, parse, isAfter, startOfMonth, getMonth } from 'date-fns';
 import { BarChart as BarChartIcon, ReceiptText, Search, ArrowUpDown, ChevronDown } from 'lucide-react';
 import {
   Bar,
@@ -207,10 +207,13 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
               const monthDate = parse(monthId, 'yyyy-MM', new Date());
               const isFutureMonth = isAfter(monthDate, today);
+              const monthIndex = getMonth(monthDate) + 1;
+              const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
 
-              if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
+              if (monthData.childSupport.amount > 0 && monthlyPayer !== 'None' && !isFutureMonth) {
                   allTransactionsForPeriod.push({
                       ...monthData.childSupport,
+                      paidBy: monthlyPayer,
                       id: `cs-${monthId}`,
                       date: monthDate.toISOString(),
                       description: 'Child Support',
@@ -314,9 +317,13 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                 });
                 const monthDate = parse(monthId, 'yyyy-MM', new Date());
                 const isFutureMonth = isAfter(monthDate, today);
-                if (monthData.childSupport.amount > 0 && monthData.childSupport.paidBy !== 'None' && !isFutureMonth) {
+                const monthIndex = getMonth(monthDate) + 1;
+                const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
+
+                if (monthData.childSupport.amount > 0 && monthlyPayer !== 'None' && !isFutureMonth) {
                     allTransactionsForPeriod.push({
                         ...monthData.childSupport,
+                        paidBy: monthlyPayer,
                         id: `cs-${monthId}`,
                         date: monthDate.toISOString(),
                         description: 'Child Support',
@@ -941,3 +948,4 @@ export function ReportingPage({ appData }: ReportingPageProps) {
     </div>
   );
 }
+
