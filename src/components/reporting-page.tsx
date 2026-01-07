@@ -122,6 +122,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'ascending' });
+  const [selectedParent, setSelectedParent] = useState<Parent | 'all'>('all');
   
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [transactionsData, setTransactionsData] = useState<TransactionsData | null>(null);
@@ -209,6 +210,10 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
       let transactionsForReport = allTransactionsForPeriod.filter(t => t.status === 'Settled');
       
+      if (selectedParent !== 'all') {
+        transactionsForReport = transactionsForReport.filter(t => t.paidBy === selectedParent);
+      }
+      
       const aggregated: { [key: string]: number } = {};
       ALL_CATEGORIES.forEach(cat => aggregated[cat] = 0);
 
@@ -247,7 +252,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
     return () => clearTimeout(calculationTimeout);
 
-  }, [appData, selectedYear, selectedMonth, selectedCategories]);
+  }, [appData, selectedYear, selectedMonth, selectedCategories, selectedParent]);
   
   useEffect(() => {
     if (activeSubTab !== 'transactions' || !summaryData) return;
@@ -719,7 +724,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-full sm:w-32">
+                        <SelectTrigger className="w-full sm:w-[8rem]">
                             <SelectValue placeholder="Select year" />
                         </SelectTrigger>
                         <SelectContent>
@@ -735,7 +740,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                         onValueChange={setSelectedMonth}
                         disabled={summaryData.availableMonths.length === 0}
                         >
-                        <SelectTrigger className="w-full sm:w-40">
+                        <SelectTrigger className="w-full sm:w-[10rem]">
                             <SelectValue placeholder="Select month" />
                         </SelectTrigger>
                         <SelectContent>
@@ -747,10 +752,20 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                             ))}
                         </SelectContent>
                         </Select>
+                         <Select value={selectedParent} onValueChange={(value: Parent | 'all') => setSelectedParent(value)}>
+                            <SelectTrigger className="w-full sm:w-[10rem]">
+                                <SelectValue placeholder="Filter by payer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Parents</SelectItem>
+                                <SelectItem value="Parent 1">{summaryData.parentNamesForPeriod['Parent 1']}</SelectItem>
+                                <SelectItem value="Parent 2">{summaryData.parentNamesForPeriod['Parent 2']}</SelectItem>
+                            </SelectContent>
+                        </Select>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full sm:w-48">
-                                Filter Categories
+                            <Button variant="outline" className="w-full sm:w-auto">
+                                Categories
                                 <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                             </DropdownMenuTrigger>
