@@ -63,7 +63,6 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
 
   const [expensesSubTab, setExpensesSubTab] = useState('monthly');
   const [settingsSubTab, setSettingsSubTab] = useState('app');
-  const [isAllMonthsView, setIsAllMonthsView] = useState(false);
   const { toast } = useToast();
   const [isDateDropdownOpen, setDateDropdownOpen] = useState(false);
   const yearRef = useRef<HTMLDivElement>(null);
@@ -140,19 +139,14 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
     setCurrentDate((prevDate) =>
       direction === 'next' ? addMonths(prevDate, 1) : subMonths(prevDate, 1)
     );
-     if (isAllMonthsView) {
-      setIsAllMonthsView(false);
-    }
   };
 
   const handleSetYear = (year: string) => {
     setCurrentDate(setYear(currentDate, parseInt(year)));
-    setIsAllMonthsView(true);
   }
 
   const handleSetMonth = (monthIndex: string) => {
     setCurrentDate(setDateFnsMonth(currentDate, parseInt(monthIndex)));
-    setIsAllMonthsView(false);
   }
   
   const updateSettingsForCurrentAndFutureMonths = (dataToUpdate: Partial<Omit<MonthData, 'id'|'year'|'month'>>) => {
@@ -197,7 +191,6 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
     const year = parseInt(monthIdToGo.substring(0, 4));
     const month = parseInt(monthIdToGo.substring(5, 7)) - 1;
     setCurrentDate(setDateFnsMonth(setYear(new Date(), year), month));
-    setIsAllMonthsView(false);
     setActiveTab('expenses');
     setExpensesSubTab('unsettled');
   };
@@ -355,7 +348,6 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                         onUpdateChildSupport={updateChildSupportForSingleMonth}
                         onDeleteExpense={handleDeleteExpense}
                         currentDate={currentDate}
-                        isDashboardAllMonthsView={isAllMonthsView}
                     />
                 </TabsContent>
              </Tabs>
@@ -367,7 +359,6 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             <ReportingPage 
               appData={appData} 
               currentDate={currentDate}
-              isAllMonthsView={isAllMonthsView}
             />
           </div>
         );
@@ -449,7 +440,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             <DropdownMenu onOpenChange={setDateDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4 w-52 justify-center">
-                  {isAllMonthsView ? `All Months ${getYear(currentDate)}` : format(currentDate, 'MMMM yyyy')}
+                  {format(currentDate, 'MMMM yyyy')}
                   <ChevronDown className="ml-2 h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -480,7 +471,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <ScrollArea className="h-48">
                       <DropdownMenuGroup>
                         {availableMonthsForYear.map(month => {
-                           const isSelected = !isAllMonthsView && getMonth(currentDate) === parseInt(month.value);
+                           const isSelected = getMonth(currentDate) === parseInt(month.value);
                           return (
                             <DropdownMenuItem
                               key={month.value}

@@ -61,7 +61,6 @@ import { Skeleton } from './ui/skeleton';
 interface ReportingPageProps {
   appData: AppData | null;
   currentDate: Date;
-  isAllMonthsView: boolean;
 }
 
 type EnrichedExpense = Expense & { 
@@ -111,12 +110,13 @@ interface TransactionsData {
     allTransactions: Transaction[];
 }
 
-export function ReportingPage({ appData, currentDate, isAllMonthsView }: ReportingPageProps) {
+export function ReportingPage({ appData, currentDate }: ReportingPageProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(ALL_CATEGORIES);
   const [activeSubTab, setActiveSubTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'ascending' });
   const [selectedParent, setSelectedParent] = useState<Parent | 'all'>('all');
+  const [isAllMonthsView, setIsAllMonthsView] = useState(true);
   
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [transactionsData, setTransactionsData] = useState<TransactionsData | null>(null);
@@ -521,7 +521,15 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView }: Reporti
                       <CardDescription>A complete log of all settled financial items.</CardDescription>
                     </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="report-all-months-switch"
+                            checked={isAllMonthsView}
+                            onCheckedChange={setIsAllMonthsView}
+                        />
+                        <Label htmlFor="report-all-months-switch">Show All Months</Label>
+                    </div>
                     <ReportingExportButton
                       transactions={sortedTransactions}
                       periodLabel={
@@ -719,7 +727,15 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView }: Reporti
                         <CardDescription>A summary of contributions by category for the selected period.</CardDescription>
                         </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+                        <div className="flex items-center space-x-2">
+                            <Switch
+                                id="report-all-months-switch-summary"
+                                checked={isAllMonthsView}
+                                onCheckedChange={setIsAllMonthsView}
+                            />
+                            <Label htmlFor="report-all-months-switch-summary">Show All Months</Label>
+                        </div>
                          <Select value={selectedParent} onValueChange={(value: Parent | 'all') => setSelectedParent(value)}>
                             <SelectTrigger className="w-full sm:w-[10rem]">
                                 <SelectValue placeholder="Filter by parent's share" />

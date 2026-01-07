@@ -35,7 +35,6 @@ interface AllUnsettledExpensesCardProps {
   onUpdateChildSupport: (childSupport: ChildSupport, monthId: string) => void;
   onDeleteExpense: (expenseId: string, monthId: string) => void;
   currentDate: Date;
-  isDashboardAllMonthsView: boolean;
 }
 
 type UnsettledItem = {
@@ -77,18 +76,12 @@ export function AllUnsettledExpensesCard({
   onUpdateChildSupport,
   onDeleteExpense,
   currentDate,
-  isDashboardAllMonthsView,
 }: AllUnsettledExpensesCardProps) {
   const { toast } = useToast();
   const { batchUpdateMonths } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'descending' });
-  const [showAllMonths, setShowAllMonths] = useState(isDashboardAllMonthsView);
-
-  useEffect(() => {
-    setShowAllMonths(isDashboardAllMonthsView);
-  }, [isDashboardAllMonthsView]);
-
+  const [showAllMonths, setShowAllMonths] = useState(true);
 
   const parentNames = useMemo(() => {
     if (!appData?.months || Object.keys(appData.months).length === 0) {
