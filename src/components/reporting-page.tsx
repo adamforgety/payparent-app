@@ -235,8 +235,17 @@ export function ReportingPage({ appData }: ReportingPageProps) {
       transactionsForSummary.forEach((transaction) => {
         if (aggregated[transaction.category] !== undefined) {
           if (selectedParent === 'all') {
-            aggregated[transaction.category]! += transaction.amount;
-            total += transaction.amount;
+            // For 'Reimbursement', we should consider the cost to the non-paying parent, not the total amount
+            if (transaction.category === 'Reimbursement') {
+                total += transaction.amount;
+                aggregated[transaction.category]! += transaction.amount;
+            } else if (transaction.category !== 'Child Support') {
+                total += transaction.amount;
+                aggregated[transaction.category]! += transaction.amount;
+            } else {
+                 aggregated[transaction.category]! += transaction.amount;
+                 total += transaction.amount;
+            }
           } else {
             const share = localGetParentShare(transaction, selectedParent);
             aggregated[transaction.category]! += share;
@@ -353,29 +362,39 @@ export function ReportingPage({ appData }: ReportingPageProps) {
 
   const filteredTransactions = useMemo(() => {
     if (!transactionsData) return [];
-    const lowercasedFilter = searchTerm.toLowerCase();
-    if (!lowercasedFilter) {
-      return transactionsData.allTransactions;
-    }
-    return transactionsData.allTransactions.filter(transaction => {
-      let paidByName = '';
-      if (transaction.paidBy && transaction.paidBy !== 'None') {
-        paidByName = transaction.parentNames[transaction.paidBy]?.toLowerCase() || '';
-      }
-      
-      const description = transaction.description.toLowerCase();
-      const category = transaction.category.toLowerCase();
-      
-      const parent1Share = getParentShare(transaction, 'Parent 1');
-      const parent2Share = getParentShare(transaction, 'Parent 2');
+    
+    let items = transactionsData.allTransactions;
 
-      return paidByName.includes(lowercasedFilter) ||
-             description.includes(lowercasedFilter) ||
-             category.includes(lowercasedFilter) ||
-             parent1Share.toFixed(2).includes(lowercasedFilter) ||
-             parent2Share.toFixed(2).includes(lowercasedFilter);
-    });
-  }, [transactionsData, searchTerm]);
+    // Filter by selected parent's share
+    if (selectedParent !== 'all') {
+        items = items.filter(t => getParentShare(t, selectedParent) > 0);
+    }
+
+    // Filter by search term
+    const lowercasedFilter = searchTerm.toLowerCase();
+    if (lowercasedFilter) {
+      items = items.filter(transaction => {
+        let paidByName = '';
+        if (transaction.paidBy && transaction.paidBy !== 'None') {
+          paidByName = transaction.parentNames[transaction.paidBy]?.toLowerCase() || '';
+        }
+        
+        const description = transaction.description.toLowerCase();
+        const category = transaction.category.toLowerCase();
+        
+        const parent1Share = getParentShare(transaction, 'Parent 1');
+        const parent2Share = getParentShare(transaction, 'Parent 2');
+
+        return paidByName.includes(lowercasedFilter) ||
+               description.includes(lowercasedFilter) ||
+               category.includes(lowercasedFilter) ||
+               parent1Share.toFixed(2).includes(lowercasedFilter) ||
+               parent2Share.toFixed(2).includes(lowercasedFilter);
+      });
+    }
+
+    return items;
+  }, [transactionsData, searchTerm, selectedParent]);
 
   const sortedTransactions = useMemo(() => {
     let sortableItems = [...filteredTransactions];
@@ -427,7 +446,12 @@ export function ReportingPage({ appData }: ReportingPageProps) {
   const { totalAmount, totalParent1Share, totalParent2Share } = useMemo(() => {
     return sortedTransactions.reduce(
       (totals, transaction) => {
-        totals.totalAmount += transaction.amount;
+        if(transaction.category !== 'Reimbursement' && transaction.category !== 'Child Support') {
+            totals.totalAmount += transaction.amount;
+        } else if (transaction.category === 'Reimbursement') {
+            totals.totalAmount += transaction.amount;
+        }
+
         totals.totalParent1Share += getParentShare(transaction, 'Parent 1');
         totals.totalParent2Share += getParentShare(transaction, 'Parent 2');
         return totals;
@@ -566,16 +590,28 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                   </div>
                 </div>
                  <div className="flex flex-col sm:flex-row gap-4 mt-4 items-center">
-                  <div className="relative flex-1 w-full">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search by description, category, or parent..."
-                      className="pl-8 w-full"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
+                    <div className="relative flex-1 w-full">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                        type="search"
+                        placeholder="Search by description, category, or parent..."
+                        className="pl-8 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1 w-full">
+                        <Select value={selectedParent} onValueChange={(value: Parent | 'all') => setSelectedParent(value)}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Filter by parent's share" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Parent Shares</SelectItem>
+                                <SelectItem value="Parent 1">{summaryData.parentNamesForPeriod['Parent 1']}'s Share</SelectItem>
+                                <SelectItem value="Parent 2">{summaryData.parentNamesForPeriod['Parent 2']}'s Share</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -774,7 +810,7 @@ export function ReportingPage({ appData }: ReportingPageProps) {
                                 <SelectValue placeholder="Filter by parent's share" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Expenses</SelectItem>
+                                <SelectItem value="all">All Parent Shares</SelectItem>
                                 <SelectItem value="Parent 1">{summaryData.parentNamesForPeriod['Parent 1']}'s Share</SelectItem>
                                 <SelectItem value="Parent 2">{summaryData.parentNamesForPeriod['Parent 2']}'s Share</SelectItem>
                             </SelectContent>
