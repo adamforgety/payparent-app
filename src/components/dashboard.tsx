@@ -73,8 +73,8 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
 
   useEffect(() => {
     if (appData && !appData.months[monthId]) {
-      const monthKeys = Object.keys(appData.months).sort();
-      const mostRecentMonthId = monthKeys[monthKeys.length - 1];
+      const monthKeys = Object.keys(appData.months).sort((a, b) => b.localeCompare(a));
+      const mostRecentMonthId = monthKeys[0];
       const mostRecentMonthData = appData.months[mostRecentMonthId] || initialData.months[Object.keys(initialData.months)[0]];
 
       if (!mostRecentMonthData) return;

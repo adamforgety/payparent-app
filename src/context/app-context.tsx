@@ -210,15 +210,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     let targetMonthData = newMonths[targetMonthId];
 
     if (!targetMonthData) {
-      const monthKeys = Object.keys(appData.months).sort();
-      const mostRecentMonthId = monthKeys[monthKeys.length - 1];
+      const monthKeys = Object.keys(appData.months).sort((a, b) => b.localeCompare(a));
+      const mostRecentMonthId = monthKeys[0];
       const mostRecentMonthData = appData.months[mostRecentMonthId];
 
       const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
-      const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
       
       const childSupportSettings: ChildSupport = {
-        amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
+        amount: mostRecentMonthData?.childSupport?.amount ?? 0,
         paidBy: 'None', 
         status: 'Unsettled' 
       };
@@ -263,15 +262,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       let targetMonthData = newMonths[targetMonthId];
 
       if (!targetMonthData) {
-        const monthKeys = Object.keys(newMonths).sort();
-        const mostRecentMonthId = monthKeys[monthKeys.length - 1];
+        const monthKeys = Object.keys(newMonths).sort((a, b) => b.localeCompare(a));
+        const mostRecentMonthId = monthKeys[0];
         const mostRecentMonthData = newMonths[mostRecentMonthId];
 
         const newMonthDate = parse(targetMonthId, 'yyyy-MM', new Date());
-        const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
         const childSupportSettings: ChildSupport = {
-            amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
+            amount: mostRecentMonthData?.childSupport?.amount ?? 0,
             paidBy: 'None',
             status: 'Unsettled'
         };
@@ -329,15 +327,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
 
       let targetMonthData = newMonths[newMonthId];
       if (!targetMonthData) {
-        const monthKeys = Object.keys(appData.months).sort();
-        const mostRecentMonthId = monthKeys[monthKeys.length - 1];
+        const monthKeys = Object.keys(appData.months).sort((a, b) => b.localeCompare(a));
+        const mostRecentMonthId = monthKeys[0];
         const mostRecentMonthData = appData.months[mostRecentMonthId];
         
         const newMonthDate = parse(newMonthId, 'yyyy-MM', new Date());
-        const mostRecentMonthDate = parse(mostRecentMonthId, 'yyyy-MM', new Date());
 
         const childSupportSettings: ChildSupport = {
-          amount: isAfter(newMonthDate, mostRecentMonthDate) ? (mostRecentMonthData?.childSupport?.amount ?? 0) : 0,
+          amount: mostRecentMonthData?.childSupport?.amount ?? 0,
           paidBy: 'None',
           status: 'Unsettled'
         };
