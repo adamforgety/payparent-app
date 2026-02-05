@@ -1,6 +1,5 @@
 'use server';
 
-import { doc, setDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase/server';
 import type { UserDoc, AppData } from '@/lib/types';
 import { initialData } from '@/lib/data';
@@ -29,11 +28,11 @@ export async function handleNewUser(userId: string, email: string | null) {
       dataOwnerId: userId, // Initially, the user owns their own data.
     };
 
-    const userDocRef = doc(firestore, 'users', userId);
+    const userDocRef = firestore.collection('users').doc(userId);
     
     try {
-        // Using setDoc to create the document with the full payload
-        await setDoc(userDocRef, userDocPayload);
+        // Using the admin SDK's .set() method
+        await userDocRef.set(userDocPayload);
         return { success: true, userId: userId };
     } catch (serverError: any) {
         // In a real app, you would log this error to a monitoring service.
