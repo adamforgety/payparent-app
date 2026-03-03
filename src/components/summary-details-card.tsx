@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useMemo } from 'react';
@@ -33,7 +31,7 @@ interface SummaryDetailsCardProps {
   currentMonthId: string;
 }
 
-const calculateShare = (
+const calculateExpenseShare = (
   expenses: Expense[],
   customSplits: CustomSplit[] | undefined,
   p: Parent
@@ -41,21 +39,20 @@ const calculateShare = (
   let totalShare = 0;
   for (const expense of expenses) {
     if (expense.category === 'Reimbursement') {
-      // The parent who paid gets 0% of the share, the other parent gets 100%
+      // Reimbursement logic: Non-payer is responsible for 100%
       totalShare += expense.paidBy === p ? 0 : expense.amount;
     } else {
       const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
-      const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5; // Default to 50% if no split found
+      const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
       totalShare += expense.amount * parentSplitPercent;
     }
   }
   return totalShare;
 };
 
-
-type PreviousBalance = {
+type MonthBalance = {
   monthId: string;
-  balance: number;
+  balance: number; // Perspective: Parent owes if positive
 };
 
 export function SummaryDetailsCard({
@@ -70,186 +67,132 @@ export function SummaryDetailsCard({
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 
-  // --- Calculate Balance from Previous Months ---
-  const previousBalances = useMemo<PreviousBalance[]>(() => {
-    const today = startOfDay(new Date());
+  // Helper to calculate total share for a specific month
+  const calculateMonthTotals = (monthExpenses: Expense[], monthSplits: CustomSplit[], monthCS: ChildSupport, monthDate: Date) => {
+    const unsettled = monthExpenses.filter(e => e.status === 'Unsettled');
+    
+    let p1Total = calculateExpenseShare(unsettled, monthSplits, 'Parent 1');
+    let p2Total = calculateExpenseShare(unsettled, monthSplits, 'Parent 2');
+
+    const today = startOfMonth(new Date());
+    const monthIndex = getMonth(monthDate) + 1;
+    const monthlyPayer = monthCS.monthlyPayer?.[monthIndex] ?? 'None';
+
+    if (monthCS.status === 'Unsettled' && monthlyPayer !== 'None' && !isAfter(monthDate, today)) {
+      if (monthlyPayer === 'Parent 1') p1Total += monthCS.amount;
+      else if (monthlyPayer === 'Parent 2') p2Total += monthCS.amount;
+    }
+
+    return { p1Total, p2Total };
+  };
+
+  // 1. Calculate Current Month's Net Perspective
+  const { p1Total: currentP1, p2Total: p2Current } = useMemo(() => {
+    return calculateMonthTotals(expenses, customSplits, childSupport, parse(currentMonthId, 'yyyy-MM', new Date()));
+  }, [expenses, customSplits, childSupport, currentMonthId]);
+
+  const currentMonthNet = parent === 'Parent 1' ? (currentP1 - p2Current) : (p2Current - currentP1);
+
+  // 2. Calculate Prior Months' Net Perspective
+  const previousBalances = useMemo<MonthBalance[]>(() => {
+    const today = startOfMonth(new Date());
+    const currentViewDate = parse(currentMonthId, 'yyyy-MM', new Date());
+
     return Object.keys(appData.months)
       .sort()
       .filter((monthId) => {
         const monthDate = parse(monthId, 'yyyy-MM', new Date());
-        const currentDate = parse(currentMonthId, 'yyyy-MM', new Date());
-        // Only include months that are strictly before the current month being viewed
-        // AND not in the future relative to today.
-        return isBefore(startOfDay(monthDate), startOfDay(currentDate)) && !isAfter(monthDate, today);
+        return isBefore(monthDate, currentViewDate) && !isAfter(monthDate, today);
       })
       .map((monthId) => {
         const monthData = appData.months[monthId];
-        if (!monthData) return { monthId, balance: 0 };
-        
-        const hasUnsettledItems = 
-            monthData.expenses.some(e => e.status === 'Unsettled') || 
-            (monthData.childSupport.status === 'Unsettled' && monthData.childSupport.amount > 0 && !isAfter(startOfMonth(parse(monthId, 'yyyy-MM', new Date())), startOfMonth(new Date())));
-
-        if (!hasUnsettledItems) {
-            return { monthId, balance: 0 };
-        }
-
-        const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-        
-        const paidByParent = unsettledExpenses
-          .filter((exp) => exp.paidBy === parent)
-          .reduce((sum, exp) => sum + exp.amount, 0);
-
-        const parentExpenseShare = calculateShare(
-          unsettledExpenses,
-          monthData.customSplits,
-          parent
-        );
-        const expenseBalance = paidByParent - parentExpenseShare;
-
-        let childSupportBalance = 0;
-        const monthDate = parse(monthId, 'yyyy-MM', new Date());
-        const isFutureMonth = isAfter(startOfMonth(monthDate), startOfMonth(new Date()));
-
-        const monthIndex = getMonth(monthDate) + 1;
-        const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
-
-        if (monthData.childSupport.status === 'Unsettled' && monthlyPayer !== 'None' && !isFutureMonth) {
-          if (monthlyPayer === parent) {
-            childSupportBalance = -monthData.childSupport.amount;
-          } else {
-            childSupportBalance = monthData.childSupport.amount;
-          }
-        }
-        
-        return { monthId, balance: expenseBalance + childSupportBalance };
+        const { p1Total, p2Total } = calculateMonthTotals(monthData.expenses, monthData.customSplits, monthData.childSupport, parse(monthId, 'yyyy-MM', new Date()));
+        const net = parent === 'Parent 1' ? (p1Total - p2Total) : (p2Total - p1Total);
+        return { monthId, balance: net };
       })
       .filter(item => Math.abs(item.balance) >= 0.01);
   }, [appData.months, currentMonthId, parent]);
-  
+
   const previousMonthsTotalBalance = previousBalances.reduce((acc, curr) => acc + curr.balance, 0);
+  const totalNetBalance = currentMonthNet + previousMonthsTotalBalance;
 
-  // --- Calculate Current Month's Balance ---
-  const unsettledExpenses = expenses.filter(e => e.status === 'Unsettled');
-  
-  const paidByParent = unsettledExpenses
-    .filter((exp) => exp.paidBy === parent)
-    .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const parentExpenseShare = calculateShare(
-    unsettledExpenses,
-    customSplits,
-    parent
-  );
-
-  let childSupportBalance = 0;
-  const currentMonthDate = parse(currentMonthId, 'yyyy-MM', new Date());
-  const isCurrentMonthFuture = isAfter(startOfMonth(currentMonthDate), startOfMonth(new Date()));
-  const currentMonthIndex = getMonth(currentMonthDate) + 1;
-  const currentMonthlyPayer = childSupport.monthlyPayer?.[currentMonthIndex] ?? 'None';
-
-  if (childSupport.status === 'Unsettled' && currentMonthlyPayer !== 'None' && !isCurrentMonthFuture) {
-    if (currentMonthlyPayer === parent) {
-      childSupportBalance = -childSupport.amount;
-    } else {
-      childSupportBalance = childSupport.amount;
-    }
-  }
-
-  // Positive value means the other parent owes you for this month.
-  const currentMonthCredit = Math.max(0, paidByParent - parentExpenseShare) + (childSupportBalance > 0 ? childSupportBalance : 0);
-  
-  // Positive value means you owe the other parent for this month.
-  const currentMonthDebit = Math.max(0, parentExpenseShare - paidByParent) + (childSupportBalance < 0 ? Math.abs(childSupportBalance) : 0);
-
-  const totalNetBalance = currentMonthCredit - currentMonthDebit + previousMonthsTotalBalance;
-  
   const renderBalanceIcon = (balance: number) => {
     if (Math.abs(balance) < 0.01) return <Circle className="h-5 w-5 text-primary" />;
-    if (balance > 0) return <ArrowUpCircle className="h-5 w-5 text-green-500" />;
+    if (balance < 0) return <ArrowUpCircle className="h-5 w-5 text-green-500" />;
     return <ArrowDownCircle className="h-5 w-5 text-destructive" />;
   };
 
-  const { title, description } = useMemo(() => {
-    return {
-        title: 'Balance Details',
-        description: 'A summary of your financial contributions.'
-    };
-  }, []);
-
   const priorBalanceTitle = useMemo(() => {
-    if (Math.abs(previousMonthsTotalBalance) < 0.01) {
-      return "Past Balances Settled";
-    }
-    if (previousMonthsTotalBalance > 0) {
-      return `${otherParentName} Owes You`;
-    }
-    return `You Owe ${otherParentName}`;
+    if (Math.abs(previousMonthsTotalBalance) < 0.01) return "Past Balances Settled";
+    return previousMonthsTotalBalance > 0 ? `You Owe ${otherParentName}` : `${otherParentName} Owes You`;
   }, [previousMonthsTotalBalance, otherParentName]);
 
-
   return (
-    <Card className="h-full">
+    <Card className="h-full shadow-sm border-border/50">
       <CardHeader>
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
             <Info className="h-5 w-5 text-primary" />
           </span>
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle>Balance Details</CardTitle>
+            <CardDescription>A reconciled summary of your ledger contributions.</CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-8">
+        {/* Current Month Breakdown */}
         <div className="space-y-4">
-          <h3 className="font-semibold text-base text-foreground">This Month's Balance</h3>
-          <ul className="space-y-4 text-lg border-l-2 border-border pl-4 ml-2">
+          <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+            This Month's Reconciled Balance
+          </h3>
+          <ul className="space-y-4 text-lg border-l-2 border-primary/20 pl-4 ml-2">
             <li className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {renderBalanceIcon(currentMonthCredit)}
+                {renderBalanceIcon(-Math.max(0, -currentMonthNet))}
                 <span className="text-base">{otherParentName} Owes You</span>
               </div>
               <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-              <span className={cn("font-semibold text-lg", currentMonthCredit > 0 ? "text-green-600" : "text-muted-foreground")}>
-                +${currentMonthCredit.toFixed(2)}
+              <span className={cn("font-semibold text-lg", currentMonthNet < 0 ? "text-green-600" : "text-muted-foreground")}>
+                +${Math.max(0, -currentMonthNet).toFixed(2)}
               </span>
             </li>
             <li className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {renderBalanceIcon(-currentMonthDebit)}
+                {renderBalanceIcon(Math.max(0, currentMonthNet))}
                 <span className="text-base">You Owe {otherParentName}</span>
               </div>
               <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-              <span className={cn("font-semibold text-lg", currentMonthDebit > 0 ? "text-destructive" : "text-muted-foreground")}>
-                -${currentMonthDebit.toFixed(2)}
+              <span className={cn("font-semibold text-lg", currentMonthNet > 0 ? "text-destructive" : "text-muted-foreground")}>
+                -${Math.max(0, currentMonthNet).toFixed(2)}
               </span>
             </li>
           </ul>
         </div>
         
+        {/* Prior Month Breakdown */}
         {previousBalances.length > 0 && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-base text-foreground">Prior Month's Balance</h3>
-             <ul className="space-y-4 text-lg border-l-2 border-border pl-4 ml-2">
-                <li className="w-full items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {renderBalanceIcon(previousMonthsTotalBalance)}
-                        <div className="flex flex-1 items-center justify-between text-base font-normal">
-                            <span className="text-base">{priorBalanceTitle}</span>
-                            <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                            <span className={cn('font-semibold text-lg', previousMonthsTotalBalance < 0 ? 'text-destructive' : previousMonthsTotalBalance > 0 ? 'text-green-600' : 'text-muted-foreground')}>
-                              {previousMonthsTotalBalance < 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${previousMonthsTotalBalance.toFixed(2)}`}
-                            </span>
+            <h3 className="font-semibold text-base text-foreground">Prior Months' Balance</h3>
+             <ul className="space-y-4 text-lg border-l-2 border-primary/20 pl-4 ml-2">
+                <li className="w-full">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            {renderBalanceIcon(previousMonthsTotalBalance)}
+                            <span className="text-base font-medium">{priorBalanceTitle}</span>
                         </div>
+                        <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
+                        <span className={cn('font-semibold text-lg', previousMonthsTotalBalance > 0 ? 'text-destructive' : 'text-green-600')}>
+                          {previousMonthsTotalBalance > 0 ? `-$${Math.abs(previousMonthsTotalBalance).toFixed(2)}` : `+$${Math.abs(previousMonthsTotalBalance).toFixed(2)}`}
+                        </span>
                     </div>
-                    <div className="pt-2 space-y-1 pl-8">
+                    <div className="pt-3 space-y-2 pl-8">
                         {previousBalances.map(({ monthId, balance }) => (
                           <div key={monthId} className="flex items-center justify-between text-sm">
                             <p className="text-muted-foreground">{format(parse(monthId, 'yyyy-MM', new Date()), 'MMMM yyyy')}</p>
                             <div className="mx-4 flex-grow border-b border-dotted border-border"></div>
-                            <p className={cn('font-medium', balance < 0 ? 'text-destructive' : 'text-green-600')}>
-                              {balance < 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${balance.toFixed(2)}`}
+                            <p className={cn('font-medium', balance > 0 ? 'text-destructive' : 'text-green-600')}>
+                              {balance > 0 ? `-$${Math.abs(balance).toFixed(2)}` : `+$${Math.abs(balance).toFixed(2)}`}
                             </p>
                           </div>
                         ))}
@@ -260,10 +203,12 @@ export function SummaryDetailsCard({
         )}
 
         <Separator />
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-lg">Total Net Balance</span>
-           <span className={cn('text-2xl font-bold', totalNetBalance < 0 ? 'text-destructive' : totalNetBalance > 0 ? 'text-green-600' : 'text-primary')}>
-                {totalNetBalance < 0 ? `-$${Math.abs(totalNetBalance).toFixed(2)}` : `+$${totalNetBalance.toFixed(2)}`}
+        
+        {/* Grand Total */}
+        <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg">
+          <span className="font-bold text-lg">Total Net Balance</span>
+           <span className={cn('text-3xl font-bold', totalNetBalance > 0 ? 'text-destructive' : totalNetBalance < 0 ? 'text-green-600' : 'text-primary')}>
+                {totalNetBalance > 0 ? `-$${Math.abs(totalNetBalance).toFixed(2)}` : `+$${Math.abs(totalNetBalance).toFixed(2)}`}
             </span>
         </div>
       </CardContent>
