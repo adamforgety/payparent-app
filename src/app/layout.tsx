@@ -5,7 +5,8 @@ import { Providers } from '@/components/providers';
 export const metadata: Metadata = {
   title: 'PayParent',
   description: 'Child Support & Expense Tracker',
-  manifest: '/manifest.ts',
+  // Next.js handles manifest auto-discovery for src/app/manifest.ts
+  // We should not manually point to the .ts source file.
   icons: {
     icon: '/icons/pwa-icon.svg',
     apple: '/icons/pwa-icon.svg',
