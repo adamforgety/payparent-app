@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { parse, isBefore, startOfDay, isAfter, startOfMonth, format, getMonth } from 'date-fns';
+import { parse, isBefore, isAfter, startOfMonth, format, getMonth } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -31,23 +31,29 @@ interface SummaryDetailsCardProps {
   currentMonthId: string;
 }
 
-const calculateExpenseShare = (
+/**
+ * Calculates how much one parent owes the other for a set of expenses.
+ */
+const calculateOwedAmount = (
   expenses: Expense[],
   customSplits: CustomSplit[] | undefined,
   p: Parent
 ): number => {
-  let totalShare = 0;
+  let totalOwed = 0;
+  const otherParent = p === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+  
   for (const expense of expenses) {
-    if (expense.category === 'Reimbursement') {
-      // Reimbursement logic: Non-payer is responsible for 100%
-      totalShare += expense.paidBy === p ? 0 : expense.amount;
-    } else {
-      const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
-      const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
-      totalShare += expense.amount * parentSplitPercent;
+    if (expense.paidBy === otherParent) {
+      if (expense.category === 'Reimbursement') {
+        totalOwed += expense.amount;
+      } else {
+        const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
+        const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
+        totalOwed += expense.amount * parentSplitPercent;
+      }
     }
   }
-  return totalShare;
+  return totalOwed;
 };
 
 type MonthBalance = {
@@ -67,31 +73,31 @@ export function SummaryDetailsCard({
   const otherParent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
   const otherParentName = parentNames[otherParent];
 
-  // Helper to calculate total share for a specific month
-  const calculateMonthTotals = (monthExpenses: Expense[], monthSplits: CustomSplit[], monthCS: ChildSupport, monthDate: Date) => {
+  // Helper to calculate debts for a specific month
+  const calculateMonthDebts = (monthExpenses: Expense[], monthSplits: CustomSplit[], monthCS: ChildSupport, monthDate: Date) => {
     const unsettled = monthExpenses.filter(e => e.status === 'Unsettled');
     
-    let p1Total = calculateExpenseShare(unsettled, monthSplits, 'Parent 1');
-    let p2Total = calculateExpenseShare(unsettled, monthSplits, 'Parent 2');
+    let p1Debt = calculateOwedAmount(unsettled, monthSplits, 'Parent 1');
+    let p2Debt = calculateOwedAmount(unsettled, monthSplits, 'Parent 2');
 
     const today = startOfMonth(new Date());
     const monthIndex = getMonth(monthDate) + 1;
     const monthlyPayer = monthCS.monthlyPayer?.[monthIndex] ?? 'None';
 
     if (monthCS.status === 'Unsettled' && monthlyPayer !== 'None' && !isAfter(monthDate, today)) {
-      if (monthlyPayer === 'Parent 1') p1Total += monthCS.amount;
-      else if (monthlyPayer === 'Parent 2') p2Total += monthCS.amount;
+      if (monthlyPayer === 'Parent 1') p1Debt += monthCS.amount;
+      else if (monthlyPayer === 'Parent 2') p2Debt += monthCS.amount;
     }
 
-    return { p1Total, p2Total };
+    return { p1Debt, p2Debt };
   };
 
-  // 1. Calculate Current Month's Net Perspective
-  const { p1Total: currentP1, p2Total: p2Current } = useMemo(() => {
-    return calculateMonthTotals(expenses, customSplits, childSupport, parse(currentMonthId, 'yyyy-MM', new Date()));
+  // 1. Calculate Current Month's Net Perspective (P1 - P2 reconciliation)
+  const { p1Debt: currentP1, p2Debt: currentP2 } = useMemo(() => {
+    return calculateMonthDebts(expenses, customSplits, childSupport, parse(currentMonthId, 'yyyy-MM', new Date()));
   }, [expenses, customSplits, childSupport, currentMonthId]);
 
-  const currentMonthNet = parent === 'Parent 1' ? (currentP1 - p2Current) : (p2Current - currentP1);
+  const currentMonthNet = parent === 'Parent 1' ? (currentP1 - currentP2) : (currentP2 - currentP1);
 
   // 2. Calculate Prior Months' Net Perspective
   const previousBalances = useMemo<MonthBalance[]>(() => {
@@ -106,8 +112,8 @@ export function SummaryDetailsCard({
       })
       .map((monthId) => {
         const monthData = appData.months[monthId];
-        const { p1Total, p2Total } = calculateMonthTotals(monthData.expenses, monthData.customSplits, monthData.childSupport, parse(monthId, 'yyyy-MM', new Date()));
-        const net = parent === 'Parent 1' ? (p1Total - p2Total) : (p2Total - p1Total);
+        const { p1Debt, p2Debt } = calculateMonthDebts(monthData.expenses, monthData.customSplits, monthData.childSupport, parse(monthId, 'yyyy-MM', new Date()));
+        const net = parent === 'Parent 1' ? (p1Debt - p2Debt) : (p2Debt - p1Debt);
         return { monthId, balance: net };
       })
       .filter(item => Math.abs(item.balance) >= 0.01);

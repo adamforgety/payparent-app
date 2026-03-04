@@ -20,7 +20,7 @@ import type {
   AppData,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { parse, isBefore, startOfDay, isAfter, startOfMonth, getMonth } from 'date-fns';
+import { parse, isAfter, startOfMonth, getMonth } from 'date-fns';
 import { Button } from './ui/button';
 
 interface SettleBalanceCardProps {
@@ -35,26 +35,31 @@ interface SettleBalanceCardProps {
 }
 
 /**
- * Calculates the total financial responsibility (share) for a parent
- * across a set of expenses.
+ * Calculates how much one parent owes the other for a set of expenses.
+ * A parent only owes for an expense if the OTHER parent was the initial payer.
  */
-const calculateExpenseShare = (
+const calculateOwedAmount = (
   expenses: Expense[],
   customSplits: CustomSplit[] | undefined,
   p: Parent
 ): number => {
-  let totalShare = 0;
+  let totalOwed = 0;
+  const otherParent = p === 'Parent 1' ? 'Parent 2' : 'Parent 1';
+  
   for (const expense of expenses) {
-    if (expense.category === 'Reimbursement') {
-      // For Reimbursements, the non-paying parent is responsible for 100%
-      totalShare += expense.paidBy === p ? 0 : expense.amount;
-    } else {
-      const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
-      const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
-      totalShare += expense.amount * parentSplitPercent;
+    // Only count as debt if the other parent paid
+    if (expense.paidBy === otherParent) {
+      if (expense.category === 'Reimbursement') {
+        // Reimbursement logic: Non-payer owes 100%
+        totalOwed += expense.amount;
+      } else {
+        const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
+        const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
+        totalOwed += expense.amount * parentSplitPercent;
+      }
     }
   }
-  return totalShare;
+  return totalOwed;
 };
 
 export function SettleBalanceCard({
@@ -71,12 +76,12 @@ export function SettleBalanceCard({
   const otherParentName = parentNames[otherParent];
 
   /**
-   * Calculates the net balance by summing Total P1 Share and Total P2 Share,
-   * then subtracting them.
+   * Calculates the net balance by summing Total P1 Debt and Total P2 Debt,
+   * then subtracting them to find the reconciled difference.
    */
   const totalNetBalance = useMemo<number>(() => {
-    let totalP1Debt = 0;
-    let totalP2Debt = 0;
+    let totalP1Debt = 0; // What P1 owes P2
+    let totalP2Debt = 0; // What P2 owes P1
 
     const monthIds = Object.keys(appData.months);
     const today = startOfMonth(new Date());
@@ -89,12 +94,12 @@ export function SettleBalanceCard({
       const isViewingCurrentOrPast = !isAfter(monthDate, parse(currentMonthId, 'yyyy-MM', new Date()));
       if (!isViewingCurrentOrPast) continue;
 
-      // 1. Calculate Expense Shares for this month
+      // 1. Calculate Expense Debts for this month (only for unsettled items)
       const unsettledExpenses = monthData.expenses.filter(e => e.status === 'Unsettled');
-      totalP1Debt += calculateExpenseShare(unsettledExpenses, monthData.customSplits, 'Parent 1');
-      totalP2Debt += calculateExpenseShare(unsettledExpenses, monthData.customSplits, 'Parent 2');
+      totalP1Debt += calculateOwedAmount(unsettledExpenses, monthData.customSplits, 'Parent 1');
+      totalP2Debt += calculateOwedAmount(unsettledExpenses, monthData.customSplits, 'Parent 2');
 
-      // 2. Calculate Child Support Share for this month
+      // 2. Calculate Child Support Debt for this month
       const isFutureMonth = isAfter(monthDate, today);
       const monthIndex = getMonth(monthDate) + 1;
       const monthlyPayer = monthData.childSupport.monthlyPayer?.[monthIndex] ?? 'None';
@@ -108,11 +113,10 @@ export function SettleBalanceCard({
       }
     }
 
-    // Return the difference from the perspective of the Parent 1
-    // Positive means Parent 1 owes more than Parent 2
+    // Net Difference reconciliation: Parent 1 Debt - Parent 2 Debt
     const netDifference = totalP1Debt - totalP2Debt;
     
-    // If the perspective parent is Parent 2, flip the sign
+    // Return result from the perspective of the requested parent
     return parent === 'Parent 1' ? netDifference : -netDifference;
   }, [appData.months, currentMonthId, parent]);
 
