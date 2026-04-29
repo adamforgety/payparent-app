@@ -191,6 +191,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const getOrCreateMonthData = (targetMonthId: string, currentMonths: { [key: string]: MonthData }): MonthData => {
+    if (currentMonths[targetMonthId]) {
+      return currentMonths[targetMonthId];
+    }
+    const monthKeys = Object.keys(currentMonths).sort((a, b) => b.localeCompare(a));
+    const mostRecentMonthId = monthKeys[0];
+    const mostRecentMonthData = currentMonths[mostRecentMonthId];
+    const [yearStr, monthStr] = targetMonthId.split('-');
+
+    return {
+      id: targetMonthId,
+      year: parseInt(yearStr, 10),
+      month: parseInt(monthStr, 10),
+      childSupport: {
+        ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
+        status: 'Unsettled'
+      },
+      parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
+      expenses: [],
+      customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
+    };
+  };
+
   const addExpense = (
     newExpense: Omit<Expense, 'id' | 'year' | 'month'>
   ) => {
@@ -207,26 +230,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     };
 
     const newMonths = { ...appData.months };
-    let targetMonthData = newMonths[targetMonthId];
-
-    if (!targetMonthData) {
-      const monthKeys = Object.keys(appData.months).sort((a, b) => b.localeCompare(a));
-      const mostRecentMonthId = monthKeys[0];
-      const mostRecentMonthData = appData.months[mostRecentMonthId];
-
-      targetMonthData = {
-        id: targetMonthId,
-        year: getYear(expenseDate),
-        month: getMonth(expenseDate) + 1,
-        childSupport: {
-            ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
-            status: 'Unsettled' 
-        },
-        parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
-        expenses: [],
-        customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
-      };
-    }
+    const targetMonthData = getOrCreateMonthData(targetMonthId, newMonths);
 
     const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
     newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
@@ -254,26 +258,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         month: getMonth(expenseDate) + 1,
       };
 
-      let targetMonthData = newMonths[targetMonthId];
-
-      if (!targetMonthData) {
-        const monthKeys = Object.keys(newMonths).sort((a, b) => b.localeCompare(a));
-        const mostRecentMonthId = monthKeys[0];
-        const mostRecentMonthData = newMonths[mostRecentMonthId];
-
-        targetMonthData = {
-          id: targetMonthId,
-          year: getYear(expenseDate),
-          month: getMonth(expenseDate) + 1,
-          childSupport: {
-            ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
-            status: 'Unsettled'
-          },
-          parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
-          expenses: [],
-          customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
-        };
-      }
+      const targetMonthData = getOrCreateMonthData(targetMonthId, newMonths);
 
       const updatedExpenses = [...targetMonthData.expenses, newExpenseWithId];
       newMonths[targetMonthId] = { ...targetMonthData, expenses: updatedExpenses };
@@ -315,25 +300,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
         };
       }
 
-      let targetMonthData = newMonths[newMonthId];
-      if (!targetMonthData) {
-        const monthKeys = Object.keys(appData.months).sort((a, b) => b.localeCompare(a));
-        const mostRecentMonthId = monthKeys[0];
-        const mostRecentMonthData = appData.months[mostRecentMonthId];
-        
-        targetMonthData = {
-          id: newMonthId,
-          year: getYear(newDate),
-          month: getMonth(newDate) + 1,
-          childSupport: {
-            ...(mostRecentMonthData?.childSupport ?? initialData.months[Object.keys(initialData.months)[0]].childSupport),
-            status: 'Unsettled'
-          },
-          parentNames: mostRecentMonthData?.parentNames || initialData.months[Object.keys(initialData.months)[0]].parentNames,
-          expenses: [],
-          customSplits: mostRecentMonthData?.customSplits || initialData.months[Object.keys(initialData.months)[0]].customSplits,
-        };
-      }
+      const targetMonthData = getOrCreateMonthData(newMonthId, newMonths);
       
       newMonths[newMonthId] = {
         ...targetMonthData,
