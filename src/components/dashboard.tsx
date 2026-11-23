@@ -247,6 +247,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             appData={appData}
             monthId={monthId}
             handleGoToUnsettled={handleGoToUnsettled}
+            setActiveTab={setActiveTab}
           />
         );
       case 'expenses':
