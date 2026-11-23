@@ -28,6 +28,7 @@ import { useAppContext } from '@/context/app-context';
 import { Input } from './ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { AllUnsettledExportButton } from './all-unsettled-export-button';
+import { getExpenseParentShare, isExpenseReimbursement } from '@/lib/splits';
 
 interface AllUnsettledExpensesCardProps {
   appData: AppData;
@@ -98,17 +99,7 @@ export function AllUnsettledExpensesCard({
     if (item.type === 'child_support') {
       return item.paidBy === parent ? item.amount : 0;
     }
-  
-    const expense = item as Expense;
-    if (expense.category === 'Reimbursement') {
-      // The parent who paid gets 0 share of the cost, the other parent gets 100%
-      return expense.paidBy === parent ? 0 : expense.amount;
-    }
-  
-    const applicableSplit = item.customSplits?.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-  
-    return expense.amount * parentSplitPercent;
+    return getExpenseParentShare(item as Expense, parent, item.customSplits);
   };
   
   const filteredAndSortedItems = useMemo(() => {
@@ -224,7 +215,7 @@ export function AllUnsettledExpensesCard({
         acc[monthId] = { items: [], totalAmount: 0, totalP1Share: 0, totalP2Share: 0 };
       }
       acc[monthId].items.push(item);
-      if (item.category !== 'Reimbursement') {
+      if (!isExpenseReimbursement(item.category, item.customSplits)) {
         acc[monthId].totalAmount += item.amount;
       }
       acc[monthId].totalP1Share += getParentShare(item, 'Parent 1');
@@ -423,7 +414,7 @@ export function AllUnsettledExpensesCard({
                                                     {item.description}
                                                     <div className="text-xs text-muted-foreground">{format(new Date(item.date), 'MMM d, yyyy')}</div>
                                                 </TableCell>
-                                                <TableCell><Badge variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>{item.category}</Badge></TableCell>
+                                                <TableCell><Badge variant={item.category === 'Child Support' ? 'default' : isExpenseReimbursement(item.category, item.customSplits) ? 'reimbursement' : 'outline'}>{item.category}</Badge></TableCell>
                                                 <TableCell>{item.paidBy && item.paidBy !== 'None' && <Badge variant={item.paidBy === 'Parent 1' ? 'secondary' : 'info'}>{item.parentNames[item.paidBy]}</Badge>}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center space-x-2">
@@ -448,7 +439,7 @@ export function AllUnsettledExpensesCard({
                                                     <div className="flex justify-end gap-1 h-8 w-full">
                                                     {item.type === 'expense' && item.originalExpense && (
                                                         <>
-                                                        <EditExpenseDialog expense={item.originalExpense} onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)} parentNames={item.parentNames} monthId={item.monthId}/>
+                                                        <EditExpenseDialog expense={item.originalExpense} onUpdateExpense={(expense) => onUpdateExpense(expense, item.monthId)} parentNames={item.parentNames} monthId={item.monthId} customSplits={item.customSplits}/>
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDeleteExpense(item.id, item.monthId)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button></TooltipTrigger>

@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 
 import type { Expense, Parent, CustomSplit, ParentNames } from '@/lib/types';
 import { Button } from './ui/button';
+import { getExpenseParentShare } from '@/lib/splits';
 
 type UnsettledItem = {
   id: string;
@@ -35,16 +36,7 @@ export function AllUnsettledExportButton({
     if (item.type === 'child_support') {
       return item.paidBy === parent ? item.amount : 0;
     }
-
-    const expense = item as Expense;
-    if (expense.category === 'Reimbursement') {
-      return expense.paidBy === parent ? 0 : expense.amount;
-    }
-
-    const applicableSplit = item.customSplits.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-
-    return expense.amount * parentSplitPercent;
+    return getExpenseParentShare(item as Expense, parent, item.customSplits);
   };
 
   const handleExport = () => {

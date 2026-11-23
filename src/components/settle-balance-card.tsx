@@ -22,6 +22,7 @@ import type {
 import { cn } from '@/lib/utils';
 import { parse, isAfter, startOfMonth, getMonth } from 'date-fns';
 import { Button } from './ui/button';
+import { getExpenseOwedAmount } from '@/lib/splits';
 
 interface SettleBalanceCardProps {
   parent: Parent;
@@ -44,20 +45,8 @@ const calculateOwedAmount = (
   p: Parent
 ): number => {
   let totalOwed = 0;
-  const otherParent = p === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-  
   for (const expense of expenses) {
-    // Only count as debt if the other parent paid
-    if (expense.paidBy === otherParent) {
-      if (expense.category === 'Reimbursement') {
-        // Reimbursement logic: Non-payer owes 100%
-        totalOwed += expense.amount;
-      } else {
-        const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
-        const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
-        totalOwed += expense.amount * parentSplitPercent;
-      }
-    }
+    totalOwed += getExpenseOwedAmount(expense, p, customSplits);
   }
   return totalOwed;
 };

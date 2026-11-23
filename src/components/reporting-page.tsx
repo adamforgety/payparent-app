@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 
 import type { AppData, Expense, ExpenseCategory, ParentNames, Parent, CustomSplit, ChildSupport } from '@/lib/types';
+import { getExpenseParentShare, isExpenseReimbursement } from '@/lib/splits';
 import {
   Card,
   CardContent,
@@ -131,15 +132,8 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
     if (transaction.category === 'Child Support') {
       return transaction.paidBy === parent ? transaction.amount : 0;
     }
-
     const expense = transaction as EnrichedExpense;
-    if (expense.category === 'Reimbursement') {
-      return expense.paidBy === parent ? 0 : expense.amount;
-    }
-
-    const applicableSplit = expense.customSplits?.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-    return expense.amount * parentSplitPercent;
+    return getExpenseParentShare(expense, parent, expense.customSplits);
   };
 
   useEffect(() => {
@@ -328,15 +322,8 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
     if (transaction.category === 'Child Support') {
       return transaction.paidBy === parent ? transaction.amount : 0;
     }
-
     const expense = transaction as EnrichedExpense;
-    if (expense.category === 'Reimbursement') {
-      return expense.paidBy === parent ? 0 : expense.amount;
-    }
-
-    const applicableSplit = expense.customSplits?.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-    return expense.amount * parentSplitPercent;
+    return getExpenseParentShare(expense, parent, expense.customSplits);
   };
 
   const filteredTransactions = useMemo(() => {
@@ -586,15 +573,16 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
                         const parent1Share = getParentShare(transaction, 'Parent 1');
                         const parent2Share = getParentShare(transaction, 'Parent 2');
 
-                        const isP1Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 1';
-                        const isP2Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 2';
+                        const isReimb = isExpenseReimbursement(transaction.category, (transaction as EnrichedExpense).customSplits);
+                        const isP1Reimbursed = isReimb && transaction.paidBy === 'Parent 1';
+                        const isP2Reimbursed = isReimb && transaction.paidBy === 'Parent 2';
 
                         return (
                           <TableRow key={transaction.id}>
                             <TableCell>{format(new Date(transaction.date), 'MMM d, yyyy')}</TableCell>
                             <TableCell className="font-medium">{transaction.description}</TableCell>
                             <TableCell>
-                              <Badge variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>
+                              <Badge variant={transaction.category === 'Child Support' ? 'default' : isReimb ? 'reimbursement' : 'outline'}>
                                 {transaction.category}
                               </Badge>
                             </TableCell>
@@ -641,8 +629,9 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
                   sortedTransactions.map((transaction) => {
                     const parent1Share = getParentShare(transaction, 'Parent 1');
                     const parent2Share = getParentShare(transaction, 'Parent 2');
-                    const isP1Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 1';
-                    const isP2Reimbursed = transaction.category === 'Reimbursement' && transaction.paidBy === 'Parent 2';
+                    const isReimb = isExpenseReimbursement(transaction.category, (transaction as EnrichedExpense).customSplits);
+                    const isP1Reimbursed = isReimb && transaction.paidBy === 'Parent 1';
+                    const isP2Reimbursed = isReimb && transaction.paidBy === 'Parent 2';
                     return (
                     <Card key={transaction.id} className="overflow-hidden">
                       <div className="p-4 space-y-3">
@@ -653,7 +642,7 @@ export function ReportingPage({ appData, currentDate, isAllMonthsView, setIsAllM
                           </div>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <Badge variant={transaction.category === 'Child Support' ? 'default' : transaction.category === 'Reimbursement' ? 'reimbursement' : 'outline'}>
+                          <Badge variant={transaction.category === 'Child Support' ? 'default' : isReimb ? 'reimbursement' : 'outline'}>
                             {transaction.category}
                           </Badge>
                           <p className="font-bold text-lg text-right">${transaction.amount.toFixed(2)}</p>

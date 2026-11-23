@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import type { ChildSupport, Expense, CustomSplit, ParentNames, Parent } from '@/lib/types';
 import { Button } from './ui/button';
 import type { Transaction } from './reporting-page';
+import { getExpenseParentShare } from '@/lib/splits';
 
 interface ReportingExportButtonProps {
   transactions: Transaction[];
@@ -24,18 +25,10 @@ export function ReportingExportButton({
   
   const getParentShare = (transaction: Transaction, parent: Parent): number => {
     if (transaction.category === 'Child Support') {
-        return transaction.paidBy === parent ? transaction.amount : 0;
+      return transaction.paidBy === parent ? transaction.amount : 0;
     }
-
     const expense = transaction as (Expense & { customSplits: CustomSplit[] });
-    if (expense.category === 'Reimbursement') {
-        return expense.paidBy === parent ? 0 : expense.amount;
-    }
-
-    const applicableSplit = expense.customSplits?.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-
-    return expense.amount * parentSplitPercent;
+    return getExpenseParentShare(expense, parent, expense.customSplits);
   };
 
 

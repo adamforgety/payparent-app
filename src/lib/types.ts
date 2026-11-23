@@ -8,7 +8,8 @@ export type ExpenseCategory =
   | 'Clothing'
   | 'Food'
   | 'Reimbursement'
-  | 'Other';
+  | 'Other'
+  | (string & {});
 
 export type PaymentStatus = 'Unsettled' | 'Settled';
 
@@ -50,6 +51,7 @@ export interface CustomSplit {
   name: string;
   split: ExpenseSplit;
   categories: ExpenseCategory[];
+  isReimbursement?: boolean;
 }
 
 

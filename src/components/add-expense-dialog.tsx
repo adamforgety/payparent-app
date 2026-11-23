@@ -41,11 +41,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Expense, Parent, ExpenseCategory, ParentNames } from '@/lib/types';
+import type { Expense, Parent, ExpenseCategory, ParentNames, CustomSplit } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { SelectSeparator } from './ui/select';
 import { Alert, AlertDescription } from './ui/alert';
+import { useAppContext } from '@/context/app-context';
+import { getAllCategories, isExpenseReimbursement, getCategoryColor } from '@/lib/splits';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
@@ -57,10 +59,7 @@ const createExpenseSchema = () => z.object({
   paidBy: z.enum(['Parent 1', 'Parent 2'], {
     required_error: 'Please select who paid.',
   }),
-  category: z.enum(
-    ['Medical', 'Child Care', 'Education', 'Activities', 'Clothing', 'Food', 'Reimbursement', 'Other'],
-    { required_error: 'Please select a category.' }
-  ),
+  category: z.string().min(1, 'Please select a category.'),
   receipt: z
     .any()
     .optional()
@@ -90,12 +89,32 @@ interface AddExpenseDialogProps {
   currentDate: Date;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  customSplits?: CustomSplit[];
 }
 
-export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open, onOpenChange }: AddExpenseDialogProps) {
+export function AddExpenseDialog({
+  onAddExpense,
+  parentNames,
+  currentDate,
+  open,
+  onOpenChange,
+  customSplits,
+}: AddExpenseDialogProps) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
+  const { appData } = useAppContext();
   const expenseSchema = createExpenseSchema();
+
+  const categories = useMemo(() => {
+    if (customSplits && customSplits.length > 0) {
+      return getAllCategories(customSplits);
+    }
+    if (appData?.months) {
+      const allSplits = Object.values(appData.months).flatMap((m) => m.customSplits || []);
+      return getAllCategories(allSplits);
+    }
+    return getAllCategories();
+  }, [customSplits, appData]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(expenseSchema),
@@ -216,24 +235,31 @@ export function AddExpenseDialog({ onAddExpense, parentNames, currentDate, open,
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Medical">Medical</SelectItem>
-                        <SelectItem value="Child Care">Child Care</SelectItem>
-                        <SelectItem value="Education">Education</SelectItem>
-                        <SelectItem value="Activities">Activities</SelectItem>
-                        <SelectItem value="Clothing">Clothing</SelectItem>
-                        <SelectItem value="Food">Food</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                        <SelectSeparator />
-                        <SelectItem value="Reimbursement">Reimbursement</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: getCategoryColor(cat) }}
+                              />
+                              <span>{cat}</span>
+                              {isExpenseReimbursement(cat, customSplits) && (
+                                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium ml-1">
+                                  (100% Reimbursed)
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    {selectedCategory === 'Reimbursement' && (
-                        <Alert className="mt-2">
-                            <Info className="h-4 w-4" />
-                            <AlertDescription>
-                                The parent who initially paid will be reimbursed 100% of this amount by the other parent.
-                            </AlertDescription>
-                        </Alert>
+                    {isExpenseReimbursement(selectedCategory, customSplits) && (
+                      <Alert className="mt-2 bg-teal-500/10 border-teal-500/30 text-teal-800 dark:text-teal-200">
+                        <Info className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                        <AlertDescription>
+                          The parent who pays will be reimbursed 100% of this amount by the other parent.
+                        </AlertDescription>
+                      </Alert>
                     )}
                     <FormMessage />
                   </FormItem>

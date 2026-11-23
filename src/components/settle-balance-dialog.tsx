@@ -23,6 +23,7 @@ import type {
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/app-context';
 import { parse, isBefore, startOfDay, format, isAfter, startOfMonth } from 'date-fns';
+import { getExpenseParentShare } from '@/lib/splits';
 import {
   Accordion,
   AccordionContent,
@@ -46,11 +47,8 @@ const calculateShare = (
   p: Parent
 ): number => {
   let totalShare = 0;
-
   for (const expense of expenses) {
-    const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5; // Default to 50%
-    totalShare += expense.amount * parentSplitPercent;
+    totalShare += getExpenseParentShare(expense, p, customSplits);
   }
   return totalShare;
 };

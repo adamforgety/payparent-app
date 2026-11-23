@@ -9,6 +9,7 @@ import type { ChildSupport, Expense, CustomSplit, ParentNames, Parent } from '@/
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { DropdownMenuItem } from './ui/dropdown-menu';
+import { getExpenseParentShare } from '@/lib/splits';
 
 interface ExportButtonProps {
   expenses: Expense[];
@@ -33,16 +34,7 @@ export function ExportButton({
     if (item.category === 'Child Support') {
       return 0; // Child support is a direct transfer, not a shared cost.
     }
-
-    const expense = item as Expense;
-    if (expense.category === 'Reimbursement') {
-      return expense.paidBy === parent ? 0 : expense.amount;
-    }
-
-    const applicableSplit = customSplits.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-
-    return expense.amount * parentSplitPercent;
+    return getExpenseParentShare(item as Expense, parent, customSplits);
   };
   
   const childSupportItem =

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { AddExpenseDialog } from '@/components/add-expense-dialog';
 import { ImportExpensesDialog } from '@/components/import-expenses-dialog';
+import { format } from 'date-fns';
 import type { AppData, ParentNames } from '@/lib/types';
 import { useAppContext } from '@/context/app-context';
 
@@ -59,6 +60,7 @@ export function AddExpenseChooser({ parentNames, currentDate, appData }: AddExpe
         onAddExpense={addExpense}
         parentNames={parentNames}
         currentDate={currentDate}
+        customSplits={appData?.months?.[format(currentDate, 'yyyy-MM')]?.customSplits}
       />
 
       <ImportExpensesDialog

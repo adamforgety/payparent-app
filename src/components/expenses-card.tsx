@@ -43,6 +43,7 @@ import { Label } from './ui/label';
 import { useAppContext } from '@/context/app-context';
 import { ExportButton } from './export-button';
 import { ImportExpensesDialog } from './import-expenses-dialog';
+import { getExpenseParentShare, isExpenseReimbursement } from '@/lib/splits';
 
 interface ExpensesCardProps {
   expenses: Expense[];
@@ -124,19 +125,10 @@ export function ExpensesCard({
 
   const getParentShare = (item: DisplayItem, parent: Parent): number => {
     if (item.type === 'child_support') {
-        return item.paidBy === parent ? item.amount : 0;
+      return item.paidBy === parent ? item.amount : 0;
     }
-
-    const expense = item as Expense;
-    if (expense.category === 'Reimbursement') {
-        return expense.paidBy === parent ? 0 : expense.amount;
-    }
-
-    const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
-    const parentSplitPercent = applicableSplit ? applicableSplit.split[parent] / 100 : 0.5;
-
-    return expense.amount * parentSplitPercent;
-};
+    return getExpenseParentShare(item as Expense, parent, customSplits);
+  };
 
   const filteredAndSortedItems = useMemo(() => {
     let items = [...localItems];
@@ -203,14 +195,15 @@ export function ExpensesCard({
   const totals = useMemo(() => {
     return filteredAndSortedItems.reduce(
       (acc, item) => {
-        if (item.category !== 'Reimbursement') {
+        const isReimb = isExpenseReimbursement(item.category, customSplits);
+        if (!isReimb) {
           acc.totalInitialAmount += item.amount;
         }
         
         let p1Share = getParentShare(item, 'Parent 1');
         let p2Share = getParentShare(item, 'Parent 2');
 
-        if (item.category === 'Reimbursement') {
+        if (isReimb) {
           if (item.paidBy === 'Parent 1') {
             // Parent 1 paid, so they get a credit. Their "share" is negative.
             p1Share -= item.amount;
@@ -431,7 +424,7 @@ export function ExpensesCard({
                         </TableCell>
                         <TableCell>
                           <Badge
-                            variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
+                            variant={item.category === 'Child Support' ? 'default' : isExpenseReimbursement(item.category, customSplits) ? 'reimbursement' : 'outline'}
                           >
                             {item.category}
                           </Badge>
@@ -490,6 +483,7 @@ export function ExpensesCard({
                                   onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)}
                                   parentNames={parentNames}
                                   monthId={monthId}
+                                  customSplits={customSplits}
                                 />
                                 <TooltipProvider>
                                   <Tooltip>
@@ -622,6 +616,7 @@ export function ExpensesCard({
                                                 onUpdateExpense={(exp) => onUpdateExpense(exp, monthId)}
                                                 parentNames={parentNames}
                                                 monthId={monthId}
+                                                customSplits={customSplits}
                                             />
                                             <TooltipProvider>
                                                 <Tooltip>
@@ -640,7 +635,7 @@ export function ExpensesCard({
 
                                 <div className="flex items-center justify-between text-sm">
                                     <Badge
-                                      variant={item.category === 'Child Support' ? 'default' : item.category === 'Reimbursement' ? 'reimbursement' : 'outline'}
+                                      variant={item.category === 'Child Support' ? 'default' : isExpenseReimbursement(item.category, customSplits) ? 'reimbursement' : 'outline'}
                                     >
                                       {item.category}
                                     </Badge>

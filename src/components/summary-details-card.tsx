@@ -20,6 +20,7 @@ import type {
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ArrowDownCircle, ArrowUpCircle, Info, Circle } from 'lucide-react';
+import { getExpenseOwedAmount } from '@/lib/splits';
 
 interface SummaryDetailsCardProps {
   parent: Parent;
@@ -40,18 +41,8 @@ const calculateOwedAmount = (
   p: Parent
 ): number => {
   let totalOwed = 0;
-  const otherParent = p === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-  
   for (const expense of expenses) {
-    if (expense.paidBy === otherParent) {
-      if (expense.category === 'Reimbursement') {
-        totalOwed += expense.amount;
-      } else {
-        const applicableSplit = customSplits?.find(s => s.categories.includes(expense.category));
-        const parentSplitPercent = applicableSplit ? applicableSplit.split[p] / 100 : 0.5;
-        totalOwed += expense.amount * parentSplitPercent;
-      }
-    }
+    totalOwed += getExpenseOwedAmount(expense, p, customSplits);
   }
   return totalOwed;
 };

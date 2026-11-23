@@ -37,6 +37,11 @@ import type { AppData, MonthData, Expense, CustomSplit, Parent } from '@/lib/typ
 import { useAppContext } from '@/context/app-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  getExpenseOwedAmount,
+  getExpenseParentShare,
+  getCategoryColor,
+} from '@/lib/splits';
 
 interface DashboardTabProps {
   currentMonthData: MonthData;
@@ -109,25 +114,8 @@ export function DashboardTab({
     for (const exp of expenses) {
       if (exp.status === 'Unsettled') {
         unsettledCount++;
-        if (exp.paidBy === 'Parent 2') {
-          // P2 paid upfront, so P1 owes their share
-          if (exp.category === 'Reimbursement') {
-            p1 += exp.amount;
-          } else {
-            const split = customSplits.find((s) => s.categories.includes(exp.category));
-            const p1Percent = split ? split.split['Parent 1'] / 100 : 0.5;
-            p1 += exp.amount * p1Percent;
-          }
-        } else if (exp.paidBy === 'Parent 1') {
-          // P1 paid upfront, so P2 owes their share
-          if (exp.category === 'Reimbursement') {
-            p2 += exp.amount;
-          } else {
-            const split = customSplits.find((s) => s.categories.includes(exp.category));
-            const p2Percent = split ? split.split['Parent 2'] / 100 : 0.5;
-            p2 += exp.amount * p2Percent;
-          }
-        }
+        p1 += getExpenseOwedAmount(exp, 'Parent 1', customSplits);
+        p2 += getExpenseOwedAmount(exp, 'Parent 2', customSplits);
       }
     }
 
@@ -168,19 +156,8 @@ export function DashboardTab({
       map[exp.category].total += exp.amount;
       map[exp.category].count += 1;
 
-      if (exp.category === 'Reimbursement') {
-        if (exp.paidBy === 'Parent 1') {
-          map[exp.category].p2Share += exp.amount;
-        } else {
-          map[exp.category].p1Share += exp.amount;
-        }
-      } else {
-        const split = customSplits.find((s) => s.categories.includes(exp.category));
-        const p1Pct = split ? split.split['Parent 1'] / 100 : 0.5;
-        const p2Pct = 1 - p1Pct;
-        map[exp.category].p1Share += exp.amount * p1Pct;
-        map[exp.category].p2Share += exp.amount * p2Pct;
-      }
+      map[exp.category].p1Share += getExpenseParentShare(exp, 'Parent 1', customSplits);
+      map[exp.category].p2Share += getExpenseParentShare(exp, 'Parent 2', customSplits);
     }
 
     // Include Child Support as a category if configured
@@ -212,7 +189,7 @@ export function DashboardTab({
         pct,
         p1Pct,
         p2Pct,
-        color: CATEGORY_COLORS[catName] || '#6c5ce7',
+        color: getCategoryColor(catName),
       };
     });
 
