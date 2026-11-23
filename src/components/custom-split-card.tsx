@@ -1,8 +1,8 @@
-
 'use client';
 
-import { useState, useEffect, type ChangeEvent, useMemo } from 'react';
-import { Plus, Trash2, PieChart } from 'lucide-react';
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react';
+import { Plus, Trash2, PieChart, Sliders, Tag, Check, Sparkles } from 'lucide-react';
+
 import {
   Card,
   CardContent,
@@ -14,13 +14,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Checkbox } from '@/components/ui/checkbox';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import type {
   CustomSplit,
   Parent,
@@ -28,17 +31,27 @@ import type {
   ExpenseCategory,
   ExpenseSplit,
 } from '@/lib/types';
-import { Separator } from './ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 const ALL_CATEGORIES: ExpenseCategory[] = [
   'Medical',
-  'Education',
   'Child Care',
+  'Education',
   'Activities',
   'Clothing',
   'Food',
   'Other',
 ];
+
+const CATEGORY_COLORS: { [key: string]: string } = {
+  'Child Care': '#f59e0b',
+  'Education': '#10b981',
+  'Activities': '#3b82f6',
+  'Medical': '#ec4899',
+  'Clothing': '#8b5cf6',
+  'Food': '#f97316',
+  'Other': '#64748b',
+};
 
 interface CustomSplitCardProps {
   customSplits: CustomSplit[];
@@ -51,244 +64,336 @@ export function CustomSplitCard({
   onUpdate,
   parentNames,
 }: CustomSplitCardProps) {
-  const [localSplits, setLocalSplits] = useState<CustomSplit[]>(customSplits || []);
+  const { toast } = useToast();
+  const [localSplits, setLocalSplits] = useState<CustomSplit[]>(() => {
+    if (customSplits && customSplits.length > 0) return customSplits;
+    return [
+      {
+        id: 'split-standard',
+        name: 'Standard',
+        split: { 'Parent 1': 50, 'Parent 2': 50 },
+        categories: ['Activities', 'Clothing', 'Education', 'Food', 'Other'],
+      },
+      {
+        id: 'split-court-mandated',
+        name: 'Court-Mandated',
+        split: { 'Parent 1': 57, 'Parent 2': 43 },
+        categories: ['Medical', 'Child Care'],
+      },
+    ];
+  });
 
   useEffect(() => {
-    setLocalSplits(customSplits || []);
+    if (customSplits && customSplits.length > 0) {
+      setLocalSplits(customSplits);
+    }
   }, [customSplits]);
 
-  const assignedCategories = useMemo(() => {
-    const categories = new Set<ExpenseCategory>();
-    (localSplits || []).forEach(s => {
-      s.categories.forEach(cat => categories.add(cat));
-    });
-    return categories;
-  }, [localSplits]);
+  const p1Name = parentNames['Parent 1'] || 'Parent 1';
+  const p2Name = parentNames['Parent 2'] || 'Parent 2';
 
+  // Find which split profile currently owns a category
+  const getAssignedSplitId = (category: ExpenseCategory): string => {
+    const found = localSplits.find((s) => s.categories.includes(category));
+    return found ? found.id : localSplits[0]?.id || '';
+  };
+
+  // Add a new split profile
   const handleAddNewSplit = () => {
+    const newId = `split-${Date.now()}`;
     const newSplit: CustomSplit = {
-      id: `split-${Date.now()}`,
-      name: 'New Split',
+      id: newId,
+      name: `Custom Split ${localSplits.length + 1}`,
       split: { 'Parent 1': 50, 'Parent 2': 50 },
       categories: [],
     };
-    onUpdate([...(localSplits || []), newSplit]);
+    const updated = [...localSplits, newSplit];
+    setLocalSplits(updated);
+    onUpdate(updated);
+    toast({
+      title: 'Split Profile Created',
+      description: `Added "${newSplit.name}". You can now assign categories to it below.`,
+    });
   };
 
+  // Remove a split profile
   const handleRemoveSplit = (id: string) => {
-    onUpdate((localSplits || []).filter((split) => split.id !== id));
+    if (localSplits.length <= 1) return;
+
+    const splitToRemove = localSplits.find((s) => s.id === id);
+    const orphanCategories = splitToRemove?.categories || [];
+    const remainingSplits = localSplits.filter((s) => s.id !== id);
+
+    // Reassign orphan categories to the first remaining split profile
+    if (orphanCategories.length > 0 && remainingSplits.length > 0) {
+      remainingSplits[0] = {
+        ...remainingSplits[0],
+        categories: Array.from(new Set([...remainingSplits[0].categories, ...orphanCategories])),
+      };
+    }
+
+    setLocalSplits(remainingSplits);
+    onUpdate(remainingSplits);
+    toast({
+      title: 'Profile Deleted',
+      description: `Removed "${splitToRemove?.name || 'Split'}". Any assigned categories were moved to ${remainingSplits[0]?.name}.`,
+    });
   };
 
+  // Change percentage for Parent 1 or Parent 2
   const handleSplitChange = (
     id: string,
     parent: Parent,
-    e: ChangeEvent<HTMLInputElement>
+    value: string
   ) => {
-    const value = e.target.value;
     const numericValue = parseInt(value, 10);
     const otherParent: Parent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
 
-    const updatedSplits = (localSplits || []).map((s) => {
+    const updatedSplits = localSplits.map((s) => {
       if (s.id === id) {
         if (value === '' || (numericValue >= 0 && numericValue <= 100)) {
-          const otherValue = value === '' ? '' : String(100 - numericValue);
+          const otherValue = value === '' ? 50 : 100 - numericValue;
           return {
             ...s,
             split: {
               ...s.split,
-              [parent]: value,
+              [parent]: value === '' ? 0 : numericValue,
               [otherParent]: otherValue,
-            },
+            } as ExpenseSplit,
           };
         }
       }
       return s;
     });
+
     setLocalSplits(updatedSplits);
   };
 
-  const handleSplitBlur = (id: string, parent: Parent) => {
-    const split = (localSplits || []).find(s => s.id === id);
-    if (!split) return;
-
-    const value = parseInt(String(split.split[parent]), 10);
-    const newPercentage = isNaN(value) ? 0 : Math.max(0, Math.min(100, value));
-
-    const otherParent: Parent = parent === 'Parent 1' ? 'Parent 2' : 'Parent 1';
-    const otherPercentage = 100 - newPercentage;
-
-    const updatedSplits = (localSplits || []).map((s) => {
-        if(s.id === id) {
-            return {
-                ...s,
-                split: {
-                    [parent]: newPercentage,
-                    [otherParent]: otherPercentage
-                } as ExpenseSplit
-            }
-        }
-        return s;
-    });
-
-    onUpdate(updatedSplits);
+  const handleSplitBlur = (id: string) => {
+    onUpdate(localSplits);
   };
-  
+
+  // Change split name
   const handleNameChange = (id: string, newName: string) => {
-    const updatedSplits = (localSplits || []).map((s) =>
+    const updatedSplits = localSplits.map((s) =>
       s.id === id ? { ...s, name: newName } : s
     );
     setLocalSplits(updatedSplits);
   };
-  
+
   const handleNameBlur = () => {
     onUpdate(localSplits);
   };
 
-  const handleCategoryChange = (
-    id: string,
-    category: ExpenseCategory,
-    checked: boolean
-  ) => {
-    const updatedSplits = (localSplits || []).map((s) => {
-      if (s.id === id) {
-        const newCategories = checked
-          ? [...s.categories, category]
-          : s.categories.filter((c) => c !== category);
-        return { ...s, categories: newCategories };
+  // Assign a category to a split profile via the dropdown selector
+  const handleAssignCategory = (category: ExpenseCategory, targetSplitId: string) => {
+    const targetSplit = localSplits.find((s) => s.id === targetSplitId);
+    if (!targetSplit) return;
+
+    const updatedSplits = localSplits.map((split) => {
+      if (split.id === targetSplitId) {
+        // Add category to target split if not already there
+        const categories = split.categories.includes(category)
+          ? split.categories
+          : [...split.categories, category];
+        return { ...split, categories };
       } else {
-        // Ensure category is removed from other splits if it's being added to this one
-        if (checked) {
-            return { ...s, categories: s.categories.filter(c => c !== category) };
-        }
+        // Remove category from any other split
+        return {
+          ...split,
+          categories: split.categories.filter((c) => c !== category),
+        };
       }
-      return s;
     });
+
+    setLocalSplits(updatedSplits);
     onUpdate(updatedSplits);
+    toast({
+      title: 'Category Assigned',
+      description: `${category} is now split using "${targetSplit.name}" (${targetSplit.split['Parent 1']}% / ${targetSplit.split['Parent 2']}%).`,
+    });
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-            <PieChart className="h-5 w-5 text-secondary-foreground" />
-          </span>
-          <div>
-            <CardTitle>Custom Expense Splits</CardTitle>
-            <CardDescription>
-              Create and manage how different expense categories are split.
-            </CardDescription>
+    <div className="space-y-6">
+      {/* SECTION 1: SPLIT PROFILES */}
+      <Card className="border-border shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Sliders className="h-5 w-5" />
+              </span>
+              <div>
+                <CardTitle>Split Profiles</CardTitle>
+                <CardDescription>
+                  Define percentage splits (e.g., Court-Mandated 57/43, Standard 50/50).
+                </CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleAddNewSplit} className="gap-1.5 font-medium">
+              <Plus className="h-4 w-4" />
+              Add Split Profile
+            </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Accordion type="multiple" defaultValue={(localSplits || []).map(s => s.id)} className="w-full">
-          {(localSplits || []).map((split) => (
-            <AccordionItem value={split.id} key={split.id}>
-              <AccordionTrigger>
-                <div className="flex w-full items-center justify-between">
-                  <span className="font-semibold text-base">{split.name}</span>
-                  <span className="text-sm text-muted-foreground">
-                    ({split.split['Parent 1']}% / {split.split['Parent 2']}%)
-                  </span>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {localSplits.map((split, idx) => (
+            <div
+              key={split.id}
+              className="rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/30"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                {/* Profile Name */}
+                <div className="w-full sm:w-1/3 space-y-1.5">
+                  <Label htmlFor={`name-${split.id}`} className="text-xs font-semibold text-muted-foreground uppercase">
+                    Profile Name
+                  </Label>
+                  <Input
+                    id={`name-${split.id}`}
+                    value={split.name}
+                    onChange={(e) => handleNameChange(split.id, e.target.value)}
+                    onBlur={handleNameBlur}
+                    placeholder="e.g. Court-Mandated"
+                    className="font-medium h-9"
+                  />
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                     <Label htmlFor={`split-name-${split.id}`}>Split Name</Label>
-                     <Input
-                        id={`split-name-${split.id}`}
-                        value={split.name}
-                        onChange={(e) => handleNameChange(split.id, e.target.value)}
-                        onBlur={handleNameBlur}
-                    />
+
+                {/* Percentage Inputs */}
+                <div className="grid grid-cols-2 gap-3 w-full sm:w-1/2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`p1-${split.id}`} className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                      {p1Name} (%)
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id={`p1-${split.id}`}
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={split.split['Parent 1']}
+                        onChange={(e) => handleSplitChange(split.id, 'Parent 1', e.target.value)}
+                        onBlur={() => handleSplitBlur(split.id)}
+                        className="h-9 font-semibold pr-7"
+                      />
+                      <span className="absolute right-2.5 top-2 text-xs text-muted-foreground font-semibold">%</span>
+                    </div>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor={`split-${split.id}-p1`}>
-                        {parentNames['Parent 1']} (%)
-                      </Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`p2-${split.id}`} className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      {p2Name} (%)
+                    </Label>
+                    <div className="relative">
                       <Input
-                        id={`split-${split.id}-p1`}
+                        id={`p2-${split.id}`}
                         type="number"
-                        value={split.split['Parent 1']}
-                        onChange={(e) => handleSplitChange(split.id, 'Parent 1', e)}
-                        onBlur={() => handleSplitBlur(split.id, 'Parent 1')}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`split-${split.id}-p2`}>
-                        {parentNames['Parent 2']} (%)
-                      </Label>
-                      <Input
-                        id={`split-${split.id}-p2`}
-                        type="number"
+                        min="0"
+                        max="100"
                         value={split.split['Parent 2']}
-                        onChange={(e) => handleSplitChange(split.id, 'Parent 2', e)}
-                        onBlur={() => handleSplitBlur(split.id, 'Parent 2')}
+                        onChange={(e) => handleSplitChange(split.id, 'Parent 2', e.target.value)}
+                        onBlur={() => handleSplitBlur(split.id)}
+                        className="h-9 font-semibold pr-7"
                       />
+                      <span className="absolute right-2.5 top-2 text-xs text-muted-foreground font-semibold">%</span>
                     </div>
                   </div>
-                  <Separator />
-                  <div>
-                    <Label className="font-medium">Assigned Categories</Label>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Select which categories this split applies to.
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {ALL_CATEGORIES.map((category) => {
-                        const isChecked = split.categories.includes(category);
-                        const isDisabled = assignedCategories.has(category) && !isChecked;
-                        return (
-                          <div
-                            key={category}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={`check-${split.id}-${category}`}
-                              checked={isChecked}
-                              disabled={isDisabled}
-                              onCheckedChange={(checked) =>
-                                handleCategoryChange(split.id, category, !!checked)
-                              }
-                            />
-                            <label
-                              htmlFor={`check-${split.id}-${category}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {category}
-                            </label>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                   <Separator />
-                   <div className="flex justify-end">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveSplit(split.id)}
-                        disabled={(localSplits || []).length <= 1}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Split
-                      </Button>
-                   </div>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
+
+                {/* Delete button */}
+                <div className="self-end sm:self-center pt-2 sm:pt-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleRemoveSplit(split.id)}
+                    disabled={localSplits.length <= 1}
+                    title={localSplits.length <= 1 ? "At least one split profile is required" : "Delete split profile"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           ))}
-        </Accordion>
-      </CardContent>
-      <CardFooter>
-        <Button variant="outline" onClick={handleAddNewSplit}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Split Rule
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* SECTION 2: CATEGORY TO SPLIT MAPPING (Dropdown selector for every category) */}
+      <Card className="border-border shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-foreground">
+              <Tag className="h-5 w-5" />
+            </span>
+            <div>
+              <CardTitle>Category to Split Mapping</CardTitle>
+              <CardDescription>
+                Assign each expense category to its designated split profile. New expenses in that category will automatically follow that split.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="divide-y divide-border/60">
+            {ALL_CATEGORIES.map((category) => {
+              const currentSplitId = getAssignedSplitId(category);
+              const activeSplit = localSplits.find((s) => s.id === currentSplitId) || localSplits[0];
+              const dotColor = CATEGORY_COLORS[category] || '#6c5ce7';
+
+              return (
+                <div
+                  key={category}
+                  className="py-3.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0 shadow-xs"
+                      style={{ backgroundColor: dotColor }}
+                    />
+                    <div>
+                      <span className="font-semibold text-sm text-foreground">{category}</span>
+                      <p className="text-xs text-muted-foreground">
+                        Currently: <span className="font-medium text-foreground">{activeSplit?.name}</span> ({activeSplit?.split['Parent 1']}% {p1Name} / {activeSplit?.split['Parent 2']}% {p2Name})
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-full sm:w-64">
+                    <Select
+                      value={currentSplitId}
+                      onValueChange={(newSplitId) => handleAssignCategory(category, newSplitId)}
+                    >
+                      <SelectTrigger className="h-9 text-xs font-medium bg-background">
+                        <SelectValue placeholder="Select Split Profile" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {localSplits.map((split) => (
+                          <SelectItem key={split.id} value={split.id} className="text-xs">
+                            <span className="font-semibold">{split.name}</span>{' '}
+                            <span className="text-muted-foreground">
+                              ({split.split['Parent 1']}% / {split.split['Parent 2']}%)
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+
+        <CardFooter className="bg-muted/20 border-t border-border/60 py-3 text-xs text-muted-foreground flex items-center justify-between">
+          <span>Categories are updated across the current month and future months.</span>
+          <Badge variant="outline" className="text-[11px] font-normal">
+            Auto-saved
+          </Badge>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
