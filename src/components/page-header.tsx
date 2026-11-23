@@ -34,9 +34,14 @@ interface PageHeaderProps {
 export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettled, onGoHome }: PageHeaderProps) {
   const auth = useAuth();
   const { user } = useFirebase();
-  const { appData } = useAppContext();
+  const { appData, setRunTour } = useAppContext();
   const router = useRouter();
   const isMobile = useIsMobile();
+
+  const handleStartTour = () => {
+    setRunTour(true);
+    // Optionally close the user dropdown if we are on mobile
+  };
 
   const handleSignOut = () => {
     signOut(auth).then(() => {
@@ -74,7 +79,7 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full" onClick={onShowGettingStarted}>
+                    <Button id="tour-help" variant="outline" size="icon" className="rounded-full" onClick={handleStartTour}>
                       <HelpCircle className="h-5 w-5 text-primary" />
                     </Button>
                   </TooltipTrigger>
@@ -125,9 +130,9 @@ export function PageHeader({ totalExpenses, onShowGettingStarted, onGoToUnsettle
                             )}
                         </DropdownMenuItem>
                     </NotificationSheet>
-                    <DropdownMenuItem onClick={onShowGettingStarted}>
+                    <DropdownMenuItem id="tour-help-mobile" onClick={handleStartTour}>
                       <HelpCircle className="mr-2 h-4 w-4" />
-                      <span>Getting Started</span>
+                      <span>Start Tour</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

@@ -26,7 +26,7 @@ export function SettingsTab({
       <Tabs value={settingsSubTab} onValueChange={setSettingsSubTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="app" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">App Settings</TabsTrigger>
-          <TabsTrigger value="account" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Account Settings</TabsTrigger>
+          <TabsTrigger id="tour-account-tab" value="account" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Account Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="app">
           <div className="grid grid-cols-1 gap-6 lg:gap-8 mt-6">
@@ -34,12 +34,14 @@ export function SettingsTab({
               parentNames={currentMonthData.parentNames}
               onUpdate={(parentNames: ParentNames) => updateSettingsForCurrentAndFutureMonths({ parentNames })}
             />
-            <ChildSupportCard
-              childSupport={currentMonthData.childSupport}
-              onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
-              parentNames={currentMonthData.parentNames}
-              currentDate={currentDate}
-            />
+            <div id="tour-child-support-card">
+              <ChildSupportCard
+                childSupport={currentMonthData.childSupport}
+                onUpdate={(cs: ChildSupport) => updateSettingsForCurrentAndFutureMonths({ childSupport: cs })}
+                parentNames={currentMonthData.parentNames}
+                currentDate={currentDate}
+              />
+            </div>
             <CustomSplitCard
               customSplits={currentMonthData.customSplits || []}
               onUpdate={(customSplits: CustomSplit[]) => updateSettingsForCurrentAndFutureMonths({ customSplits })}

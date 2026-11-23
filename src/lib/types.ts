@@ -69,6 +69,18 @@ export interface AppData {
   };
 }
 
+export type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'none';
+
+export interface SubscriptionData {
+  status: SubscriptionStatus;
+  plan?: 'monthly' | 'yearly';
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  currentPeriodEnd?: string | null;
+  trialEndsAt?: string | null;
+  cancelAtPeriodEnd?: boolean;
+}
+
 // This is the definitive structure for the /users/{userId} document
 export interface UserDoc {
   id: string;
@@ -77,4 +89,6 @@ export interface UserDoc {
   appData: AppData;
   coParentId: string | null;
   dataOwnerId: string;
+  createdAt?: string;
+  subscription?: SubscriptionData;
 }

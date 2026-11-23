@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Info } from 'lucide-react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthErrorCodes } from 'firebase/auth';
@@ -293,6 +294,15 @@ export function LoginForm() {
                 {isDemoPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Try a Demo
             </Button>
+            <div className="mt-6 pt-4 border-t border-border flex items-center justify-center gap-3 text-xs text-muted-foreground">
+              <Link href="/privacy" className="hover:underline hover:text-foreground">
+                Privacy Policy
+              </Link>
+              <span>•</span>
+              <Link href="/terms" className="hover:underline hover:text-foreground">
+                Terms of Service
+              </Link>
+            </div>
         </CardContent>
       </Card>
     </main>

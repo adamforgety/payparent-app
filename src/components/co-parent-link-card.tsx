@@ -81,12 +81,6 @@ export function CoParentLinkCard() {
       const currentUserDocRef = doc(firestore, 'users', user.uid);
       
       try {
-        const coParentDoc = await getDoc(coParentDocRef);
-        if (!coParentDoc.exists()) {
-          toast({ variant: 'destructive', title: 'Co-Parent Not Found', description: 'The co-parent code is invalid.' });
-          return;
-        }
-
         const batch = writeBatch(firestore);
 
         // Current user gives up data ownership and links to co-parent.
@@ -95,24 +89,32 @@ export function CoParentLinkCard() {
           dataOwnerId: coParentId // Point to co-parent's data
         });
         
-        // Co-parent keeps data ownership and links back to current user.
+        // Co-parent document is updated only with the new coParentId link
         batch.update(coParentDocRef, { 
-          coParentId: user.uid,
-          dataOwnerId: coParentId // They own their (and now your) data
+          coParentId: user.uid
         });
         
         await batch.commit();
 
-        toast({ title: 'Success!', description: `You are now linked with ${coParentDoc.data().email}.` });
+        // Once linked, the current user is authorized to read the co-parent document
+        const coParentDoc = await getDoc(coParentDocRef);
+        const coParentEmail = coParentDoc.exists() ? coParentDoc.data()?.email : 'your co-parent';
+
+        toast({ title: 'Success!', description: `You are now linked with ${coParentEmail}.` });
         form.reset();
 
-      } catch (error) {
+      } catch (error: any) {
+        toast({ 
+          variant: 'destructive', 
+          title: 'Linking Failed', 
+          description: 'Could not link with this co-parent code. Ensure the code is correct and not already linked.' 
+        });
         const permissionError = new FirestorePermissionError({
             path: 'batch-write',
             operation: 'write', 
             requestResourceData: [
               { path: currentUserDocRef.path, data: { coParentId: coParentId, dataOwnerId: coParentId } },
-              { path: coParentDocRef.path, data: { coParentId: user.uid, dataOwnerId: coParentId } }
+              { path: coParentDocRef.path, data: { coParentId: user.uid } }
             ]
         });
         errorEmitter.emit('permission-error', permissionError);
@@ -147,18 +149,27 @@ export function CoParentLinkCard() {
         const coParentDocRef = doc(firestore, 'users', coParentId);
         
         const batch = writeBatch(firestore);
+        const isDataOwner = userDocData.dataOwnerId === user.uid;
         
-        // Reset current user to be their own data owner and remove link
-        batch.update(currentUserDocRef, { 
-          coParentId: null,
-          dataOwnerId: user.uid
-        });
-        
-        // Reset co-parent to be their own data owner and remove link
-        batch.update(coParentDocRef, { 
-          coParentId: null,
-          dataOwnerId: coParentId
-         });
+        if (isDataOwner) {
+          // Data owner retains their data and releases the co-parent
+          batch.update(currentUserDocRef, { 
+            coParentId: null 
+          });
+          batch.update(coParentDocRef, { 
+            coParentId: null, 
+            dataOwnerId: coParentId 
+          });
+        } else {
+          // Subordinate user reverts to their own data ownership and breaks link
+          batch.update(currentUserDocRef, { 
+            coParentId: null, 
+            dataOwnerId: user.uid 
+          });
+          batch.update(coParentDocRef, { 
+            coParentId: null 
+          });
+        }
         
         await batch.commit();
         toast({ title: 'Unlinked Successfully', description: `Your accounts are no longer connected.` });

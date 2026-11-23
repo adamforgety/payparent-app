@@ -19,6 +19,7 @@ import { format, getMonth, getYear, parse, isAfter } from 'date-fns';
 import { doc, onSnapshot, getDoc, FirestoreError, collection, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { errorEmitter, FirestorePermissionError } from '@/firebase';
 import { initialData } from '@/lib/data';
+import { getHouseholdSubscriptionInfo, type HouseholdSubscriptionInfo } from '@/lib/stripe';
 
 interface AppContextType {
   appData: AppData | null;
@@ -35,6 +36,10 @@ interface AppContextType {
   coParentData: UserDoc | null;
   isNewUser: boolean;
   dataOwnerId: string | null;
+  runTour: boolean;
+  setRunTour: (run: boolean) => void;
+  currentUserDoc: UserDoc | null;
+  subscriptionInfo: HouseholdSubscriptionInfo;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -45,12 +50,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
   const { firestore, user, isUserLoading } = useFirebase();
 
   const [currentUserDoc, setCurrentUserDoc] = useState<UserDoc | null>(null);
+  const [dataOwnerDoc, setDataOwnerDoc] = useState<UserDoc | null>(null);
   const [coParentData, setCoParentData] = useState<UserDoc | null>(null);
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
   const [dataOwnerId, setDataOwnerId] = useState<string | null>(null);
   const [isAppVisible, setIsAppVisible] = useState(true);
+  const [runTour, setRunTour] = useState(false);
 
   // Effect to handle page visibility
   useEffect(() => {
@@ -133,8 +140,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       const unsubscribeAppData = onSnapshot(dataOwnerDocRef, (docSnap) => {
           if (docSnap.exists()) {
               const ownerDoc = docSnap.data() as UserDoc;
+              setDataOwnerDoc(ownerDoc);
               setAppData(ownerDoc.appData || JSON.parse(JSON.stringify(initialData)));
           } else {
+              setDataOwnerDoc(null);
               setAppData(null);
           }
           setIsLoading(false); // Data is loaded or confirmed not to exist
@@ -320,6 +329,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
     updateAppData({ months: newMonths });
   };
 
+  const subscriptionInfo = useMemo(() => {
+    return getHouseholdSubscriptionInfo(dataOwnerDoc || currentUserDoc);
+  }, [dataOwnerDoc, currentUserDoc]);
+
   const contextValue = useMemo(
     () => ({
       appData,
@@ -334,8 +347,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       coParentData,
       isNewUser,
       dataOwnerId,
+      runTour,
+      setRunTour,
+      currentUserDoc,
+      subscriptionInfo,
     }),
-    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser, dataOwnerId, deleteExpense, updateExpense]
+    [appData, updateAppData, batchUpdateMonths, isLoading, coParentData, isNewUser, dataOwnerId, deleteExpense, updateExpense, runTour, setRunTour, currentUserDoc, subscriptionInfo]
   );
 
   return (

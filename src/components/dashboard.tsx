@@ -328,7 +328,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
             </Button>
             <DropdownMenu onOpenChange={setDateDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="text-xl font-semibold text-primary h-10 px-4 w-52 justify-center">
+                <Button id="tour-month-selector" variant="ghost" className="text-xl font-semibold text-primary h-10 px-4 w-52 justify-center">
                   {format(currentDate, 'MMMM yyyy')}
                   <ChevronDown className="ml-2 h-5 w-5" />
                 </Button>
@@ -411,7 +411,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
           {renderContent()}
 
         </main>
-        <nav className="bottom-nav no-print">
+        <nav className="bottom-nav no-print" id="tour-bottom-nav">
             <div className="bottom-nav-grid">
                 <button className={cn('bottom-nav-item', activeTab === 'dashboard' && 'active')} onClick={() => handleTabChange('dashboard')}>
                     <LayoutDashboard className="h-5 w-5"/>
@@ -421,7 +421,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <ExpensesIcon className="h-5 w-5"/>
                     <span>Expenses</span>
                 </button>
-                <div className="flex justify-center">
+                <div className="flex justify-center" id="tour-add-expense">
                     <AddExpenseChooser
                         parentNames={currentMonthData.parentNames}
                         currentDate={currentDate}
@@ -432,7 +432,7 @@ function DashboardUI({ appData, initialDate, activeTab, setActiveTab, onShowGett
                     <ReportingIcon className="h-5 w-5"/>
                     <span>Reporting</span>
                 </button>
-                <button className={cn('bottom-nav-item', activeTab === 'settings' && 'active')} onClick={() => handleTabChange('settings')}>
+                <button id="tour-settings-tab" className={cn('bottom-nav-item', activeTab === 'settings' && 'active')} onClick={() => handleTabChange('settings')}>
                     <Settings className="h-5 w-5"/>
                     <span>Settings</span>
                 </button>

@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { GettingStartedPage } from '@/components/getting-started-page';
 import { useAppContext } from '@/context/app-context';
+import { AppTour } from '@/components/app-tour';
 
 function AppContent() {
   const { user, isUserLoading } = useFirebase();
@@ -54,11 +55,14 @@ function AppContent() {
   }
 
   return (
-      <Dashboard 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        onShowGettingStarted={() => setShowGettingStarted(true)}
-      />
+      <>
+        <AppTour setActiveTab={setActiveTab} />
+        <Dashboard 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          onShowGettingStarted={() => setShowGettingStarted(true)}
+        />
+      </>
   );
 }
 

@@ -1,163 +1,54 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
-import type { EmblaCarouselType } from 'embla-carousel-react';
 import { Button } from './ui/button';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from './ui/carousel';
-import { Settings, FilePlus, LayoutDashboard, Link2, ArrowRight, Plus, BarChart } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { Logo } from './logo';
-import { cn } from '@/lib/utils';
+import { useAppContext } from '@/context/app-context';
 
 interface GettingStartedPageProps {
   onFinish: () => void;
 }
 
 export function GettingStartedPage({ onFinish }: GettingStartedPageProps) {
-  const [emblaApi, setEmblaApi] = useState<EmblaCarouselType | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const { setRunTour } = useAppContext();
 
-  const tutorialSteps = [
-    {
-      icon: Settings,
-      title: 'Step 1: Configure Your Settings',
-      description: (
-        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>Go to the <strong className="text-primary">Settings</strong> tab to customize the app.</li>
-          <li>Set parent names to personalize your dashboard.</li>
-          <li>Enter the monthly child support amount.</li>
-          <li>Adjust expense percentages for general and medical costs.</li>
-          <li>Update your account email or password.</li>
-        </ul>
-      ),
-    },
-    {
-      icon: FilePlus,
-      title: 'Step 2: Log Your First Expense',
-      description: (
-        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-            <li>Click the <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground"><Plus className="w-3 h-3" /></div> button to add a single expense.</li>
-            <li>Go to the <strong className="text-primary">Expenses</strong> tab to log, view, and settle expenses.</li>
-            <li>Use the <strong className="text-primary">Import</strong> button to bulk upload expenses from a file and follow the instructions.</li>
-        </ul>
-      ),
-    },
-    {
-      icon: LayoutDashboard,
-      title: 'Step 3: Understand the Dashboard',
-      description: (
-        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>
-            The <strong className="text-primary">Settle Balance</strong> card
-            shows the final amount of who owes whom.
-          </li>
-           <li>Click the <strong className="text-primary">View & Settle Expenses</strong> button to settle all outstanding expenses.</li>
-          <li>
-            The <strong className="text-primary">Balance Details</strong> card
-            provides a complete balance breakdown.
-          </li>
-        </ul>
-      ),
-    },
-    {
-      icon: BarChart,
-      title: 'Step 4: View Reports',
-      description: (
-        <ul className="list-disc list-inside text-left text-sm text-muted-foreground space-y-2">
-          <li>Go to the <strong className="text-primary">Reporting</strong> tab to see year-to-date expenses.</li>
-          <li>Export your data for taxes or other financial needs.</li>
-          <li>View the <strong className="text-primary">Summary tab</strong> for a breakdown of all expenses by category.</li>
-        </ul>
-      ),
-    },
-    {
-      icon: Link2,
-      title: 'Step 5: Link With Your Co-Parent',
-      description: (
-        <p className="text-sm text-muted-foreground">
-          Head to <strong className="text-primary">Settings</strong> &gt; <strong className="text-primary">Account</strong> to find your unique <strong className="text-primary">Co-Parent Code</strong>. Share it with your co-parent to link accounts and share financial data seamlessly.
-        </p>
-      )
-    },
-  ];
-  
-  useEffect(() => {
-    if (!emblaApi) return;
-    setScrollSnaps(emblaApi.scrollSnapList());
-    const onSelect = () => {
-      setSelectedIndex(emblaApi.selectedScrollSnap());
-    };
-    emblaApi.on('select', onSelect);
-    onSelect(); // Set initial selected index
-    return () => {
-      emblaApi.off('select', onSelect);
-    };
-  }, [emblaApi]);
-
-  const scrollTo = (index: number) => {
-    emblaApi?.scrollTo(index);
+  const handleStartTour = () => {
+    onFinish(); // Close the getting started page
+    setTimeout(() => {
+        setRunTour(true); // Start the joyride tour
+    }, 500); // Small delay to let the dashboard render
   };
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
-      <div className="w-full max-w-2xl">
-        <header className="text-center mb-8">
-            <div className="flex justify-center mb-4">
+      <div className="w-full max-w-lg text-center space-y-8">
+        <header className="space-y-4">
+            <div className="flex justify-center">
                 <Logo />
             </div>
-          <h1 className="text-2xl font-semibold">Welcome to PayParent!</h1>
-          <p className="text-muted-foreground">
-            Here’s a quick guide to get you started.
+          <h1 className="text-3xl font-bold tracking-tight">Welcome to PayParent!</h1>
+          <p className="text-lg text-muted-foreground">
+            The easiest way to track, split, and settle shared expenses with your co-parent.
           </p>
         </header>
 
-        <Carousel opts={{ loop: true }} setApi={setEmblaApi} className="w-full px-12">
-          <CarouselContent>
-            {tutorialSteps.map((step, index) => (
-              <CarouselItem key={index}>
-                <div className="p-1">
-                  <div className="text-center space-y-4 p-4 min-h-[280px]">
-                    <div className="flex justify-center">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <step.icon className="h-6 w-6" />
-                        </div>
-                    </div>
-                    <h3 className="text-lg font-semibold">{step.title}</h3>
-                    <div className="text-sm text-muted-foreground">
-                      {step.description}
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="bg-primary text-primary-foreground hover:bg-primary/90" />
-          <CarouselNext className="bg-primary text-primary-foreground hover:bg-primary/90" />
-        </Carousel>
-        
-        <div className="flex justify-center gap-2 mt-4">
-            {scrollSnaps.map((_, index) => (
-                <button
-                    key={index}
-                    onClick={() => scrollTo(index)}
-                    className={cn('h-2 w-2 rounded-full transition-colors', 
-                        index === selectedIndex ? 'bg-primary' : 'bg-muted'
-                    )}
-                />
-            ))}
+        <div className="bg-secondary/50 rounded-lg p-6 border text-left space-y-4">
+            <h2 className="font-semibold text-lg">In this quick tour, you will learn how to:</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+                <li>Configure your account settings and display names.</li>
+                <li>Set your recurring monthly child support.</li>
+                <li>Log new expenses and bulk-import spreadsheets.</li>
+                <li>Navigate your dashboard and reports.</li>
+            </ul>
         </div>
 
-        <footer className="mt-8 flex justify-center">
-            <Button onClick={onFinish}>
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
+        <footer className="pt-4 flex flex-col gap-4 items-center">
+            <Button size="lg" className="w-full sm:w-auto text-lg px-8" onClick={handleStartTour}>
+                <Play className="mr-2 h-5 w-5" />
+                Start Interactive Tour
+            </Button>
+            <Button variant="ghost" onClick={onFinish}>
+                Skip for now
             </Button>
         </footer>
       </div>
