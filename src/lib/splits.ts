@@ -7,7 +7,6 @@ export const DEFAULT_CATEGORIES: ExpenseCategory[] = [
   'Activities',
   'Clothing',
   'Food',
-  'Reconciliation',
   'Reimbursement',
   'Other',
 ];
@@ -19,7 +18,6 @@ export const CATEGORY_COLORS: { [key: string]: string } = {
   'Medical': '#ec4899',
   'Clothing': '#8b5cf6',
   'Food': '#f97316',
-  'Reconciliation': '#14b8a6', // Teal
   'Reimbursement': '#14b8a6', // Teal
   'Other': '#64748b',
 };

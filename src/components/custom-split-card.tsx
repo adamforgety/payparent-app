@@ -58,10 +58,10 @@ const DEFAULT_INITIAL_SPLITS: CustomSplit[] = [
     isReimbursement: false,
   },
   {
-    id: 'split-reconciliation',
-    name: 'Reconciliation',
+    id: 'split-reimbursement',
+    name: 'Reimbursement',
     split: { 'Parent 1': 0, 'Parent 2': 0 },
-    categories: ['Reconciliation', 'Reimbursement'],
+    categories: ['Reimbursement'],
     isReimbursement: true,
   },
 ];
@@ -72,35 +72,36 @@ function sanitizeSplits(splits: CustomSplit[]): CustomSplit[] {
   let result = splits.map((s) => {
     const isReimb =
       s.isReimbursement ||
-      s.name.toLowerCase().includes('reconcil') ||
-      s.name.toLowerCase().includes('reimburse');
+      s.name.toLowerCase().includes('reimburse') ||
+      s.name.toLowerCase().includes('reconcil');
     return {
       ...s,
       name:
-        s.name === '100% Reimbursed' || s.name.toLowerCase() === 'reimbursement'
-          ? 'Reconciliation'
+        s.name === '100% Reimbursed' || s.name.toLowerCase() === 'reconciliation'
+          ? 'Reimbursement'
           : s.name,
       isReimbursement: isReimb,
+      categories: (s.categories || []).filter((c) => c !== 'Reconciliation'),
     };
   });
 
-  const hasReconciliation = result.some((s) => s.isReimbursement);
+  const hasReimbursement = result.some((s) => s.isReimbursement);
 
-  if (!hasReconciliation) {
+  if (!hasReimbursement) {
     result.push({
-      id: 'split-reconciliation',
-      name: 'Reconciliation',
+      id: 'split-reimbursement',
+      name: 'Reimbursement',
       split: { 'Parent 1': 0, 'Parent 2': 0 },
-      categories: ['Reconciliation', 'Reimbursement'],
+      categories: ['Reimbursement'],
       isReimbursement: true,
     });
   } else {
-    // Ensure both Reconciliation and Reimbursement are categorized
-    const recProfile = result.find((s) => s.isReimbursement)!;
-    const cats = new Set(recProfile.categories || []);
-    cats.add('Reconciliation');
+    // Ensure Reimbursement is in the reimbursement profile's categories
+    const reimbProfile = result.find((s) => s.isReimbursement)!;
+    const cats = new Set(reimbProfile.categories || []);
+    cats.delete('Reconciliation');
     cats.add('Reimbursement');
-    recProfile.categories = Array.from(cats);
+    reimbProfile.categories = Array.from(cats);
   }
 
   return result;
@@ -134,14 +135,14 @@ export function CustomSplitCard({
     return localSplits.filter((s) => !s.isReimbursement);
   }, [localSplits]);
 
-  // Dedicated reconciliation profile
-  const reconciliationSplit = useMemo(() => {
+  // Dedicated reimbursement profile
+  const reimbursementSplit = useMemo(() => {
     return (
       localSplits.find((s) => s.isReimbursement) || {
-        id: 'split-reconciliation',
-        name: 'Reconciliation',
+        id: 'split-reimbursement',
+        name: 'Reimbursement',
         split: { 'Parent 1': 0, 'Parent 2': 0 },
-        categories: ['Reconciliation', 'Reimbursement'],
+        categories: ['Reimbursement'],
         isReimbursement: true,
       }
     );
@@ -150,7 +151,9 @@ export function CustomSplitCard({
   // Compute all available categories from default list + any in localSplits
   const categoriesList = useMemo(() => {
     const raw = getAllCategories(localSplits);
-    return raw.filter((c) => !removedDefaultCategories.includes(c));
+    return raw.filter(
+      (c) => c !== 'Reconciliation' && !removedDefaultCategories.includes(c)
+    );
   }, [localSplits, removedDefaultCategories]);
 
   // Find which split profile currently owns a category
@@ -304,13 +307,13 @@ export function CustomSplitCard({
     const formattedCategory =
       trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 
-    // Target split: if user adds a category named 'Reconciliation' or 'Reimbursement', assign to reconciliation
-    const isReconciliationTarget =
-      formattedCategory.toLowerCase().includes('reconcil') ||
-      formattedCategory.toLowerCase().includes('reimburse');
+    // Target split: if user adds a category named 'Reimbursement', assign to reimbursement
+    const isReimbursementTarget = formattedCategory
+      .toLowerCase()
+      .includes('reimburse');
 
-    const targetSplit = isReconciliationTarget
-      ? reconciliationSplit
+    const targetSplit = isReimbursementTarget
+      ? reimbursementSplit
       : percentageSplits[0] || localSplits[0];
 
     const updatedSplits = localSplits.map((split) => {
@@ -497,7 +500,7 @@ export function CustomSplitCard({
         </CardContent>
       </Card>
 
-      {/* SECTION 2: DEDICATED RECONCILIATION PROFILE */}
+      {/* SECTION 2: DEDICATED REIMBURSEMENT PROFILE */}
       <Card className="border-teal-500/30 bg-teal-500/5 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -507,7 +510,7 @@ export function CustomSplitCard({
               </span>
               <div>
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-base font-bold">Reconciliation Profile</CardTitle>
+                  <CardTitle className="text-base font-bold">Reimbursement Profile</CardTitle>
                   <Badge variant="outline" className="bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30 text-xs">
                     100% Reimbursed
                   </Badge>
@@ -527,12 +530,12 @@ export function CustomSplitCard({
                 <span>100% Reimbursement to Paying Parent</span>
               </div>
               <p className="text-muted-foreground text-[11px] pl-6">
-                Whichever parent pays an expense assigned to Reconciliation upfront is reimbursed 100% by the other parent ($0 share to payer, 100% debt to other parent).
+                Whichever parent pays an expense assigned to Reimbursement upfront is reimbursed 100% by the other parent ($0 share to payer, 100% debt to other parent).
               </p>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap shrink-0 pl-6 sm:pl-0">
               <span className="text-[11px] text-muted-foreground font-medium">Mapped Categories:</span>
-              {(reconciliationSplit.categories || []).map((cat) => (
+              {(reimbursementSplit.categories || []).map((cat) => (
                 <Badge
                   key={cat}
                   variant="outline"
@@ -556,7 +559,7 @@ export function CustomSplitCard({
             <div>
               <CardTitle>Category to Split Mapping</CardTitle>
               <CardDescription>
-                Assign each expense category to its designated percentage profile or the Reconciliation profile.
+                Assign each expense category to its designated percentage profile or the Reimbursement profile.
               </CardDescription>
             </div>
           </div>
@@ -573,7 +576,7 @@ export function CustomSplitCard({
                 value={newCategoryInput}
                 onChange={(e) => setNewCategoryInput(e.target.value)}
                 onKeyDown={handleCategoryKeyDown}
-                placeholder="e.g. Reconciliation, Tutoring, Sports, Camp..."
+                placeholder="e.g. Reimbursement, Tutoring, Sports, Camp..."
                 className="h-9 text-sm"
               />
               <Button
@@ -586,7 +589,7 @@ export function CustomSplitCard({
               </Button>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1.5">
-              Tip: You can assign any category to either your percentage profiles (e.g. Standard 50/50) or the Reconciliation profile below.
+              Tip: You can assign any category to either your percentage profiles (e.g. Standard 50/50) or the Reimbursement profile below.
             </p>
           </div>
 
@@ -618,7 +621,7 @@ export function CustomSplitCard({
                             variant="outline"
                             className="text-[10px] bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30 font-medium"
                           >
-                            Reconciliation (100% to payer)
+                            Reimbursement (100% to payer)
                           </Badge>
                         )}
                       </div>
@@ -662,13 +665,13 @@ export function CustomSplitCard({
                               </span>
                             </SelectItem>
                           ))}
-                          {/* Dedicated Reconciliation profile */}
+                          {/* Dedicated Reimbursement profile */}
                           <SelectItem
-                            key={reconciliationSplit.id}
-                            value={reconciliationSplit.id}
+                            key={reimbursementSplit.id}
+                            value={reimbursementSplit.id}
                             className="text-xs font-medium text-teal-700 dark:text-teal-300"
                           >
-                            <span className="font-semibold">Reconciliation</span>{' '}
+                            <span className="font-semibold">Reimbursement</span>{' '}
                             <span>(100% to Payer)</span>
                           </SelectItem>
                         </SelectContent>

@@ -46,10 +46,10 @@ export const initialData: AppData = {
           isReimbursement: false,
         },
         {
-          id: 'reconciliation-split',
-          name: 'Reconciliation',
+          id: 'reimbursement-split',
+          name: 'Reimbursement',
           split: { 'Parent 1': 0, 'Parent 2': 0 },
-          categories: ['Reconciliation', 'Reimbursement'],
+          categories: ['Reimbursement'],
           isReimbursement: true,
         },
       ],
