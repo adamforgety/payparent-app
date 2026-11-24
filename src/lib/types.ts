@@ -7,6 +7,7 @@ export type ExpenseCategory =
   | 'Activities'
   | 'Clothing'
   | 'Food'
+  | 'Reconciliation'
   | 'Reimbursement'
   | 'Other'
   | (string & {});

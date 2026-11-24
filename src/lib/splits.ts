@@ -7,6 +7,7 @@ export const DEFAULT_CATEGORIES: ExpenseCategory[] = [
   'Activities',
   'Clothing',
   'Food',
+  'Reconciliation',
   'Reimbursement',
   'Other',
 ];
@@ -18,6 +19,7 @@ export const CATEGORY_COLORS: { [key: string]: string } = {
   'Medical': '#ec4899',
   'Clothing': '#8b5cf6',
   'Food': '#f97316',
+  'Reconciliation': '#14b8a6', // Teal
   'Reimbursement': '#14b8a6', // Teal
   'Other': '#64748b',
 };
@@ -74,7 +76,7 @@ export function isExpenseReimbursement(
   category: string,
   customSplits?: CustomSplit[]
 ): boolean {
-  if (category === 'Reimbursement') return true;
+  if (category === 'Reimbursement' || category === 'Reconciliation') return true;
   if (!customSplits || !Array.isArray(customSplits)) return false;
   const applicableSplit = customSplits.find(
     (s) => Array.isArray(s.categories) && s.categories.includes(category as any)
