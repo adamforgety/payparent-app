@@ -157,6 +157,65 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({
       return () => unsubscribeAppData();
   }, [firestore, dataOwnerId, isNewUser, isAppVisible]);
 
+  // Silent background auto-sync with Google Sheet if configured and not synced recently (> 15 minutes)
+  useEffect(() => {
+    if (!firestore || !user || !dataOwnerId || !appData || isLoading || !isAppVisible) return;
+
+    const config = currentUserDoc?.googleSheetConfig;
+    if (!config?.sheetId || config.syncStatus !== 'connected') return;
+
+    const lastSyncTime = config.lastSyncedAt ? new Date(config.lastSyncedAt).getTime() : 0;
+    const fifteenMinutes = 15 * 60 * 1000;
+
+    // Only run if at least 15 minutes have passed since last sync
+    if (Date.now() - lastSyncTime < fifteenMinutes) return;
+
+    const runSilentSync = async () => {
+      try {
+        let parentNames = { 'Parent 1': 'Parent 1', 'Parent 2': 'Parent 2' };
+        if (appData.months) {
+          const mKeys = Object.keys(appData.months).sort();
+          if (mKeys.length > 0 && appData.months[mKeys[mKeys.length - 1]]?.parentNames) {
+            parentNames = appData.months[mKeys[mKeys.length - 1]].parentNames;
+          }
+        }
+
+        const res = await fetch('/api/sheets/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            dataOwnerId,
+            sheetId: config.sheetId,
+            currentAppData: appData,
+            parentNames,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.updatedAppData) {
+            await saveUserData(firestore, dataOwnerId, data.updatedAppData);
+            const userRef = doc(firestore, 'users', dataOwnerId);
+            await setDoc(
+              userRef,
+              {
+                googleSheetConfig: {
+                  ...config,
+                  lastSyncedAt: new Date().toISOString(),
+                },
+              },
+              { merge: true }
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Background auto-sync skipped:', err);
+      }
+    };
+
+    runSilentSync();
+  }, [user, firestore, dataOwnerId, currentUserDoc?.googleSheetConfig?.sheetId, isLoading, isAppVisible]);
 
   const updateAppData = useCallback(
     (newData: Partial<Omit<AppData, 'id' | 'email'>>) => {
