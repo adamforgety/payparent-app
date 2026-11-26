@@ -1,12 +1,13 @@
 import { google } from 'googleapis';
 import { format, parse, isValid } from 'date-fns';
-import type { AppData, Expense, ExpenseCategory, Parent, ParentNames, PaymentStatus, MonthData } from './types';
-import { extractSpreadsheetId } from './sheet-utils';
+import type { AppData, Expense, ExpenseCategory, Parent, ParentNames, PaymentStatus } from './types';
+import { extractSpreadsheetId, isAppsScriptUrl } from './sheet-utils';
 
-export { extractSpreadsheetId };
+export { extractSpreadsheetId, isAppsScriptUrl };
 
 /**
- * Gets an authenticated Google Sheets API client using a Service Account.
+ * Gets an authenticated Google Sheets API client using a Service Account if configured.
+ * Safely returns null if credentials are not configured in the environment.
  */
 export function getGoogleSheetsClient() {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -14,22 +15,32 @@ export function getGoogleSheetsClient() {
     ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
     : undefined;
 
-  let auth: any;
-
   if (serviceAccountEmail && privateKey) {
-    auth = new google.auth.JWT({
-      email: serviceAccountEmail,
-      key: privateKey,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-  } else {
-    // Fall back to Google Application Default Credentials (e.g. Firebase App Hosting or GOOGLE_APPLICATION_CREDENTIALS)
-    auth = new google.auth.GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+    try {
+      const auth = new google.auth.JWT({
+        email: serviceAccountEmail,
+        key: privateKey,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+      return google.sheets({ version: 'v4', auth });
+    } catch (err) {
+      console.warn('Failed to initialize JWT auth for Google Sheets:', err);
+    }
   }
 
-  return google.sheets({ version: 'v4', auth });
+  // Only attempt Application Default Credentials if explicitly configured
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCLOUD_PROJECT) {
+    try {
+      const auth = new google.auth.GoogleAuth({
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+      return google.sheets({ version: 'v4', auth });
+    } catch (err) {
+      console.warn('Failed to initialize GoogleAuth for Google Sheets:', err);
+    }
+  }
+
+  return null;
 }
 
 export interface ParsedSheetRow {
@@ -95,67 +106,71 @@ export function parseSheetDate(raw: any): { isoDate: string; year: number; month
 }
 
 /**
- * Reads all expense rows from the Google Sheet (tab "Expenses", starting from row 3).
- * Columns expected:
- * A: Date
- * B: Description
- * C: Category
- * D: Paid By (mapped against parentNames)
- * E: Status ("Unsettled" or "Settled")
- * F: Amount
+ * Parses a 2D matrix of row values into structured ParsedSheetRow items.
  */
-export async function readExpensesFromSheet(
-  sheetId: string,
-  parentNames: ParentNames
-): Promise<ParsedSheetRow[]> {
-  const sheets = getGoogleSheetsClient();
-
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: sheetId,
-    range: 'Expenses!A3:F',
-    valueRenderOption: 'UNFORMATTED_VALUE',
-    dateTimeRenderOption: 'FORMATTED_STRING',
-  });
-
-  const rows = response.data.values || [];
+export function parseRawRowMatrix(
+  rows: any[][],
+  parentNames: ParentNames,
+  startRowIndex: number = 1
+): ParsedSheetRow[] {
   const parsedRows: ParsedSheetRow[] = [];
-
   const p1Name = (parentNames['Parent 1'] || 'Parent 1').toLowerCase().trim();
   const p2Name = (parentNames['Parent 2'] || 'Parent 2').toLowerCase().trim();
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rowIndex = i + 3; // 1-indexed, starting from row 3
+    const rowIndex = i + startRowIndex;
 
-    if (!row || row.length === 0) continue;
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
 
     const [rawDate, rawDesc, rawCategory, rawPaidBy, rawStatus, rawAmount] = row;
 
-    // Skip empty rows
+    // Skip header row if it looks like column titles
+    if (
+      i < 3 &&
+      typeof rawDate === 'string' &&
+      (rawDate.toLowerCase().includes('date') || String(rawDesc || '').toLowerCase().includes('description'))
+    ) {
+      continue;
+    }
+
     if (!rawDate && !rawDesc && !rawAmount) continue;
 
     const parsedDate = parseSheetDate(rawDate);
     if (!parsedDate) continue;
 
-    const amount = typeof rawAmount === 'number' ? rawAmount : parseFloat(String(rawAmount || '0').replace(/[^0-9.-]+/g, ''));
+    const amount =
+      typeof rawAmount === 'number'
+        ? rawAmount
+        : parseFloat(String(rawAmount || '0').replace(/[^0-9.-]+/g, ''));
     if (isNaN(amount) || amount <= 0) continue;
 
     const description = String(rawDesc || '').trim() || 'Expense';
     const category = (String(rawCategory || 'Other').trim() || 'Other') as ExpenseCategory;
 
-    // Map paidBy to 'Parent 1' or 'Parent 2'
     const paidByStr = String(rawPaidBy || '').toLowerCase().trim();
     let paidBy: Parent = 'Parent 1';
-    if (paidByStr === p2Name || paidByStr.includes('parent 2') || paidByStr.includes('khylee') || paidByStr.includes('mom')) {
+    if (
+      paidByStr === p2Name ||
+      paidByStr.includes('parent 2') ||
+      paidByStr.includes('khylee') ||
+      paidByStr.includes('mom')
+    ) {
       paidBy = 'Parent 2';
-    } else if (paidByStr === p1Name || paidByStr.includes('parent 1') || paidByStr.includes('adam') || paidByStr.includes('dad')) {
+    } else if (
+      paidByStr === p1Name ||
+      paidByStr.includes('parent 1') ||
+      paidByStr.includes('adam') ||
+      paidByStr.includes('dad')
+    ) {
       paidBy = 'Parent 1';
     }
 
     const statusStr = String(rawStatus || '').toLowerCase().trim();
-    const status: PaymentStatus = statusStr.includes('settled') && !statusStr.includes('unsettled')
-      ? 'Settled'
-      : 'Unsettled';
+    const status: PaymentStatus =
+      statusStr.includes('settled') && !statusStr.includes('unsettled')
+        ? 'Settled'
+        : 'Unsettled';
 
     parsedRows.push({
       rowIndex,
@@ -176,16 +191,94 @@ export async function readExpensesFromSheet(
 }
 
 /**
- * Appends one or more expenses to the Google Sheet (tab "Expenses").
+ * Reads all expense rows from either:
+ * 1. An Apps Script Web App URL (GET request)
+ * 2. Google Sheets API v4 (if Service Account is configured)
+ * 3. GViz Public/Link-Shared Sheet endpoint
+ */
+export async function readExpensesFromSheet(
+  sheetUrlOrId: string,
+  parentNames: ParentNames
+): Promise<{ rows: ParsedSheetRow[]; source: 'appscript' | 'api' | 'gviz' }> {
+  const trimmed = (sheetUrlOrId || '').trim();
+
+  // Mode 1: Google Apps Script Web App
+  if (isAppsScriptUrl(trimmed)) {
+    try {
+      const res = await fetch(trimmed, { redirect: 'follow' });
+      if (!res.ok) {
+        throw new Error(`Apps Script responded with HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const rawRows = Array.isArray(data.rows) ? data.rows : Array.isArray(data) ? data : [];
+      const rows = parseRawRowMatrix(rawRows, parentNames, 1);
+      return { rows, source: 'appscript' };
+    } catch (err: any) {
+      throw new Error(`Failed to read from Apps Script Web App: ${err.message}`);
+    }
+  }
+
+  const cleanSheetId = extractSpreadsheetId(trimmed);
+  if (!cleanSheetId) {
+    throw new Error('Please enter a valid Google Sheet URL, Sheet ID, or Apps Script Web App URL.');
+  }
+
+  // Mode 2: Google Sheets API with Service Account
+  const sheets = getGoogleSheetsClient();
+  if (sheets) {
+    try {
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: cleanSheetId,
+        range: 'Expenses!A3:F',
+        valueRenderOption: 'UNFORMATTED_VALUE',
+        dateTimeRenderOption: 'FORMATTED_STRING',
+      });
+      const rows = parseRawRowMatrix(response.data.values || [], parentNames, 3);
+      return { rows, source: 'api' };
+    } catch (apiErr: any) {
+      console.warn('Google Sheets API call failed:', apiErr.message);
+    }
+  }
+
+  // Mode 3: GViz Public Link-Shared Sheet fallback
+  try {
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${cleanSheetId}/gviz/tq?tqx=out:json&sheet=Expenses`;
+    const res = await fetch(gvizUrl);
+    if (res.ok) {
+      const text = await res.text();
+      if (text.includes('google.visualization.Query.setResponse')) {
+        const jsonStr = text.replace(/^[^{]*\(/, '').replace(/\);?$/, '');
+        const gvizData = JSON.parse(jsonStr);
+        if (gvizData.table && Array.isArray(gvizData.table.rows)) {
+          const rawRows = gvizData.table.rows.map((r: any) =>
+            (r.c || []).map((cell: any) => (cell ? cell.v : ''))
+          );
+          const rows = parseRawRowMatrix(rawRows, parentNames, 2);
+          return { rows, source: 'gviz' };
+        }
+      }
+    }
+  } catch (gvizErr) {
+    console.warn('GViz fetch failed:', gvizErr);
+  }
+
+  // If all modes failed, provide a clear, helpful error message
+  throw new Error(
+    'Unable to connect to Google Sheet. Your sheet is private and no service account credentials were found in .env.\n\n' +
+    '💡 Quickest solution: In your Google Sheet, open Extensions > Apps Script, paste the Web App script (copy it from the card below), click Deploy > New deployment > Web app, and paste your Web App URL here — it connects instantly with zero Google Cloud setup!'
+  );
+}
+
+/**
+ * Appends one or more expenses to the Google Sheet.
  */
 export async function appendExpensesToSheet(
-  sheetId: string,
+  sheetUrlOrId: string,
   expenses: Expense[],
   parentNames: ParentNames
 ): Promise<number> {
   if (expenses.length === 0) return 0;
-
-  const sheets = getGoogleSheetsClient();
+  const trimmed = (sheetUrlOrId || '').trim();
 
   const rowsToAppend = expenses.map((exp) => {
     const parentDisplayName = parentNames[exp.paidBy] || exp.paidBy;
@@ -201,39 +294,90 @@ export async function appendExpensesToSheet(
     ];
   });
 
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: sheetId,
-    range: 'Expenses!A:F',
-    valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
-    requestBody: {
-      values: rowsToAppend,
-    },
-  });
+  // Mode 1: Apps Script Web App
+  if (isAppsScriptUrl(trimmed)) {
+    try {
+      const res = await fetch(trimmed, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'append', rows: rowsToAppend }),
+      });
+      if (res.ok) {
+        return rowsToAppend.length;
+      }
+    } catch (err) {
+      console.error('Error appending to Apps Script:', err);
+    }
+    return 0;
+  }
 
-  return response.data.updates?.updatedRows || rowsToAppend.length;
+  // Mode 2: Google Sheets API
+  const cleanSheetId = extractSpreadsheetId(trimmed);
+  const sheets = getGoogleSheetsClient();
+  if (sheets && cleanSheetId) {
+    try {
+      const response = await sheets.spreadsheets.values.append({
+        spreadsheetId: cleanSheetId,
+        range: 'Expenses!A:F',
+        valueInputOption: 'USER_ENTERED',
+        insertDataOption: 'INSERT_ROWS',
+        requestBody: { values: rowsToAppend },
+      });
+      return response.data.updates?.updatedRows || rowsToAppend.length;
+    } catch (err) {
+      console.error('Error appending via Sheets API:', err);
+    }
+  }
+
+  return 0;
 }
 
 /**
  * Updates the status cell (Column E) of a specific row in the Google Sheet.
  */
 export async function updateExpenseStatusInSheet(
-  sheetId: string,
+  sheetUrlOrId: string,
   rowIndex: number,
   status: PaymentStatus
 ): Promise<boolean> {
+  const trimmed = (sheetUrlOrId || '').trim();
+
+  // Mode 1: Apps Script Web App
+  if (isAppsScriptUrl(trimmed)) {
+    try {
+      await fetch(trimmed, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateStatus', updates: [{ rowIndex, status }] }),
+      });
+      return true;
+    } catch (err) {
+      console.error('Error updating status in Apps Script:', err);
+      return false;
+    }
+  }
+
+  // Mode 2: Google Sheets API
+  const cleanSheetId = extractSpreadsheetId(trimmed);
   const sheets = getGoogleSheetsClient();
+  if (sheets && cleanSheetId) {
+    try {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: cleanSheetId,
+        range: `Expenses!E${rowIndex}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [[status]] },
+      });
+      return true;
+    } catch (err) {
+      console.error('Error updating status via Sheets API:', err);
+      return false;
+    }
+  }
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: sheetId,
-    range: `Expenses!E${rowIndex}`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: {
-      values: [[status]],
-    },
-  });
-
-  return true;
+  return false;
 }
 
 export interface SyncResult {
@@ -249,24 +393,24 @@ export interface SyncResult {
 
 /**
  * Performs a comprehensive two-way sync between the Google Sheet and PayParent AppData:
- * 1. Reads all rows from Google Sheet.
+ * 1. Reads all rows from Google Sheet (via Web App, Sheets API, or link-shared sheet).
  * 2. Compares with all expenses in PayParent AppData.
  * 3. Imports new rows from Sheet -> AppData.
  * 4. Appends app-only expenses -> Sheet.
  * 5. Syncs settlement status if changed.
  */
 export async function twoWaySyncWithSheet(
-  sheetId: string,
+  sheetUrlOrId: string,
   currentAppData: AppData,
   parentNames: ParentNames
 ): Promise<SyncResult> {
-  const cleanSheetId = extractSpreadsheetId(sheetId);
-  if (!cleanSheetId) {
-    throw new Error('Invalid or missing Google Spreadsheet ID');
+  const trimmed = (sheetUrlOrId || '').trim();
+  if (!trimmed) {
+    throw new Error('Please enter a Google Sheet URL, Sheet ID, or Apps Script Web App URL.');
   }
 
   // 1. Read all rows from the Sheet
-  const sheetRows = await readExpensesFromSheet(cleanSheetId, parentNames);
+  const { rows: sheetRows, source } = await readExpensesFromSheet(trimmed, parentNames);
 
   // Clone AppData so we can update it cleanly
   const updatedAppData: AppData = JSON.parse(JSON.stringify(currentAppData || { months: {} }));
@@ -286,7 +430,6 @@ export async function twoWaySyncWithSheet(
     }
   }
 
-  // Helper to match expenses (fuzzy match by date, description, amount, paidBy)
   const isMatch = (sheet: ParsedSheetRow, app: Expense): boolean => {
     const sheetDateStr = sheet.isoDate;
     const appDateStr = app.date ? format(new Date(app.date), 'yyyy-MM-dd') : '';
@@ -311,9 +454,7 @@ export async function twoWaySyncWithSheet(
     if (matched) {
       matchedAppExpenseIds.add(matched.expense.id);
 
-      // Reconcile status if they differ
       if (sheetRow.status !== matched.expense.status) {
-        // If sheet is Settled, mark app Settled; if app is Settled, mark sheet Settled
         if (sheetRow.status === 'Settled' && matched.expense.status === 'Unsettled') {
           matched.expense.status = 'Settled';
           statusUpdated++;
@@ -323,10 +464,8 @@ export async function twoWaySyncWithSheet(
         }
       }
 
-      // Store sheet row index on app expense for fast future updates
       matched.expense.sheetRowIndex = sheetRow.rowIndex;
     } else {
-      // New expense from Sheet (e.g. entered by Ex)! Add to AppData
       const mId = sheetRow.monthId;
 
       if (!updatedAppData.months[mId]) {
@@ -373,15 +512,20 @@ export async function twoWaySyncWithSheet(
   }
 
   if (appExpensesToExport.length > 0) {
-    exportedToSheet = await appendExpensesToSheet(cleanSheetId, appExpensesToExport, parentNames);
+    exportedToSheet = await appendExpensesToSheet(trimmed, appExpensesToExport, parentNames);
   }
 
   // 4. Update any mismatched statuses in the Sheet
   for (const rowUpdate of rowsToUpdateInSheet) {
-    await updateExpenseStatusInSheet(cleanSheetId, rowUpdate.rowIndex, rowUpdate.status);
+    await updateExpenseStatusInSheet(trimmed, rowUpdate.rowIndex, rowUpdate.status);
   }
 
-  const message = `Sync complete! Imported ${importedToApp} from Sheet, exported ${exportedToSheet} to Sheet, reconciled ${statusUpdated} statuses.`;
+  let note = '';
+  if (source === 'gviz' && appExpensesToExport.length > 0) {
+    note = ' (Note: Sheet is connected via view link. Use Apps Script Web App for 2-way writes.)';
+  }
+
+  const message = `Sync complete! Imported ${importedToApp} from Sheet, exported ${exportedToSheet} to Sheet, reconciled ${statusUpdated} statuses.${note}`;
 
   return {
     success: true,
