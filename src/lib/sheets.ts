@@ -460,6 +460,19 @@ export async function twoWaySyncWithSheet(
   const updatedAppData: AppData = JSON.parse(JSON.stringify(currentAppData || { months: {} }));
   if (!updatedAppData.months) updatedAppData.months = {};
 
+  const isChildSupport = (item: { category?: string; description?: string }) => {
+    const cat = (item.category || '').toLowerCase().trim();
+    const desc = (item.description || '').toLowerCase().trim();
+    return cat === 'child support' || desc.includes('child support');
+  };
+
+  // Clean up any existing duplicate Child Support expenses in expenses[] (since Child Support has its own dedicated setting in PayParent)
+  for (const [mId, mData] of Object.entries(updatedAppData.months)) {
+    if (Array.isArray(mData.expenses)) {
+      mData.expenses = mData.expenses.filter((exp) => !isChildSupport(exp));
+    }
+  }
+
   let importedToApp = 0;
   let exportedToSheet = 0;
   let statusUpdated = 0;
@@ -491,6 +504,52 @@ export async function twoWaySyncWithSheet(
 
   // 2. Process Sheet rows -> AppData
   for (const sheetRow of sheetRows) {
+    const mId = sheetRow.monthId;
+
+    if (!updatedAppData.months[mId]) {
+      updatedAppData.months[mId] = {
+        id: mId,
+        year: sheetRow.year,
+        month: sheetRow.month,
+        childSupport: {
+          amount: 0,
+          paidBy: 'None',
+          monthlyPayer: { 1: 'None', 2: 'None', 3: 'None', 4: 'None', 5: 'None', 6: 'None', 7: 'None', 8: 'None', 9: 'None', 10: 'None', 11: 'None', 12: 'None' },
+          status: 'Unsettled',
+        },
+        parentNames,
+        expenses: [],
+        customSplits: [],
+      };
+    }
+
+    // SPECIAL HANDLING FOR CHILD SUPPORT:
+    // In PayParent, Child Support is tracked directly in monthData.childSupport, NOT in expenses[].
+    // If the sheet auto-adds a Child Support row, we sync its amount/status to childSupport and DO NOT add it to expenses[].
+    if (isChildSupport(sheetRow)) {
+      const currentCs = updatedAppData.months[mId].childSupport;
+      const csMonth = sheetRow.month;
+
+      if (currentCs) {
+        if (sheetRow.status !== currentCs.status) {
+          if (sheetRow.status === 'Settled' && currentCs.status === 'Unsettled') {
+            currentCs.status = 'Settled';
+            statusUpdated++;
+          } else if (currentCs.status === 'Settled' && sheetRow.status === 'Unsettled') {
+            rowsToUpdateInSheet.push({ rowIndex: sheetRow.rowIndex, status: 'Settled' });
+            statusUpdated++;
+          }
+        }
+
+        currentCs.amount = sheetRow.amount;
+        currentCs.paidBy = sheetRow.paidBy;
+        if (!currentCs.monthlyPayer) currentCs.monthlyPayer = {};
+        currentCs.monthlyPayer[csMonth] = sheetRow.paidBy;
+      }
+      continue;
+    }
+
+    // Regular expense matching
     const matched = existingAppExpenses.find(
       (item) => !matchedAppExpenseIds.has(item.expense.id) && isMatch(sheetRow, item.expense)
     );
@@ -510,25 +569,6 @@ export async function twoWaySyncWithSheet(
 
       matched.expense.sheetRowIndex = sheetRow.rowIndex;
     } else {
-      const mId = sheetRow.monthId;
-
-      if (!updatedAppData.months[mId]) {
-        updatedAppData.months[mId] = {
-          id: mId,
-          year: sheetRow.year,
-          month: sheetRow.month,
-          childSupport: {
-            amount: 0,
-            paidBy: 'None',
-            monthlyPayer: { 1: 'None', 2: 'None', 3: 'None', 4: 'None', 5: 'None', 6: 'None', 7: 'None', 8: 'None', 9: 'None', 10: 'None', 11: 'None', 12: 'None' },
-            status: 'Unsettled',
-          },
-          parentNames,
-          expenses: [],
-          customSplits: [],
-        };
-      }
-
       const newExpense: Expense = {
         id: `sheet-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         date: new Date(sheetRow.isoDate).toISOString(),
@@ -550,7 +590,11 @@ export async function twoWaySyncWithSheet(
   // 3. Process App expenses that do not exist in the Sheet -> export them to the Sheet
   const appExpensesToExport: Expense[] = [];
   for (const item of existingAppExpenses) {
-    if (!matchedAppExpenseIds.has(item.expense.id) && !item.expense.id.startsWith('sheet-')) {
+    if (
+      !matchedAppExpenseIds.has(item.expense.id) &&
+      !item.expense.id.startsWith('sheet-') &&
+      !isChildSupport(item.expense)
+    ) {
       appExpensesToExport.push(item.expense);
     }
   }
