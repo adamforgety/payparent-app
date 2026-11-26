@@ -205,11 +205,55 @@ export async function readExpensesFromSheet(
   // Mode 1: Google Apps Script Web App
   if (isAppsScriptUrl(trimmed)) {
     try {
-      const res = await fetch(trimmed, { redirect: 'follow' });
+      const urlWithParam = trimmed.includes('?')
+        ? (trimmed.includes('api=') ? trimmed : `${trimmed}&api=sync`)
+        : `${trimmed}?api=sync`;
+
+      const res = await fetch(urlWithParam, { redirect: 'follow' });
       if (!res.ok) {
         throw new Error(`Apps Script responded with HTTP ${res.status}`);
       }
       const data = await res.json();
+
+      // Check if returned data from getDashboardDataDirect()
+      if (Array.isArray(data.transactions)) {
+        const p1Name = (parentNames['Parent 1'] || 'Adam').toLowerCase().trim();
+        const p2Name = (parentNames['Parent 2'] || 'Khylee').toLowerCase().trim();
+
+        const rows: ParsedSheetRow[] = data.transactions.map((t: any) => {
+          const yr = Number(t.year) || new Date(t.isoDate).getFullYear();
+          const mo = typeof t.month === 'number' ? t.month + 1 : new Date(t.isoDate).getMonth() + 1;
+          const monthId = `${yr}-${String(mo).padStart(2, '0')}`;
+
+          const payerStr = String(t.payer || '').toLowerCase().trim();
+          const paidBy: Parent =
+            payerStr === p2Name || payerStr.includes('khylee') || payerStr.includes('parent 2')
+              ? 'Parent 2'
+              : 'Parent 1';
+
+          const statusStr = String(t.status || '').toLowerCase().trim();
+          const status: PaymentStatus =
+            statusStr.includes('settled') && !statusStr.includes('unsettled')
+              ? 'Settled'
+              : 'Unsettled';
+
+          return {
+            rowIndex: Number(t.rowIndex),
+            dateStr: String(t.isoDate),
+            isoDate: String(t.isoDate),
+            year: yr,
+            month: mo,
+            monthId,
+            description: String(t.description || ''),
+            category: (t.category || 'Other') as ExpenseCategory,
+            paidBy,
+            status,
+            amount: Number(t.amount) || 0,
+          };
+        });
+        return { rows, source: 'appscript' };
+      }
+
       const rawRows = Array.isArray(data.rows) ? data.rows : Array.isArray(data) ? data : [];
       const rows = parseRawRowMatrix(rawRows, parentNames, 1);
       return { rows, source: 'appscript' };
