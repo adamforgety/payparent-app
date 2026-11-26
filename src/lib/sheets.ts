@@ -424,6 +424,173 @@ export async function updateExpenseStatusInSheet(
   return false;
 }
 
+/**
+ * Determines if a Google Sheet row and a PayParent expense represent the same transaction.
+ * Accounts for slight naming variations, formatting differences, and minor date offsets.
+ */
+export function isFuzzyExpenseMatch(
+  sheetRow: { isoDate: string; description: string; amount: number; paidBy: Parent; category?: string },
+  appExpense: { date: string; description: string; amount: number; paidBy: Parent; category?: string }
+): boolean {
+  // 1. Amount must be identical (within 1 cent)
+  if (Math.abs(sheetRow.amount - appExpense.amount) >= 0.01) {
+    return false;
+  }
+
+  // 2. Payer must match
+  if (sheetRow.paidBy !== appExpense.paidBy) {
+    return false;
+  }
+
+  // 3. Date proximity
+  const sheetDate = new Date(sheetRow.isoDate);
+  const appDate = new Date(appExpense.date);
+
+  let diffDays = 0;
+  if (!isNaN(sheetDate.getTime()) && !isNaN(appDate.getTime())) {
+    const sYr = sheetDate.getFullYear();
+    const sMo = sheetDate.getMonth();
+    const aYr = appDate.getFullYear();
+    const aMo = appDate.getMonth();
+
+    const diffTime = Math.abs(sheetDate.getTime() - appDate.getTime());
+    diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    // If more than 10 days apart and different months, not the same transaction
+    if (diffDays > 10 && (sYr !== aYr || sMo !== aMo)) {
+      return false;
+    }
+  }
+
+  // Normalize descriptions
+  const normalize = (str: string) =>
+    (str || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const sDesc = normalize(sheetRow.description);
+  const aDesc = normalize(appExpense.description);
+
+  // Exact description match
+  if (sDesc === aDesc) {
+    return true;
+  }
+
+  // One description contains the other (e.g. "target" & "target clothes", "cvs" & "cvs pharmacy", "costco" & "costco wholesale")
+  if (sDesc.length >= 3 && aDesc.length >= 3) {
+    if (sDesc.includes(aDesc) || aDesc.includes(sDesc)) {
+      return true;
+    }
+  }
+
+  // Common keyword overlap
+  const stopWords = new Set(['the', 'and', 'for', 'with', 'from', 'at', 'in', 'of', 'to', 'a', 'an', 'co', 'inc', 'llc', 'or', 'on', 'by']);
+  const sWords = sDesc.split(' ').filter((w) => w.length >= 3 && !stopWords.has(w));
+  const aWords = aDesc.split(' ').filter((w) => w.length >= 3 && !stopWords.has(w));
+
+  const hasCommonWord = sWords.some((w) => aWords.includes(w));
+  if (hasCommonWord) {
+    return true;
+  }
+
+  // Prefix matching on words (e.g. "cloth" in "clothing" vs "clothes", "pediatr" in "pediatrician" vs "pediatric")
+  for (const sw of sWords) {
+    for (const aw of aWords) {
+      if (sw.length >= 4 && aw.length >= 4) {
+        const minLen = Math.min(sw.length, aw.length, 5);
+        if (sw.substring(0, minLen) === aw.substring(0, minLen)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // If in the exact same month, same payer, exact same amount, and within 3 days:
+  if (diffDays <= 3) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Deduplicates an array of expenses in a month, merging accidental duplicates.
+ */
+export function deduplicateMonthExpenses(expenses: Expense[]): Expense[] {
+  if (!Array.isArray(expenses) || expenses.length <= 1) return expenses || [];
+
+  const deduplicated: Expense[] = [];
+  const handledIds = new Set<string>();
+
+  for (let i = 0; i < expenses.length; i++) {
+    const current = expenses[i];
+    if (handledIds.has(current.id)) continue;
+
+    let duplicateIndex = -1;
+    for (let j = i + 1; j < expenses.length; j++) {
+      const other = expenses[j];
+      if (handledIds.has(other.id)) continue;
+
+      const currentIso = current.date ? format(new Date(current.date), 'yyyy-MM-dd') : '';
+      if (
+        isFuzzyExpenseMatch(
+          {
+            isoDate: currentIso,
+            description: current.description,
+            amount: current.amount,
+            paidBy: current.paidBy,
+            category: current.category,
+          },
+          other
+        )
+      ) {
+        duplicateIndex = j;
+        break;
+      }
+    }
+
+    if (duplicateIndex !== -1) {
+      const other = expenses[duplicateIndex];
+      handledIds.add(other.id);
+
+      // Merge the pair: prefer non-sheet ID as base, but transfer sheetRowIndex and status
+      const isCurrentSheet = current.id.startsWith('sheet-');
+      const isOtherSheet = other.id.startsWith('sheet-');
+
+      let primary = current;
+      let secondary = other;
+
+      if (isCurrentSheet && !isOtherSheet) {
+        primary = other;
+        secondary = current;
+      }
+
+      if (!primary.sheetRowIndex && secondary.sheetRowIndex) {
+        primary.sheetRowIndex = secondary.sheetRowIndex;
+      }
+
+      if (secondary.status === 'Settled' || primary.status === 'Settled') {
+        primary.status = 'Settled';
+      }
+
+      if (!primary.receiptUrl && secondary.receiptUrl) {
+        primary.receiptUrl = secondary.receiptUrl;
+        primary.receiptFilename = secondary.receiptFilename;
+      }
+
+      deduplicated.push(primary);
+    } else {
+      deduplicated.push(current);
+    }
+
+    handledIds.add(current.id);
+  }
+
+  return deduplicated;
+}
+
 export interface SyncResult {
   success: boolean;
   importedToApp: number;
@@ -466,10 +633,11 @@ export async function twoWaySyncWithSheet(
     return cat === 'child support' || desc.includes('child support');
   };
 
-  // Clean up any existing duplicate Child Support expenses in expenses[] (since Child Support has its own dedicated setting in PayParent)
+  // Clean up any existing duplicate Child Support expenses and merge accidental duplicates
   for (const [mId, mData] of Object.entries(updatedAppData.months)) {
     if (Array.isArray(mData.expenses)) {
       mData.expenses = mData.expenses.filter((exp) => !isChildSupport(exp));
+      mData.expenses = deduplicateMonthExpenses(mData.expenses);
     }
   }
 
@@ -486,18 +654,6 @@ export async function twoWaySyncWithSheet(
       }
     }
   }
-
-  const isMatch = (sheet: ParsedSheetRow, app: Expense): boolean => {
-    const sheetDateStr = sheet.isoDate;
-    const appDateStr = app.date ? format(new Date(app.date), 'yyyy-MM-dd') : '';
-
-    const sameDate = sheetDateStr === appDateStr;
-    const sameAmount = Math.abs(sheet.amount - app.amount) < 0.01;
-    const samePayer = sheet.paidBy === app.paidBy;
-    const sameDesc = sheet.description.toLowerCase().trim() === app.description.toLowerCase().trim();
-
-    return sameDate && sameAmount && samePayer && sameDesc;
-  };
 
   const matchedAppExpenseIds = new Set<string>();
   const rowsToUpdateInSheet: { rowIndex: number; status: PaymentStatus }[] = [];
@@ -549,9 +705,12 @@ export async function twoWaySyncWithSheet(
       continue;
     }
 
-    // Regular expense matching
+    // Regular expense matching using intelligent fuzzy match
     const matched = existingAppExpenses.find(
-      (item) => !matchedAppExpenseIds.has(item.expense.id) && isMatch(sheetRow, item.expense)
+      (item) =>
+        item.monthId === mId &&
+        !matchedAppExpenseIds.has(item.expense.id) &&
+        isFuzzyExpenseMatch(sheetRow, item.expense)
     );
 
     if (matched) {
@@ -569,6 +728,19 @@ export async function twoWaySyncWithSheet(
 
       matched.expense.sheetRowIndex = sheetRow.rowIndex;
     } else {
+      // Check if this sheet row is a duplicate of an ALREADY MATCHED expense in this month
+      const alreadyMatchedInSheet = existingAppExpenses.find(
+        (item) =>
+          item.monthId === mId &&
+          matchedAppExpenseIds.has(item.expense.id) &&
+          isFuzzyExpenseMatch(sheetRow, item.expense)
+      );
+
+      if (alreadyMatchedInSheet) {
+        // Skip importing duplicate rows from the Google Sheet
+        continue;
+      }
+
       const newExpense: Expense = {
         id: `sheet-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         date: new Date(sheetRow.isoDate).toISOString(),
@@ -583,6 +755,8 @@ export async function twoWaySyncWithSheet(
       };
 
       updatedAppData.months[mId].expenses.push(newExpense);
+      existingAppExpenses.push({ expense: newExpense, monthId: mId });
+      matchedAppExpenseIds.add(newExpense.id);
       importedToApp++;
     }
   }
