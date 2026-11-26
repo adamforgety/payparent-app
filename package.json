@@ -44,6 +44,7 @@
     "firebase": "11.5.0",
     "firebase-admin": "13.1.0",
     "genkit": "1.27.0",
+    "googleapis": "^190.0.0",
     "lucide-react": "^0.490.0",
     "next": "16.0.10",
     "react": "19.2.1",

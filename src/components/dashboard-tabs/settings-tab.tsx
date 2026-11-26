@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ParentNamesCard } from '@/components/parent-names-card';
 import { ChildSupportCard } from '@/components/child-support-card';
 import { CustomSplitCard } from '@/components/custom-split-card';
+import { GoogleSheetSyncCard } from '@/components/google-sheet-sync-card';
 import { CoParentLinkCard } from '@/components/co-parent-link-card';
 import { AccountSettingsCard } from '@/components/account-settings-card';
 import type { MonthData, ParentNames, ChildSupport, CustomSplit } from '@/lib/types';
@@ -47,6 +48,7 @@ export function SettingsTab({
               onUpdate={(customSplits: CustomSplit[]) => updateSettingsForCurrentAndFutureMonths({ customSplits })}
               parentNames={currentMonthData.parentNames}
             />
+            <GoogleSheetSyncCard />
           </div>
         </TabsContent>
         <TabsContent value="account">

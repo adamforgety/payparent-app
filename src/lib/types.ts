@@ -25,6 +25,7 @@ export interface Expense {
   month: number;
   receiptUrl?: string | null;
   receiptFilename?: string | null;
+  sheetRowIndex?: number;
 }
 
 export type Parent = 'Parent 1' | 'Parent 2';
@@ -83,6 +84,15 @@ export interface SubscriptionData {
   cancelAtPeriodEnd?: boolean;
 }
 
+export interface GoogleSheetConfig {
+  sheetId?: string;
+  sheetUrl?: string;
+  lastSyncedAt?: string;
+  syncStatus?: 'connected' | 'error' | 'not_configured';
+  errorMessage?: string;
+  autoSyncEnabled?: boolean;
+}
+
 // This is the definitive structure for the /users/{userId} document
 export interface UserDoc {
   id: string;
@@ -93,4 +103,5 @@ export interface UserDoc {
   dataOwnerId: string;
   createdAt?: string;
   subscription?: SubscriptionData;
+  googleSheetConfig?: GoogleSheetConfig;
 }
